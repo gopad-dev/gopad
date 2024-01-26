@@ -1,0 +1,6 @@
+.idea/
+/debug.log
+/test/
+go.work
+go.work.sum
+.gopad/

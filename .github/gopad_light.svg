@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
+  <rect x="10" y="10" width="80" height="80" rx="5" ry="5" fill="#FFF" stroke="#00ADD8" stroke-width="2"/>
+
+  <text x="25" y="45" font-family="monospace" font-size="20" fill="#333">GP</text>
+
+  <line x1="45" y1="45" x2="55" y2="45" stroke="#333" stroke-width="2">
+    <animate attributeName="stroke-opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite"/>
+  </line>
+
+  <text x="145" y="55" text-anchor="middle" font-family="system-ui" font-size="30" fill="#333" font-weight="700">gopad</text>
+</svg>

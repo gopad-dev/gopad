@@ -1,0 +1,21 @@
+# This is a TOML file
+# For more information, see https://toml.io/
+#
+
+# General configuration
+theme = 'dark'
+
+# Editor configuration
+[editor]
+tab_size = 4
+indent_size = 4
+end_of_line = 'lf'
+charset = 'utf-8'
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Cursor configuration
+[editor.cursor]
+mode = 'blink'
+blink_interval = '530ms'
+shape = 'block'

@@ -1,0 +1,52 @@
+name = 'dark'
+
+# Color configuration
+[colors]
+primary_color = '6'
+primary_selected_color = '14'
+primary_text_color = '15'
+secondary_text_color = '248'
+disabled_text_color = '8'
+background_color = ''
+secondary_background_color = '235'
+error_color = '1'
+warning_color = '3'
+information_color = '2'
+hint_color = '6'
+cursor_color = '9'
+disabled_cursor_color = '1'
+
+# Code style configuration
+[code]
+comment.foreground = '8'
+property.foreground = '9'
+type.foreground = '11'
+keyword.foreground = '13'
+constant.foreground = '11'
+"constant.builtin".foreground = '9'
+function.foreground = '14'
+string = { foreground = '10', bold = true }
+"string.special".foreground = '9'
+"string.special.url".foreground = '4'
+number.foreground = '3'
+"variable.other.member".foreground = '9'
+"string.escape".foreground = '14'
+"punctuation.delimiter".foreground = '11'
+"punctuation.bracket".foreground = '11'
+"markup.heading" = { foreground = '6', bold = true }
+"markup.italic" = { italic = true }
+"markup.bold" = { bold = true }
+"markup.underline" = { underline = true }
+"markup.strikethrough" = { strikethrough = true }
+"markup.link" = { foreground = '4', underline = true }
+"markup.list".foreground = '13'
+"markup.raw".foreground = '7'
+label.foreground = '11'
+tag.foreground = '9'
+attribute.foreground = '3'
+"comment.error" = { foreground = '1', bold = true }
+"comment.warning" = { foreground = '3', bold = true }
+"comment.note" = { foreground = '2', bold = true }
+"comment.todo" = { foreground = '15', bold = true }
+"diff.addition".foreground = '10'
+"diff.deletion".foreground = '9'

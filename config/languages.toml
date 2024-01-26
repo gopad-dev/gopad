@@ -1,0 +1,61 @@
+# Languages configuration
+
+[go]
+alt_names = ['golang']
+mime_types = ['text/x-gosrc']
+file_types = ['.go']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = [{ open = '(', close = ')' }, { open = '{', close = '}' }, { open = '[', close = ']' }, { open = '"', close = '"' }, { open = "'", close = "'" }, { open = '`', close = '`' }]
+tree_sitter = { name = 'go', symbol_name = 'go', path = '/usr/lib/libtree-sitter-go.so' }
+
+[go-mod]
+alt_names = ['go.mod']
+mime_types = []
+file_types = []
+files = ['go.mod']
+line_comment_tokens = ['//']
+block_comment_tokens = []
+auto_pairs = []
+tree_sitter = { name = 'go-mod', symbol_name = 'gomod', path = '/usr/lib/libtree-sitter-gomod.so' }
+
+[go-sum]
+alt_names = ['go.sum', 'go.work.sum']
+mime_types = []
+file_types = []
+files = ['go.sum', 'go.work.sum']
+line_comment_tokens = ['//']
+block_comment_tokens = []
+auto_pairs = []
+tree_sitter = { name = 'go-sum', symbol_name = 'gosum', path = '/usr/lib/libtree-sitter-gosum.so' }
+
+[go-work]
+alt_names = ['go.work']
+mime_types = []
+file_types = []
+files = ['go.work']
+line_comment_tokens = ['//']
+block_comment_tokens = []
+auto_pairs = []
+tree_sitter = { name = 'go-work', symbol_name = 'gowork', path = '/usr/local/lib/libtree-sitter-gowork.so' }
+
+[toml]
+alt_names = []
+mime_types = []
+file_types = ['.toml']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = [{ open = '"', close = '"' }, { open = "'", close = "'" }]
+tree_sitter = { name = 'toml', symbol_name = 'toml', path = '/usr/lib/libtree-sitter-toml.so' }
+
+[query]
+alt_names = ['tree sitter query']
+mime_types = []
+file_types = ['.scm']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = [{ open = '"', close = '"' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
+tree_sitter = { name = 'query', symbol_name = 'query', path = '/usr/lib/libtree-sitter-query.so' }
