@@ -85,6 +85,7 @@ type EditorKeyMap struct {
 	RefreshSyntaxHighlight key.Binding
 	ToggleTreeSitterDebug  key.Binding
 	DebugTreeSitterNodes   key.Binding
+	ShowCurrentDiagnostic  key.Binding
 
 	CharacterLeft  key.Binding
 	CharacterRight key.Binding
@@ -254,6 +255,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 			RefreshSyntaxHighlight: "f1",
 			ToggleTreeSitterDebug:  "f2",
 			DebugTreeSitterNodes:   "f3",
+			ShowCurrentDiagnostic:  "ctrl+j",
 
 			CharacterLeft:  "left",
 			CharacterRight: "right",
@@ -419,6 +421,7 @@ type EditorKeyConfig struct {
 	RefreshSyntaxHighlight string `toml:"refresh_syntax_highlight"`
 	ToggleTreeSitterDebug  string `toml:"toggle_tree_sitter_debug"`
 	DebugTreeSitterNodes   string `toml:"debug_tree_sitter_nodes"`
+	ShowCurrentDiagnostic  string `toml:"show_current_diagnostic"`
 
 	CharacterLeft  string `toml:"character_left"`
 	CharacterRight string `toml:"character_right"`
@@ -542,6 +545,10 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 		DebugTreeSitterNodes: key.NewBinding(
 			key.WithKeys(k.DebugTreeSitterNodes),
 			key.WithHelp(k.DebugTreeSitterNodes, "debug tree-sitter nodes"),
+		),
+		ShowCurrentDiagnostic: key.NewBinding(
+			key.WithKeys(k.ShowCurrentDiagnostic),
+			key.WithHelp(k.ShowCurrentDiagnostic, "show current diagnostic"),
 		),
 
 		CharacterLeft: key.NewBinding(

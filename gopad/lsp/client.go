@@ -80,6 +80,14 @@ func (c *Client) Start(send SendFunc) error {
 		return fmt.Errorf("error creating server: %w", err)
 	}
 
+	var workspaceFolders []protocol.WorkspaceFolder
+	if c.workspace != "" {
+		workspaceFolders = append(workspaceFolders, protocol.WorkspaceFolder{
+			URI:  "file://" + c.workspace,
+			Name: filepath.Base(c.workspace),
+		})
+	}
+
 	if _, err = c.server.Initialize(ctx, &protocol.InitializeParams{
 		ClientInfo: &protocol.ClientInfo{
 			Name:    c.name,
@@ -87,12 +95,7 @@ func (c *Client) Start(send SendFunc) error {
 		},
 		Locale:                "de",
 		InitializationOptions: c.cfg.Config,
-		WorkspaceFolders: []protocol.WorkspaceFolder{
-			{
-				URI:  "file://" + c.workspace,
-				Name: filepath.Base(c.workspace),
-			},
-		},
+		WorkspaceFolders:      workspaceFolders,
 		Capabilities: protocol.ClientCapabilities{
 			Workspace: &protocol.WorkspaceClientCapabilities{
 				//		ApplyEdit: true,
@@ -565,10 +568,12 @@ func (c *Client) Configuration(ctx context.Context, params *protocol.Configurati
 }
 
 func (c *Client) WorkspaceFolders(ctx context.Context) ([]protocol.WorkspaceFolder, error) {
-	return []protocol.WorkspaceFolder{
-		{
+	var workspaceFolders []protocol.WorkspaceFolder
+	if c.workspace != "" {
+		workspaceFolders = append(workspaceFolders, protocol.WorkspaceFolder{
 			URI:  "file://" + c.workspace,
 			Name: filepath.Base(c.workspace),
-		},
-	}, nil
+		})
+	}
+	return workspaceFolders, nil
 }

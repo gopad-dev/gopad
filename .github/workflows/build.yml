@@ -41,11 +41,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
-      - name: Create Dist Folder
-        run: mkdir dist
       - name: Prepare Version Info
         run: |
-          echo "VERSION=$(git describe --tags)" >> $GITHUB_ENV
+          echo "VERSION=$(git describe --tags --always)" >> $GITHUB_ENV
           echo "COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
           echo $GITHUB_ENV
       - name: Build

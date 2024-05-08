@@ -1,6 +1,8 @@
 package lsp
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -113,4 +115,8 @@ type Diagnostic struct {
 	Message         string
 	Data            any
 	Priority        int
+}
+
+func (d Diagnostic) OneLineMessage() string {
+	return strings.SplitN(d.Message, "\n", 2)[0]
 }

@@ -1,6 +1,8 @@
 .idea/
-/debug.log
+dist/
 /test/
+.gopad/
+
 go.work
 go.work.sum
-.gopad/
+/debug.log

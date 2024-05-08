@@ -78,17 +78,18 @@ func NewFileFromName(name string) (*File, error) {
 }
 
 type File struct {
-	buffer            *buffer.Buffer
-	mode              FileMode
-	cursor            Cursor
-	language          *Language
-	tree              *Tree
-	autocomplete      *Autocompleter
-	diagnosticVersion int32
-	diagnostics       []lsp.Diagnostic
-	matches           []Match
-	locals            []Local
-	changes           []Change
+	buffer                *buffer.Buffer
+	mode                  FileMode
+	cursor                Cursor
+	language              *Language
+	tree                  *Tree
+	autocomplete          *Autocompleter
+	diagnosticVersion     int32
+	diagnostics           []lsp.Diagnostic
+	matches               []Match
+	locals                []Local
+	changes               []Change
+	showCurrentDiagnostic bool
 }
 
 func (f *File) Name() string {
@@ -221,6 +222,14 @@ func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col 
 	}
 
 	return diagnostic.Severity.CharStyle().Copy().Inherit(style)
+}
+
+func (f *File) ShowCurrentDiagnostic() {
+	f.showCurrentDiagnostic = true
+}
+
+func (f *File) HideCurrentDiagnostic() {
+	f.showCurrentDiagnostic = false
 }
 
 func (f *File) Matches() []Match {
@@ -614,7 +623,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		if lineDiagnostic.Severity > 0 {
 			lineWidth := ansi.PrintableRuneWidth(string(codeLine))
 			if lineWidth < width {
-				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.Severity.Style().Render(lineDiagnostic.Message))...)
+				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.Severity.Style().Render(lineDiagnostic.OneLineMessage()))...)
 			}
 		}
 
@@ -628,7 +637,14 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 
 	editorCode = strings.TrimSuffix(editorCode, "\n")
 
-	if f.autocomplete.Visible() {
+	if f.showCurrentDiagnostic {
+		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
+		if diagnostic.Severity > 0 {
+			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnosticPopupView(diagnostic, width, height), editorCode)
+		} else {
+			f.HideCurrentDiagnostic()
+		}
+	} else if f.autocomplete.Visible() {
 		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(width, height), editorCode,
 			overlay.WithMarginX(styles.CodePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
 			overlay.WithMarginY(realCursorRow+1),
@@ -652,4 +668,17 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	}
 
 	return editorCode
+}
+
+func diagnosticPopupView(dia lsp.Diagnostic, width int, height int) string {
+	width = min(width, 80)
+	height = min(height, 10)
+
+	var view string
+	view += fmt.Sprintf("Severity: %s\n", dia.Severity.String())
+	view += fmt.Sprintf("Type: %s\n", dia.Type.String())
+	view += fmt.Sprintf("Source: %s\n", dia.Source)
+	view += fmt.Sprintf("Message: %s\n", dia.Message)
+
+	return view
 }

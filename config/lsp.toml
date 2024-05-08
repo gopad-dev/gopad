@@ -7,31 +7,31 @@ args = []
 file_types = ['.go']
 files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
 
-[golangci-lint]
-command = 'golangci-lint-langserver'
-args = ['-debug', '-severity', 'Hint']
-config = { command = ['golangci-lint', 'run', '--enable-all', '--out-format', 'json', '--issues-exit-code=1'] }
-file_types = ['.go']
-files = []
-
-[yaml]
-command = 'yaml-language-server'
-args = ['--stdio']
-file_types = ['.yaml', '.yml']
-files = []
-
-[json]
-command = 'vscode-json-languageserver'
-args = ['--stdio']
-file_types = ['.json', '.jsonc']
-files = []
-
-[html]
-command = 'vscode-html-language-server'
-args = ['--stdio']
-file_types = ['.html', '.htm']
-files = []
-
+#[golangci-lint]
+#command = 'golangci-lint-langserver'
+#args = ['-debug', '-severity', 'Hint']
+#config = { command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1'] }
+#file_types = ['.go']
+#files = []
+#
+#[yaml]
+#command = 'yaml-language-server'
+#args = ['--stdio']
+#file_types = ['.yaml', '.yml']
+#files = []
+#
+#[json]
+#command = 'vscode-json-languageserver'
+#args = ['--stdio']
+#file_types = ['.json', '.jsonc']
+#files = []
+#
+#[html]
+#command = 'vscode-html-language-server'
+#args = ['--stdio']
+#file_types = ['.html', '.htm']
+#files = []
+#
 #[toml]
 #command = 'taplo'
 #args = ['lsp', 'stdio']

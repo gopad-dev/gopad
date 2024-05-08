@@ -20,18 +20,19 @@ import (
 	"go.gopad.dev/gopad/gopad/lsp"
 )
 
-const (
+var (
 	Version = "dev"
 	Commit  = "unknown"
-)
 
-//go:embed config/*
-var defaultConfigs embed.FS
+	//go:embed config/*
+	defaultConfigs embed.FS
+)
 
 func main() {
 	help := pflag.BoolP("help", "h", false, "show help")
 	version := pflag.BoolP("version", "v", false, "show version")
 	debug := pflag.StringP("debug", "d", "", "enable & set debug log file (use - for stdout)")
+	debugLsp := pflag.StringP("debug-lsp", "", "", "enable & set debug log file for lsp")
 	pprof := pflag.StringP("pprof", "p", "", "enable & set pprof address:port")
 	configDir := pflag.StringP("config-dir", "c", "", "set config directory")
 	createConfig := pflag.String("create-config", "", "create a new config file in the specified directory")
@@ -43,15 +44,14 @@ func main() {
 	}
 
 	if version != nil && *version {
-		fmt.Printf("gopad: %s (%s)", Version, Commit)
+		fmt.Printf("gopad: %s (%s)\n", Version, Commit)
 		return
 	}
 
-	var logFile *os.File
 	if debug != nil && *debug != "" {
 		if *debug != "-" {
 			var err error
-			logFile, err = tea.LogToFile(*debug, "gopad")
+			logFile, err := tea.LogToFile(*debug, "gopad")
 			if err != nil {
 				log.Panicln("failed to open debug log file:", err)
 			}
@@ -60,6 +60,16 @@ func main() {
 		log.Println("debug mode enabled")
 	} else {
 		log.SetOutput(io.Discard)
+	}
+
+	var lspLogFile *os.File
+	if debugLsp != nil && *debugLsp != "" {
+		var err error
+		lspLogFile, err = os.OpenFile(*debugLsp, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+		if err != nil {
+			log.Panicln("failed to open debug lsp log file:", err)
+		}
+		defer lspLogFile.Close()
 	}
 
 	if createConfig != nil && *createConfig != "" {
@@ -98,7 +108,7 @@ func main() {
 		log.Panicln("failed to load languages:", err)
 	}
 
-	lspClient := lsp.New(Version, config.LSP, logFile)
+	lspClient := lsp.New(Version, config.LSP, lspLogFile)
 	e, err := gopad.New(lspClient, Version, pflag.Args())
 	if err != nil {
 		log.Panicln("failed to start gopad:", err)

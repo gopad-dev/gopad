@@ -607,6 +607,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 				e.files = append(e.files, debugFile)
 				e.activeFile = len(e.files) - 1
+			case key.Matches(msg, config.Keys.Editor.ShowCurrentDiagnostic):
+				file.ShowCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Editor.Search):
 				if !e.searchBar.Focused() {
 					e.searchBar.Show()
