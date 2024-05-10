@@ -82,12 +82,13 @@ func NewNotifications() notifications.Model {
 	return n
 }
 
-func NewFileTree(name string, openFile func(name string) tea.Cmd) (filetree.Model, error) {
+func NewFileTree(name string, openFile func(name string) tea.Cmd, languageIconFunc func(name string) rune) (filetree.Model, error) {
 	ft := filetree.New()
 	ft.Styles = Theme.Editor.FileTree
 	ft.KeyMap = Keys.Editor.FileTree
 	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.OpenFolder.Help().Key)
 	ft.OpenFile = openFile
+	ft.LanguageIconFunc = languageIconFunc
 
 	if name != "" {
 		if err := ft.Open(name); err != nil {

@@ -27,6 +27,14 @@ const (
 	pageSize = 10
 )
 
+var fileIconFunc = func(name string) rune {
+	lang := GetLanguageByFilename(name)
+	if lang != nil && lang.Icon != 0 {
+		return lang.Icon
+	}
+	return 0
+}
+
 func NewEditor(args []string) (*Editor, error) {
 	editor := Editor{
 		searchBar: config.NewSearchBar(
@@ -56,7 +64,7 @@ func NewEditor(args []string) (*Editor, error) {
 		editor.workspace = workspacePath
 		if editor.fileTree, err = config.NewFileTree(workspacePath, func(name string) tea.Cmd {
 			return OpenFile(name)
-		}); err != nil {
+		}, fileIconFunc); err != nil {
 			return nil, fmt.Errorf("failed to init file tree: %w", err)
 		}
 
@@ -75,7 +83,7 @@ func NewEditor(args []string) (*Editor, error) {
 	var err error
 	if editor.fileTree, err = config.NewFileTree("", func(name string) tea.Cmd {
 		return OpenFile(name)
-	}); err != nil {
+	}, fileIconFunc); err != nil {
 		return nil, fmt.Errorf("failed to init file tree: %w", err)
 	}
 

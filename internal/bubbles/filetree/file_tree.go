@@ -11,16 +11,16 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
 var (
-	ignoreDirs  = []string{".git", ".idea"}
-	dirIcon     = "⏵ "
-	dirOpenIcon = "⏷ "
-	fileIcon    = ""
+	ignoreDirs          = []string{} // []string{".git", ".idea"}
+	rootFolderIcon rune = 0xef81
+	dirIcon        rune = 0xf024b
+	dirOpenIcon    rune = 0xf0770
+	fileIcon       rune = 0xea7b
 )
 
 type Entry struct {
@@ -127,15 +127,16 @@ func New() Model {
 }
 
 type Model struct {
-	entry     *Entry
-	focus     bool
-	show      bool
-	offset    int
-	Width     int
-	Styles    Styles
-	KeyMap    KeyMap
-	EmptyText string
-	OpenFile  func(string) tea.Cmd
+	entry            *Entry
+	focus            bool
+	show             bool
+	offset           int
+	Width            int
+	Styles           Styles
+	KeyMap           KeyMap
+	EmptyText        string
+	OpenFile         func(string) tea.Cmd
+	LanguageIconFunc func(string) rune
 }
 
 func (m *Model) Open(name string) error {
@@ -390,16 +391,28 @@ func (m Model) View(height int) string {
 }
 
 func (m Model) entryView(e *Entry, indent string) string {
-	prefix := fileIcon
+	var icon rune
+
 	if e.IsDir {
-		if e.Open {
-			prefix = dirOpenIcon
+		if indent == "" {
+			icon = rootFolderIcon
 		} else {
-			prefix = dirIcon
+			if e.Open {
+				icon = dirOpenIcon
+			} else {
+				icon = dirIcon
+			}
+		}
+	} else {
+		if m.LanguageIconFunc != nil {
+			icon = m.LanguageIconFunc(e.Name)
+		}
+		if icon == 0 {
+			icon = fileIcon
 		}
 	}
 
-	line := indent + prefix + e.Name
+	line := indent + string(icon) + " " + e.Name
 	if lipgloss.Width(line) > m.Width {
 		line = string([]rune(line)[:m.Width-1]) + "…"
 	} else {

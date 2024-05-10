@@ -187,7 +187,7 @@ func (f *File) DiagnosticsForLineCol(row int, col int) []lsp.Diagnostic {
 func (f *File) HighestLineDiagnostic(row int) lsp.Diagnostic {
 	var diagnostic lsp.Diagnostic
 	for _, diag := range f.diagnostics {
-		if diag.Range.Start.Row == row && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
+		if diag.Range.ContainsRow(row) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
 			diagnostic = diag
 		}
 	}
@@ -571,7 +571,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 
 		var prefix string
 		if lineDiagnostic.Severity > 0 {
-			prefix = lineDiagnostic.Severity.Style().Render(lineDiagnostic.Severity.ShortString())
+			prefix = lineDiagnostic.Severity.Style().Render(lineDiagnostic.Severity.Icon())
 		} else {
 			prefix = " "
 		}
@@ -620,10 +620,10 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			codeLine = append(codeLine, char...)
 		}
 
-		if lineDiagnostic.Severity > 0 {
+		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
 			lineWidth := ansi.PrintableRuneWidth(string(codeLine))
 			if lineWidth < width {
-				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.Severity.Style().Render(lineDiagnostic.OneLineMessage()))...)
+				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.ShortView())...)
 			}
 		}
 
@@ -640,7 +640,10 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	if f.showCurrentDiagnostic {
 		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
 		if diagnostic.Severity > 0 {
-			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnosticPopupView(diagnostic, width, height), editorCode)
+			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
+				overlay.WithMarginX(styles.CodePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
+				overlay.WithMarginY(realCursorRow+1),
+			)
 		} else {
 			f.HideCurrentDiagnostic()
 		}
@@ -668,17 +671,4 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	}
 
 	return editorCode
-}
-
-func diagnosticPopupView(dia lsp.Diagnostic, width int, height int) string {
-	width = min(width, 80)
-	height = min(height, 10)
-
-	var view string
-	view += fmt.Sprintf("Severity: %s\n", dia.Severity.String())
-	view += fmt.Sprintf("Type: %s\n", dia.Type.String())
-	view += fmt.Sprintf("Source: %s\n", dia.Source)
-	view += fmt.Sprintf("Message: %s\n", dia.Message)
-
-	return view
 }

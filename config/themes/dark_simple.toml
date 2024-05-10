@@ -1,4 +1,4 @@
-name = 'dark'
+name = 'dark-simple'
 
 # Color configuration
 [colors]
@@ -18,10 +18,10 @@ disabled_cursor_color = '1'
 
 [styles]
 [styles.diagnostics]
-error = { underline = true, underline_style = 'curly', underline_color = '1' }
-warning = { underline = true, underline_style = 'curly', underline_color = '3' }
-information = { underline = true, underline_style = 'curly', underline_color = '2' }
-hint = { underline = true, underline_style = 'curly', underline_color = '6' }
+error = { underline = true }
+warning = { underline = true }
+information = { underline = true }
+hint = { underline = true }
 
 # Code style configuration
 [code]

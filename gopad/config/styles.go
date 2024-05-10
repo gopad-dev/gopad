@@ -2,72 +2,20 @@ package config
 
 import (
 	"github.com/charmbracelet/lipgloss"
-
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
-	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
+	"go.gopad.dev/gopad/internal/bubbles/textinput"
+
+	"go.gopad.dev/gopad/internal/bubbles/filetree"
+	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/searchbar"
-	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type ColorsConfig struct {
-	PrimaryColor         string `toml:"primary_color"`
-	PrimarySelectedColor string `toml:"primary_selected_color"`
-
-	PrimaryTextColor   string `toml:"primary_text_color"`
-	SecondaryTextColor string `toml:"secondary_text_color"`
-	DisabledTextColor  string `toml:"disabled_text_color"`
-
-	BackgroundColor          string `toml:"background_color"`
-	SecondaryBackgroundColor string `toml:"secondary_background_color"`
-
-	ErrorColor       string `toml:"error_color"`
-	WarningColor     string `toml:"warning_color"`
-	InformationColor string `toml:"information_color"`
-	HintColor        string `toml:"hint_color"`
-
-	CursorColor         string `toml:"cursor_color"`
-	DisabledCursorColor string `toml:"disabled_cursor_color"`
-}
-
-func (c ColorsConfig) Colors() Colors {
-	return Colors{
-		PrimaryColor:         lipgloss.Color(c.PrimaryColor),
-		PrimarySelectedColor: lipgloss.Color(c.PrimarySelectedColor),
-
-		PrimaryTextColor:   lipgloss.Color(c.PrimaryTextColor),
-		SecondaryTextColor: lipgloss.Color(c.SecondaryTextColor),
-		DisabledTextColor:  lipgloss.Color(c.DisabledTextColor),
-
-		BackgroundColor:          lipgloss.Color(c.BackgroundColor),
-		SecondaryBackgroundColor: lipgloss.Color(c.SecondaryBackgroundColor),
-
-		ErrorColor:       lipgloss.Color(c.ErrorColor),
-		WarningColor:     lipgloss.Color(c.WarningColor),
-		InformationColor: lipgloss.Color(c.InformationColor),
-		HintColor:        lipgloss.Color(c.HintColor),
-
-		CursorColor:         lipgloss.Color(c.CursorColor),
-		DisabledCursorColor: lipgloss.Color(c.DisabledCursorColor),
-	}
-}
-
-type CodeStyles map[string]Style
-
-func (c CodeStyles) Styles() map[string]lipgloss.Style {
-	m := make(map[string]lipgloss.Style)
-	for k, v := range c {
-		m[k] = v.Style()
-	}
-	return m
-}
-
-type Styles struct {
+type ThemeConfig struct {
 	Name string
 
 	Colors Colors
@@ -127,11 +75,12 @@ type EditorStyles struct {
 	CodeSelectionStyle lipgloss.Style
 	CodeBarStyle       lipgloss.Style
 
-	FileTree     filetree.Styles
-	SearchBar    searchbar.Styles
-	List         list.Styles
-	Diagnostics  DiagnosticStyles
-	Autocomplete AutocompleteStyles
+	FileTree      filetree.Styles
+	SearchBar     searchbar.Styles
+	List          list.Styles
+	Diagnostics   DiagnosticStyles
+	Autocomplete  AutocompleteStyles
+	Documentation DocumentationStyles
 
 	CodeStyles map[string]lipgloss.Style
 }
@@ -145,6 +94,10 @@ type DiagnosticStyles struct {
 	InformationCharStyle lipgloss.Style
 	HintStyle            lipgloss.Style
 	HintCharStyle        lipgloss.Style
+}
+
+type DocumentationStyles struct {
+	Style lipgloss.Style
 }
 
 type AutocompleteStyles struct {

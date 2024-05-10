@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbletea"
@@ -53,8 +54,19 @@ func (d DiagnosticSeverity) String() string {
 	}
 }
 
-func (d DiagnosticSeverity) ShortString() string {
-	return d.String()[:1]
+func (d DiagnosticSeverity) Icon() string {
+	switch d {
+	case DiagnosticSeverityError:
+		return "🗙"
+	case DiagnosticSeverityWarning:
+		return "⚠"
+	case DiagnosticSeverityInformation:
+		return "🛈"
+	case DiagnosticSeverityHint:
+		return "⚑"
+	default:
+		return " "
+	}
 }
 
 func (d DiagnosticSeverity) Style() lipgloss.Style {
@@ -117,6 +129,13 @@ type Diagnostic struct {
 	Priority        int
 }
 
-func (d Diagnostic) OneLineMessage() string {
-	return strings.SplitN(d.Message, "\n", 2)[0]
+func (d Diagnostic) ShortView() string {
+	return d.Severity.Style().Render(fmt.Sprintf("%s %s", d.Severity.Icon(), strings.SplitN(d.Message, "\n", 2)[0]))
+}
+
+func (d Diagnostic) View(width int, height int) string {
+	width = min(width, 80)
+	height = min(height, 10)
+
+	return config.Theme.Editor.Documentation.Style.Render(fmt.Sprintf("%s\n%s", d.Severity.Style().Render(d.Severity.Icon()+" "), d.Message))
 }

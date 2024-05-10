@@ -30,8 +30,8 @@ var (
 	Languages map[string]LanguageConfig
 	LSP       LSPConfig
 	Keys      KeyMap
-	Theme     Styles
-	Themes    []ThemeConfig
+	Theme     ThemeConfig
+	Themes    []RawThemeConfig
 )
 
 func FindDir() (string, error) {
@@ -60,7 +60,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	keymap := DefaultKeyMapConfig()
 	languages := DefaultLanguageConfigs()
 	lsp := DefaultLSPConfig()
-	themes := make([]ThemeConfig, 0)
+	themes := make([]RawThemeConfig, 0)
 
 	if err := readTOMLFile(filepath.Join(name, gopadConfig), &gopad); err != nil {
 		return fmt.Errorf("error reading gopad config: %w", err)
@@ -92,7 +92,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 		}
 	}
 
-	var theme *ThemeConfig
+	var theme *RawThemeConfig
 	for _, themeFile := range themeFiles {
 		if themeFile.IsDir() {
 			continue
@@ -107,7 +107,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 			theme = &themeConfig
 		}
 
-		index := slices.IndexFunc(themes, func(config ThemeConfig) bool {
+		index := slices.IndexFunc(themes, func(config RawThemeConfig) bool {
 			return config.Name == themeConfig.Name
 		})
 		if index == -1 {
@@ -132,7 +132,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	LSP = lsp
 	Keys = keymap.Keys()
 	Themes = themes
-	Theme = theme.Styles()
+	Theme = theme.Theme()
 
 	return nil
 }
@@ -154,16 +154,16 @@ func readTOMLFile(name string, a any) error {
 	return nil
 }
 
-func readTheme(name string, theme os.DirEntry) (ThemeConfig, error) {
+func readTheme(name string, theme os.DirEntry) (RawThemeConfig, error) {
 	f, err := os.Open(filepath.Join(name, themeDir, theme.Name()))
 	if err != nil {
-		return ThemeConfig{}, fmt.Errorf("error opening theme file: %w", err)
+		return RawThemeConfig{}, fmt.Errorf("error opening theme file: %w", err)
 	}
 	defer f.Close()
 
-	var t ThemeConfig
+	var t RawThemeConfig
 	if err = toml.NewDecoder(f).Decode(&t); err != nil {
-		return ThemeConfig{}, fmt.Errorf("error decoding theme file: %w", err)
+		return RawThemeConfig{}, fmt.Errorf("error decoding theme file: %w", err)
 	}
 
 	return t, nil

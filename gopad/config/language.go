@@ -9,6 +9,7 @@ func DefaultLanguageConfigs() map[string]LanguageConfig {
 }
 
 type LanguageConfig struct {
+	Icon               rune                       `toml:"icon"`
 	AltNames           []string                   `toml:"alt_names"`
 	MIMETypes          []string                   `toml:"mime_types"`
 	FileTypes          []string                   `toml:"file_types"`

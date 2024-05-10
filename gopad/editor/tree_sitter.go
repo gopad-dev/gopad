@@ -262,7 +262,7 @@ func highlightTree(tree *Tree) ([]Match, error) {
 			matches = append(matches, Match{
 				Range: buffer.Range{
 					Start: buffer.Position{Row: realRow, Col: realCol},
-					End:   buffer.Position{Row: realEndRow, Col: realEndCol},
+					End:   buffer.Position{Row: realEndRow, Col: realEndCol - 1}, // -1 to exclude the last character idk why this is like this tbh
 				},
 				Type:     query.CaptureNameForID(capture.Index),
 				Priority: priority,

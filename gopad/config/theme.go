@@ -15,23 +15,24 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type ThemeConfig struct {
+type RawThemeConfig struct {
 	Name   string       `toml:"name"`
 	Colors ColorsConfig `toml:"colors"`
+	Styles StylesConfig `toml:"styles"`
 	Code   CodeStyles   `toml:"code"`
 }
 
-func (c ThemeConfig) Title() string {
+func (c RawThemeConfig) Title() string {
 	return c.Name
 }
 
-func (c ThemeConfig) Description() string {
+func (c RawThemeConfig) Description() string {
 	return ""
 }
 
-func (c ThemeConfig) Styles() Styles {
+func (c RawThemeConfig) Theme() ThemeConfig {
 	colors := c.Colors.Colors()
-	return Styles{
+	return ThemeConfig{
 		Name:             c.Name,
 		Colors:           colors,
 		AppBarStyle:      lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
@@ -69,13 +70,16 @@ func (c ThemeConfig) Styles() Styles {
 			},
 			Diagnostics: DiagnosticStyles{
 				ErrorStyle:           lipgloss.NewStyle().Foreground(colors.ErrorColor).Bold(true),
-				ErrorCharStyle:       lipgloss.NewStyle().UnderlineSpaces(false).Underline(true).UnderlineStyle(lipgloss.UnderlineStyleCurly).UnderlineColor(colors.ErrorColor),
+				ErrorCharStyle:       c.Styles.Diagnostics.Error.Style(),
 				WarningStyle:         lipgloss.NewStyle().Foreground(colors.WarningColor).Bold(true),
-				WarningCharStyle:     lipgloss.NewStyle().UnderlineSpaces(false).Underline(true).UnderlineStyle(lipgloss.UnderlineStyleCurly).UnderlineColor(colors.WarningColor),
+				WarningCharStyle:     c.Styles.Diagnostics.Warning.Style(),
 				InformationStyle:     lipgloss.NewStyle().Foreground(colors.InformationColor).Bold(true),
-				InformationCharStyle: lipgloss.NewStyle().UnderlineSpaces(false).Underline(true).UnderlineStyle(lipgloss.UnderlineStyleCurly).UnderlineColor(colors.InformationColor),
+				InformationCharStyle: c.Styles.Diagnostics.Information.Style(),
 				HintStyle:            lipgloss.NewStyle().Foreground(colors.HintColor).Bold(true),
-				HintCharStyle:        lipgloss.NewStyle().UnderlineSpaces(false).Underline(true).UnderlineStyle(lipgloss.UnderlineStyleCurly).UnderlineColor(colors.HintColor),
+				HintCharStyle:        c.Styles.Diagnostics.Hint.Style(),
+			},
+			Documentation: DocumentationStyles{
+				Style: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
 			},
 			Autocomplete: AutocompleteStyles{
 				Style: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
@@ -144,4 +148,67 @@ func (c ThemeConfig) Styles() Styles {
 			ItemDescriptionStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
 		},
 	}
+}
+
+type ColorsConfig struct {
+	PrimaryColor         string `toml:"primary_color"`
+	PrimarySelectedColor string `toml:"primary_selected_color"`
+
+	PrimaryTextColor   string `toml:"primary_text_color"`
+	SecondaryTextColor string `toml:"secondary_text_color"`
+	DisabledTextColor  string `toml:"disabled_text_color"`
+
+	BackgroundColor          string `toml:"background_color"`
+	SecondaryBackgroundColor string `toml:"secondary_background_color"`
+
+	ErrorColor       string `toml:"error_color"`
+	WarningColor     string `toml:"warning_color"`
+	InformationColor string `toml:"information_color"`
+	HintColor        string `toml:"hint_color"`
+
+	CursorColor         string `toml:"cursor_color"`
+	DisabledCursorColor string `toml:"disabled_cursor_color"`
+}
+
+func (c ColorsConfig) Colors() Colors {
+	return Colors{
+		PrimaryColor:         lipgloss.Color(c.PrimaryColor),
+		PrimarySelectedColor: lipgloss.Color(c.PrimarySelectedColor),
+
+		PrimaryTextColor:   lipgloss.Color(c.PrimaryTextColor),
+		SecondaryTextColor: lipgloss.Color(c.SecondaryTextColor),
+		DisabledTextColor:  lipgloss.Color(c.DisabledTextColor),
+
+		BackgroundColor:          lipgloss.Color(c.BackgroundColor),
+		SecondaryBackgroundColor: lipgloss.Color(c.SecondaryBackgroundColor),
+
+		ErrorColor:       lipgloss.Color(c.ErrorColor),
+		WarningColor:     lipgloss.Color(c.WarningColor),
+		InformationColor: lipgloss.Color(c.InformationColor),
+		HintColor:        lipgloss.Color(c.HintColor),
+
+		CursorColor:         lipgloss.Color(c.CursorColor),
+		DisabledCursorColor: lipgloss.Color(c.DisabledCursorColor),
+	}
+}
+
+type CodeStyles map[string]Style
+
+func (c CodeStyles) Styles() map[string]lipgloss.Style {
+	m := make(map[string]lipgloss.Style)
+	for k, v := range c {
+		m[k] = v.Style()
+	}
+	return m
+}
+
+type StylesConfig struct {
+	Diagnostics DiagnosticsStylesConfig `toml:"diagnostics"`
+}
+
+type DiagnosticsStylesConfig struct {
+	Error       Style `toml:"error"`
+	Warning     Style `toml:"warning"`
+	Information Style `toml:"information"`
+	Hint        Style `toml:"hint"`
 }

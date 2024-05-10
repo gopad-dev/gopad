@@ -16,6 +16,13 @@ hint_color = '6'
 cursor_color = '9'
 disabled_cursor_color = '1'
 
+[styles]
+[styles.diagnostics]
+error = { underline = true, underline_style = 'curly', underline_color = '1' }
+warning = { underline = true, underline_style = 'curly', underline_color = '3' }
+information = { underline = true, underline_style = 'curly', underline_color = '2' }
+hint = { underline = true, underline_style = 'curly', underline_color = '6' }
+
 # Code style configuration
 [code]
 comment.foreground = '8'
