@@ -26,7 +26,7 @@ type LanguageAutoPairs struct {
 }
 
 type TreeSitterConfig struct {
-	Name       string `toml:"name"`
 	SymbolName string `toml:"symbol_name"`
+	QueriesDir string `toml:"queries_dir"`
 	Path       string `toml:"path"`
 }

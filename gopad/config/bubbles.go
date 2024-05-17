@@ -88,7 +88,14 @@ func NewFileTree(name string, openFile func(name string) tea.Cmd, languageIconFu
 	ft.KeyMap = Keys.Editor.FileTree
 	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.OpenFolder.Help().Key)
 	ft.OpenFile = openFile
-	ft.LanguageIconFunc = languageIconFunc
+	ft.Icons = filetree.Icons{
+		RootDir:          Theme.Icons.RootDir,
+		Dir:              Theme.Icons.Dir,
+		OpenDir:          Theme.Icons.OpenDir,
+		File:             Theme.Icons.File,
+		LanguageIconFunc: languageIconFunc,
+	}
+	ft.Ignored = Gopad.FileTree.Ignored
 
 	if name != "" {
 		if err := ft.Open(name); err != nil {

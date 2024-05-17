@@ -67,6 +67,7 @@ delete_word_right = 'ctrl+delete'
 duplicate_line = 'ctrl+d'
 delete_line = 'alt+backspace'
 toggle_comment = 'ctrl+_'
+debug = 'f12'
 
 # File tree key bindings configuration
 [editor.file_tree]

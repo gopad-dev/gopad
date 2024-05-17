@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"go.gopad.dev/go-tree-sitter"
@@ -27,6 +28,7 @@ var (
 		"indents.scm",
 		"folds.scm",
 	}
+	parseTimeout = 10 * time.Second
 )
 
 type Language struct {
@@ -36,13 +38,13 @@ type Language struct {
 }
 
 type Grammar struct {
-	Name            string
-	TreeSitter      *sitter.Language
-	HighlightsQuery []byte
-	InjectionsQuery []byte
-	LocalsQuery     []byte
-	IndentsQuery    []byte
-	FoldsQuery      []byte
+	Language        *sitter.Language
+	HighlightsQuery *sitter.Query
+	InjectionsQuery *sitter.Query
+	LocalsQuery     *sitter.Query
+	IndentsQuery    *sitter.Query
+	FoldsQuery      *sitter.Query
+	ParseTimeout    time.Duration
 }
 
 func (l *Language) Title() string {
@@ -62,7 +64,7 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 		}
 
 		if language.TreeSitter != nil {
-			grammar, err := loadTreeSitterGrammar(*language.TreeSitter, defaultConfigs)
+			grammar, err := loadTreeSitterGrammar(name, *language.TreeSitter, defaultConfigs)
 			if err != nil {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
@@ -76,32 +78,39 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 	return nil
 }
 
-func loadTreeSitterGrammar(cfg config.TreeSitterConfig, defaultConfigs embed.FS) (*Grammar, error) {
-	tsLang, err := sitter.LoadLanguage(cfg.SymbolName, cfg.Path)
+func loadTreeSitterGrammar(name string, cfg config.TreeSitterConfig, defaultConfigs embed.FS) (*Grammar, error) {
+	symbolName := cfg.SymbolName
+	if symbolName == "" {
+		symbolName = name
+	}
+	tsLang, err := sitter.LoadLanguage(symbolName, cfg.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	queriesConfigDir := config.Path
-	queryFiles, err := os.ReadDir(filepath.Join(config.Path, queriesDir, cfg.Name))
+	queriesConfigDir := cfg.QueriesDir
+	if queriesConfigDir == "" {
+		queriesConfigDir = filepath.Join(config.Path, queriesDir, name)
+	}
+	queryFiles, err := os.ReadDir(queriesConfigDir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("error reading queries directory: %w", err)
 	}
 
 	if len(queryFiles) == 0 {
-		queriesConfigDir = "config"
-		queryFiles, err = defaultConfigs.ReadDir(filepath.Join("config", queriesDir, cfg.Name))
+		queriesConfigDir = filepath.Join("config", queriesDir, name)
+		queryFiles, err = defaultConfigs.ReadDir(queriesConfigDir)
 		if err != nil {
 			return nil, fmt.Errorf("error reading default queries directory: %w", err)
 		}
 	}
 
 	var (
-		highlightsQuery []byte
-		injectionsQuery []byte
-		localsQuery     []byte
-		indentsQuery    []byte
-		foldsQuery      []byte
+		highlightsQuery *sitter.Query
+		injectionsQuery *sitter.Query
+		localsQuery     *sitter.Query
+		indentsQuery    *sitter.Query
+		foldsQuery      *sitter.Query
 	)
 
 	for _, queryFile := range queryFiles {
@@ -109,9 +118,16 @@ func loadTreeSitterGrammar(cfg config.TreeSitterConfig, defaultConfigs embed.FS)
 			continue
 		}
 
-		query, err := readQuery(queriesConfigDir, cfg.Name, queryFile)
+		var rawQuery []byte
+		rawQuery, err = readQuery(queriesConfigDir, queryFile)
 		if err != nil {
 			return nil, fmt.Errorf("error reading query file %s: %w", queryFile.Name(), err)
+		}
+
+		var query *sitter.Query
+		query, err = sitter.NewQuery(rawQuery, tsLang)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing query file %s: %w", queryFile.Name(), err)
 		}
 
 		switch queryFile.Name() {
@@ -129,18 +145,18 @@ func loadTreeSitterGrammar(cfg config.TreeSitterConfig, defaultConfigs embed.FS)
 	}
 
 	return &Grammar{
-		Name:            cfg.Name,
-		TreeSitter:      tsLang,
+		Language:        tsLang,
 		HighlightsQuery: highlightsQuery,
 		InjectionsQuery: injectionsQuery,
 		LocalsQuery:     localsQuery,
 		IndentsQuery:    indentsQuery,
 		FoldsQuery:      foldsQuery,
+		ParseTimeout:    parseTimeout,
 	}, nil
 }
 
-func readQuery(config string, name string, query os.DirEntry) ([]byte, error) {
-	f, err := os.Open(filepath.Join(config, queriesDir, name, query.Name()))
+func readQuery(config string, query os.DirEntry) ([]byte, error) {
+	f, err := os.Open(filepath.Join(config, query.Name()))
 	if err != nil {
 		return nil, fmt.Errorf("error opening theme file: %w", err)
 	}

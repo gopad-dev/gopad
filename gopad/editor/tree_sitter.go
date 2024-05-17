@@ -2,12 +2,12 @@ package editor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"go.gopad.dev/go-tree-sitter"
 
@@ -15,65 +15,12 @@ import (
 	"go.gopad.dev/gopad/gopad/lsp"
 )
 
-type Match struct {
-	Range    buffer.Range
-	Type     string
-	Priority int
-	Source   string
-}
-
-type Tree struct {
-	Tree      *sitter.Tree
-	Language  Language
-	SubTrees  []*Tree
-	OffsetRow int
-	OffsetCol int
-}
-
-func (t *Tree) String() string {
-	return t.string(0)
-}
-
-func (t *Tree) string(indent int) string {
-	s := strings.Repeat(" ", indent) + fmt.Sprintf("Tree: %s: %d|%d \n", t.Language.Name, t.OffsetRow, t.OffsetCol)
-	for _, subTree := range t.SubTrees {
-		s += subTree.string(indent+1) + "\n"
-	}
-	return s
-}
-
-func (t *Tree) Print() string {
-	s := fmt.Sprintf("Tree: %s: %d|%d\n", t.Language.Name, t.OffsetRow, t.OffsetCol)
-	s += t.Tree.Print()
-
-	for _, subTree := range t.SubTrees {
-		s += "\n\n" + subTree.Print()
-	}
-
-	return s
-}
-
 func (f *File) InitTree() error {
 	if f.language == nil || f.language.Grammar == nil {
 		return nil
 	}
 
-	tree, err := parseTree(f.buffer.Bytes(), f.tree, *f.language, 0, 0)
-	if err != nil {
-		return err
-	}
-
-	f.tree = tree
-
-	var errs []error
-	if err = f.HighlightTree(); err != nil {
-		errs = append(errs, fmt.Errorf("error highlighting tree: %w", err))
-	}
-	if err = f.ValidateTree(); err != nil {
-		errs = append(errs, fmt.Errorf("error validating tree: %w", err))
-	}
-
-	return errors.Join(errs...)
+	return f.updateTree()
 }
 
 func (f *File) UpdateTree(edit sitter.EditInput) error {
@@ -82,48 +29,59 @@ func (f *File) UpdateTree(edit sitter.EditInput) error {
 	}
 
 	editTree(f.tree, edit)
-	tree, err := parseTree(f.buffer.Bytes(), f.tree, *f.language, 0, 0)
+
+	return f.updateTree()
+}
+
+func (f *File) updateTree() error {
+	ctx, cancel := context.WithTimeout(context.Background(), f.language.Grammar.ParseTimeout)
+	defer cancel()
+
+	tree, err := parseTree(ctx, f.buffer.Bytes(), f.tree, *f.language, 0, 0)
 	if err != nil {
 		return err
 	}
 
 	f.tree = tree
 
-	var errs []error
-	if err = f.HighlightTree(); err != nil {
-		errs = append(errs, fmt.Errorf("error highlighting tree: %w", err))
-	}
-	if err = f.ValidateTree(); err != nil {
-		errs = append(errs, fmt.Errorf("error validating tree: %w", err))
-	}
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	return errors.Join(errs...)
+	go func() {
+		defer wg.Done()
+		f.ValidateTree()
+	}()
+
+	go func() {
+		defer wg.Done()
+		f.HighlightTree()
+	}()
+
+	wg.Wait()
+
+	return nil
 }
 
-func editTree(tree *Tree, edit sitter.EditInput) {
-	tree.Tree.Edit(edit)
-
-	for _, subTree := range tree.SubTrees {
-		editTree(subTree, edit)
-	}
-}
-
-func parseTree(content []byte, oldTree *Tree, language Language, rowOffset int, colOffset int) (*Tree, error) {
+func parseTree(ctx context.Context, content []byte, oldTree *Tree, language Language, rowOffset int, colOffset int) (*Tree, error) {
 	parser := sitter.NewParser()
-	parser.SetLanguage(language.Grammar.TreeSitter)
+	parser.SetLanguage(language.Grammar.Language)
 
 	var oldSitterTree *sitter.Tree
 	if oldTree != nil {
 		oldSitterTree = oldTree.Tree
 	}
-	tree, err := parser.ParseCtx(context.Background(), oldSitterTree, content)
+
+	tree, err := parser.ParseCtx(ctx, oldSitterTree, content)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing tree: %w", err)
 	}
 
-	query, err := sitter.NewQuery(language.Grammar.InjectionsQuery, language.Grammar.TreeSitter)
-	if err != nil {
-		return nil, err
+	query := language.Grammar.InjectionsQuery
+	if query == nil {
+		return &Tree{
+			Tree:     tree,
+			Language: language,
+		}, nil
 	}
 
 	queryCursor := sitter.NewQueryCursor()
@@ -157,7 +115,7 @@ func parseTree(content []byte, oldTree *Tree, language Language, rowOffset int, 
 					}
 				}
 
-				subTree, err := parseTree(content[node.StartByte():node.EndByte()], oldSubTree, *subLanguage, newRowOffset, newColOffset)
+				subTree, err := parseTree(ctx, content[node.StartByte():node.EndByte()], oldSubTree, *subLanguage, newRowOffset, newColOffset)
 				if err != nil {
 					return nil, err
 				}
@@ -205,93 +163,103 @@ func getLanguageByMatch(parentLanguage *Language, match *sitter.QueryMatch) *Lan
 	return nil
 }
 
-func (f *File) HighlightTree() error {
-	if f.tree == nil || f.tree.Tree == nil {
-		return nil
-	}
-
-	matches, err := highlightTree(f.tree)
-	if err != nil {
-		return err
-	}
-
-	slices.SortFunc(matches, func(a, b Match) int {
-		return b.Priority - a.Priority
-	})
-
-	f.matches = matches
-
-	return nil
-}
-
-func highlightTree(tree *Tree) ([]Match, error) {
-	query, err := sitter.NewQuery(tree.Language.Grammar.HighlightsQuery, tree.Language.Grammar.TreeSitter)
-	if err != nil {
-		return nil, err
-	}
-
-	queryCursor := sitter.NewQueryCursor()
-	queryCursor.Exec(query, tree.Tree.RootNode())
-
-	var matches []Match
-	for {
-		match, ok := queryCursor.NextMatch()
-		if !ok {
-			break
-		}
-
-		for _, capture := range match.Captures {
-			node := capture.Node
-			realRow := int(node.StartPoint().Row) + tree.OffsetRow
-			realCol := int(node.StartPoint().Column)
-			realEndRow := int(node.EndPoint().Row) + tree.OffsetRow
-			realEndCol := int(node.EndPoint().Column)
-			if realRow == tree.OffsetRow {
-				realCol += tree.OffsetCol
-				realEndCol += tree.OffsetCol
-			}
-
-			priority := 100
-			if priorityStr, ok := match.Properties["priority"]; ok {
-				parsedPriority, err := strconv.Atoi(priorityStr)
-				if err == nil {
-					priority = parsedPriority
-				}
-			}
-
-			matches = append(matches, Match{
-				Range: buffer.Range{
-					Start: buffer.Position{Row: realRow, Col: realCol},
-					End:   buffer.Position{Row: realEndRow, Col: realEndCol - 1}, // -1 to exclude the last character idk why this is like this tbh
-				},
-				Type:     query.CaptureNameForID(capture.Index),
-				Priority: priority,
-				Source:   tree.Language.Name,
-			})
-		}
-	}
+func editTree(tree *Tree, edit sitter.EditInput) {
+	tree.Tree.Edit(edit)
 
 	for _, subTree := range tree.SubTrees {
-		subMatches, err := highlightTree(subTree)
-		if err != nil {
-			return nil, err
-		}
-		matches = append(subMatches, matches...)
+		editTree(subTree, edit)
 	}
-
-	return matches, nil
 }
 
-func (f *File) ValidateTree() error {
+type Tree struct {
+	Tree      *sitter.Tree
+	Language  Language
+	SubTrees  []*Tree
+	OffsetRow int
+	OffsetCol int
+}
+
+func (t *Tree) Copy() *Tree {
+	var subTrees []*Tree
+	for _, subTree := range t.SubTrees {
+		subTrees = append(subTrees, subTree.Copy())
+	}
+
+	return &Tree{
+		Tree:      t.Tree.Copy(),
+		Language:  t.Language,
+		SubTrees:  subTrees,
+		OffsetRow: t.OffsetRow,
+		OffsetCol: t.OffsetCol,
+	}
+}
+
+func (t *Tree) String() string {
+	return t.string(0)
+}
+
+func (t *Tree) string(indent int) string {
+	s := strings.Repeat(" ", indent) + fmt.Sprintf("Tree: %s: %d|%d \n", t.Language.Name, t.OffsetRow, t.OffsetCol)
+	for _, subTree := range t.SubTrees {
+		s += subTree.string(indent+1) + "\n"
+	}
+	return s
+}
+
+func (t *Tree) Print() string {
+	s := fmt.Sprintf("Tree: %s: %d|%d\n", t.Language.Name, t.OffsetRow, t.OffsetCol)
+	s += t.Tree.Print()
+
+	for _, subTree := range t.SubTrees {
+		s += "\n\n" + subTree.Print()
+	}
+
+	return s
+}
+
+func (t *Tree) Range() buffer.Range {
+	start := t.Tree.RootNode().StartPoint()
+	end := t.Tree.RootNode().EndPoint()
+
+	endCol := int(end.Column)
+	if end.Row == start.Row {
+		endCol += t.OffsetCol
+	}
+	return buffer.Range{
+		Start: buffer.Position{
+			Row: int(start.Row) + t.OffsetRow,
+			Col: int(start.Column) + t.OffsetCol,
+		},
+		End: buffer.Position{
+			Row: int(end.Row) + t.OffsetRow,
+			Col: endCol,
+		},
+	}
+}
+
+func (t *Tree) FindTree(p buffer.Position) *Tree {
+	if len(t.SubTrees) == 0 {
+		return t
+	}
+
+	for _, subTree := range t.SubTrees {
+		if subTree.Range().Contains(p) {
+			return subTree.FindTree(p)
+		}
+	}
+
+	return t
+}
+
+func (f *File) ValidateTree() {
 	if f.tree == nil || f.tree.Tree == nil {
-		return nil
+		return
 	}
 	version := f.Version()
 
-	diagnostics := validateTree(f.tree)
+	diagnostics := validateTree(f.tree.Copy())
 
 	f.SetDiagnostic(version, diagnostics)
-	return nil
 }
 
 func validateTree(tree *Tree) []lsp.Diagnostic {
@@ -340,6 +308,79 @@ func validateTree(tree *Tree) []lsp.Diagnostic {
 	return diagnostics
 }
 
+type Match struct {
+	Range    buffer.Range
+	Type     string
+	Priority int
+	Source   string
+}
+
+func (f *File) HighlightTree() {
+	if f.tree == nil || f.tree.Tree == nil {
+		return
+	}
+	version := f.Version()
+
+	matches := highlightTree(f.tree.Copy())
+
+	slices.SortFunc(matches, func(a, b Match) int {
+		return b.Priority - a.Priority
+	})
+
+	f.SetMatches(version, matches)
+}
+
+func highlightTree(tree *Tree) []Match {
+	query := tree.Language.Grammar.HighlightsQuery
+	queryCursor := sitter.NewQueryCursor()
+	queryCursor.Exec(query, tree.Tree.RootNode())
+
+	var matches []Match
+	for {
+		match, ok := queryCursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range match.Captures {
+			node := capture.Node
+			realRow := int(node.StartPoint().Row) + tree.OffsetRow
+			realCol := int(node.StartPoint().Column)
+			realEndRow := int(node.EndPoint().Row) + tree.OffsetRow
+			realEndCol := int(node.EndPoint().Column)
+			if realRow == tree.OffsetRow {
+				realCol += tree.OffsetCol
+				realEndCol += tree.OffsetCol
+			}
+
+			priority := 100
+			if priorityStr, ok := match.Properties["priority"]; ok {
+				parsedPriority, err := strconv.Atoi(priorityStr)
+				if err == nil {
+					priority = parsedPriority
+				}
+			}
+
+			matches = append(matches, Match{
+				Range: buffer.Range{
+					Start: buffer.Position{Row: realRow, Col: realCol},
+					End:   buffer.Position{Row: realEndRow, Col: realEndCol - 1}, // -1 to exclude the last character idk why this is like this tbh
+				},
+				Type:     query.CaptureNameForID(capture.Index),
+				Priority: priority,
+				Source:   tree.Language.Name,
+			})
+		}
+	}
+
+	for _, subTree := range tree.SubTrees {
+		subMatches := highlightTree(subTree)
+		matches = append(subMatches, matches...)
+	}
+
+	return matches
+}
+
 type Local struct {
 	Name       string
 	Properties map[string]string
@@ -350,11 +391,7 @@ func (f *File) parseLocals() error {
 		return nil
 	}
 
-	query, err := sitter.NewQuery(f.language.Grammar.LocalsQuery, f.language.Grammar.TreeSitter)
-	if err != nil {
-		return err
-	}
-
+	query := f.language.Grammar.LocalsQuery
 	queryCursor := sitter.NewQueryCursor()
 	queryCursor.Exec(query, f.tree.Tree.RootNode())
 

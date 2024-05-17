@@ -7,8 +7,9 @@ import (
 )
 
 type GopadConfig struct {
-	Theme  string       `toml:"theme"`
-	Editor EditorConfig `toml:"editor"`
+	Theme    string         `toml:"theme"`
+	Editor   EditorConfig   `toml:"editor"`
+	FileTree FileTreeConfig `toml:"file_tree"`
 }
 
 func DefaultGopadConfig() GopadConfig {
@@ -27,6 +28,9 @@ func DefaultGopadConfig() GopadConfig {
 				BlinkInterval: Duration(cursor.DefaultBlinkInterval),
 				Shape:         cursor.ShapeBlock,
 			},
+		},
+		FileTree: FileTreeConfig{
+			Ignored: nil,
 		},
 	}
 }
@@ -61,4 +65,8 @@ func (d *Duration) UnmarshalText(text []byte) error {
 
 func (d Duration) MarshalText() ([]byte, error) {
 	return []byte(time.Duration(d).String()), nil
+}
+
+type FileTreeConfig struct {
+	Ignored []string `toml:"ignored"`
 }

@@ -18,6 +18,7 @@ import (
 type RawThemeConfig struct {
 	Name   string       `toml:"name"`
 	Colors ColorsConfig `toml:"colors"`
+	Icons  IconsConfig  `toml:"icons"`
 	Styles StylesConfig `toml:"styles"`
 	Code   CodeStyles   `toml:"code"`
 }
@@ -35,6 +36,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 	return ThemeConfig{
 		Name:             c.Name,
 		Colors:           colors,
+		Icons:            c.Icons,
 		AppBarStyle:      lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
 		AppBarTitleStyle: lipgloss.NewStyle().Padding(0, 1),
 		Editor: EditorStyles{
@@ -211,4 +213,16 @@ type DiagnosticsStylesConfig struct {
 	Warning     Style `toml:"warning"`
 	Information Style `toml:"information"`
 	Hint        Style `toml:"hint"`
+}
+
+type IconsConfig struct {
+	RootDir rune `toml:"root_dir"`
+	Dir     rune `toml:"dir"`
+	OpenDir rune `toml:"open_dir"`
+	File    rune `toml:"file"`
+
+	Error       rune `toml:"error"`
+	Warning     rune `toml:"warning"`
+	Information rune `toml:"information"`
+	Hint        rune `toml:"hint"`
 }

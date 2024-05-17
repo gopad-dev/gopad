@@ -11,16 +11,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
+
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
-)
-
-var (
-	ignoreDirs          = []string{} // []string{".git", ".idea"}
-	rootFolderIcon rune = 0xef81
-	dirIcon        rune = 0xf024b
-	dirOpenIcon    rune = 0xf0770
-	fileIcon       rune = 0xea7b
 )
 
 type Entry struct {
@@ -117,26 +111,43 @@ var DefaultKeyMap = KeyMap{
 	),
 }
 
+type Icons struct {
+	RootDir          rune
+	Dir              rune
+	OpenDir          rune
+	File             rune
+	LanguageIconFunc func(string) rune
+}
+
+var DefaultIcons = Icons{
+	RootDir: '📁',
+	Dir:     '📂',
+	OpenDir: '📁',
+	File:    '📄',
+}
+
 func New() Model {
 	return Model{
 		Width:     24,
 		Styles:    DefaultStyles,
 		KeyMap:    DefaultKeyMap,
+		Icons:     DefaultIcons,
 		EmptyText: "No folder open",
 	}
 }
 
 type Model struct {
-	entry            *Entry
-	focus            bool
-	show             bool
-	offset           int
-	Width            int
-	Styles           Styles
-	KeyMap           KeyMap
-	EmptyText        string
-	OpenFile         func(string) tea.Cmd
-	LanguageIconFunc func(string) rune
+	entry     *Entry
+	focus     bool
+	show      bool
+	offset    int
+	Width     int
+	Styles    Styles
+	Icons     Icons
+	KeyMap    KeyMap
+	EmptyText string
+	Ignored   []string
+	OpenFile  func(string) tea.Cmd
 }
 
 func (m *Model) Open(name string) error {
@@ -163,7 +174,7 @@ func (m *Model) Open(name string) error {
 
 		current := root
 		for _, component := range strings.Split(relPath, string(os.PathSeparator)) {
-			if slices.Contains(ignoreDirs, component) {
+			if slices.Contains(m.Ignored, component) {
 				return filepath.SkipDir
 			}
 			found := false
@@ -395,26 +406,26 @@ func (m Model) entryView(e *Entry, indent string) string {
 
 	if e.IsDir {
 		if indent == "" {
-			icon = rootFolderIcon
+			icon = m.Icons.RootDir
 		} else {
 			if e.Open {
-				icon = dirOpenIcon
+				icon = m.Icons.OpenDir
 			} else {
-				icon = dirIcon
+				icon = m.Icons.Dir
 			}
 		}
 	} else {
-		if m.LanguageIconFunc != nil {
-			icon = m.LanguageIconFunc(e.Name)
+		if m.Icons.LanguageIconFunc != nil {
+			icon = m.Icons.LanguageIconFunc(e.Name)
 		}
 		if icon == 0 {
-			icon = fileIcon
+			icon = m.Icons.File
 		}
 	}
 
 	line := indent + string(icon) + " " + e.Name
-	if lipgloss.Width(line) > m.Width {
-		line = string([]rune(line)[:m.Width-1]) + "…"
+	if runewidth.StringWidth(line) > m.Width {
+		line = runewidth.Truncate(line, m.Width, "…")
 	} else {
 		line += strings.Repeat(" ", m.Width-lipgloss.Width(line))
 	}

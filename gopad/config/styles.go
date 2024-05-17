@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/charmbracelet/lipgloss"
+
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
@@ -19,6 +20,7 @@ type ThemeConfig struct {
 	Name string
 
 	Colors Colors
+	Icons  IconsConfig
 
 	AppBarStyle      lipgloss.Style
 	AppBarTitleStyle lipgloss.Style

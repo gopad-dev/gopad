@@ -128,6 +128,7 @@ type EditorKeyMap struct {
 	DeleteLine      key.Binding
 
 	ToggleComment key.Binding
+	Debug         key.Binding
 
 	FileTree  filetree.KeyMap
 	SearchBar searchbar.KeyMap
@@ -201,6 +202,7 @@ func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
 				k.DeleteLine,
 				emptyKeyBind,
 				k.ToggleComment,
+				k.Debug,
 			},
 		},
 	}
@@ -464,6 +466,7 @@ type EditorKeyConfig struct {
 	DeleteLine      string `toml:"delete_line"`
 
 	ToggleComment string `toml:"toggle_comment"`
+	Debug         string `toml:"debug"`
 
 	FileTree  FileTreeKeyConfig  `toml:"file_tree"`
 	SearchBar SearchBarKeyConfig `toml:"search_bar"`
@@ -684,6 +687,10 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 		ToggleComment: key.NewBinding(
 			key.WithKeys(k.ToggleComment),
 			key.WithHelp(k.ToggleComment, "toggle comment"),
+		),
+		Debug: key.NewBinding(
+			key.WithKeys(k.Debug),
+			key.WithHelp(k.Debug, "debug"),
 		),
 		FileTree:  k.FileTree.KeyMap(),
 		SearchBar: k.SearchBar.KeyMap(),

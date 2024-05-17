@@ -86,6 +86,7 @@ type File struct {
 	autocomplete          *Autocompleter
 	diagnosticVersion     int32
 	diagnostics           []lsp.Diagnostic
+	matchesVersion        int32
 	matches               []Match
 	locals                []Local
 	changes               []Change
@@ -232,6 +233,18 @@ func (f *File) HideCurrentDiagnostic() {
 	f.showCurrentDiagnostic = false
 }
 
+func (f *File) SetMatches(version int32, matches []Match) {
+	if version < f.matchesVersion {
+		return
+	}
+	if version > f.matchesVersion {
+		f.matches = matches
+		f.matchesVersion = version
+		return
+	}
+	f.matches = append(f.matches, matches...)
+}
+
 func (f *File) Matches() []Match {
 	return f.matches
 }
@@ -333,11 +346,26 @@ func (f *File) InsertRunes(text []rune) tea.Cmd {
 	return f.Insert([]byte(string(text)))
 }
 
-func (f *File) Replace(fromRow int, fromCol int, toRow int, toCol int, text []byte) tea.Cmd {
+func (f *File) InsertAt(row int, col int, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 	if len(text) == 0 {
 		return nil
 	}
+
+	startIndex := f.buffer.ByteIndex(row, col)
+
+	f.buffer.Insert(row, col, text)
+
+	return f.recordChange(Change{
+		StartIndex:  uint32(startIndex),
+		OldEndIndex: uint32(startIndex + 1),
+		NewEndIndex: uint32(startIndex + runewidth.StringWidth(string(text)) + 1),
+		Text:        f.buffer.Bytes(),
+	})
+}
+
+func (f *File) Replace(fromRow int, fromCol int, toRow int, toCol int, text []byte) tea.Cmd {
+	text = xrunes.Sanitize(text)
 
 	startIndex := f.buffer.ByteIndex(fromRow, fromCol)
 	endIndex := f.buffer.ByteIndex(toRow, toCol)

@@ -271,6 +271,10 @@ func (b *Buffer) Bytes() []byte {
 }
 
 func (b *Buffer) BytesRange(start Position, end Position) []byte {
+	if start.Row == end.Row {
+		return b.lines[start.Row].CutRange(start.Col, end.Col).Bytes()
+	}
+
 	var bs []byte
 	for i := start.Row; i <= end.Row; i++ {
 		line := b.lines[i]
@@ -400,6 +404,9 @@ func (b *Buffer) Replace(fromRow int, fromCol int, toRow int, toCol int, text []
 	}()
 
 	row, col := b.DeleteRange(fromRow, fromCol, toRow, toCol)
+	if len(text) == 0 {
+		return row, col
+	}
 	return b.Insert(row, col, text)
 }
 
@@ -497,7 +504,7 @@ func (b *Buffer) DeleteRange(startRow int, startCol int, endRow int, endCol int)
 	}()
 
 	if startRow == endRow {
-		b.lines[startRow] = b.lines[startRow].CutRange(startCol, endCol)
+		b.lines[startRow] = b.lines[startRow].CutEnd(startCol).Append(b.lines[startRow].CutStart(endCol))
 	} else {
 		b.lines[startRow] = b.lines[startRow].CutEnd(startCol).Append(b.lines[endRow].CutStart(endCol))
 		b.lines = append(b.lines[:startRow+1], b.lines[endRow+1:]...)

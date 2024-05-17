@@ -19,3 +19,11 @@ insert_final_newline = true
 mode = 'blink'
 blink_interval = '530ms'
 shape = 'block'
+
+[file_tree]
+ignored = [
+    '.git',
+    '.idea',
+    '.vscode',
+    'node_modules'
+]

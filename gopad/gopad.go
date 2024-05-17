@@ -191,9 +191,12 @@ func (g Gopad) CodeBar() string {
 	}
 
 	if language := file.Language(); language != nil {
-		infoLine += fmt.Sprintf("%s ", language.Name)
+		infoLine += fmt.Sprintf("lang:%s ", language.Name)
+		if language.Icon > 0 {
+			infoLine += fmt.Sprintf("%c ", language.Icon)
+		}
 		if language.Grammar != nil {
-			infoLine += fmt.Sprintf("(ts:%s) ", language.Grammar.Name)
+			infoLine += "(ts) "
 		}
 	}
 

@@ -24,6 +24,7 @@ require (
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.1-0.20240203004437-3c0d4339e51f
 	go.uber.org/zap v1.27.0
+	golang.org/x/sync v0.7.0
 	golang.org/x/text v0.15.0
 )
 
@@ -45,7 +46,6 @@ require (
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

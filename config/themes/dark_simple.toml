@@ -16,6 +16,17 @@ hint_color = '6'
 cursor_color = '9'
 disabled_cursor_color = '1'
 
+[icons]
+root_dir = 0x1F4C1
+dir = 0x1F4C1
+open_dir = 0x1F4C2
+file = 0x1F4C4
+
+error = 0x1F5D9
+warning = 0x26A0
+information = 0x1F6C8
+hint = 0x1F4A1
+
 [styles]
 [styles.diagnostics]
 error = { underline = true }

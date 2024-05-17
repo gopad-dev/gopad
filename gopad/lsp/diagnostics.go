@@ -57,13 +57,13 @@ func (d DiagnosticSeverity) String() string {
 func (d DiagnosticSeverity) Icon() string {
 	switch d {
 	case DiagnosticSeverityError:
-		return "🗙"
+		return string(config.Theme.Icons.Error)
 	case DiagnosticSeverityWarning:
-		return "⚠"
+		return string(config.Theme.Icons.Warning)
 	case DiagnosticSeverityInformation:
-		return "🛈"
+		return string(config.Theme.Icons.Information)
 	case DiagnosticSeverityHint:
-		return "⚑"
+		return string(config.Theme.Icons.Hint)
 	default:
 		return " "
 	}
@@ -109,7 +109,7 @@ const (
 func (d DiagnosticType) String() string {
 	switch d {
 	case DiagnosticTypeTreeSitter:
-		return "TreeSitter"
+		return "Language"
 	case DiagnosticTypeLanguageServer:
 		return "LanguageServer"
 	default:

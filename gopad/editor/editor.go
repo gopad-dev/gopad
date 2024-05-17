@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
+	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
@@ -722,7 +724,55 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
 					file.ResetMark()
 				} else {
+					row, col := file.Cursor()
+					toDelete := file.buffer.Line(row).RuneBytes(col - 1)
 					cmds = append(cmds, file.DeleteBefore(1))
+					if lang := file.Language(); lang != nil && len(lang.AutoPairs) > 0 {
+						row, col = file.Cursor()
+
+						fileTree := file.Tree()
+						if fileTree != nil {
+							tree := fileTree.FindTree(buffer.Position{
+								Row: row,
+								Col: col,
+							})
+							if tree != nil {
+								node := tree.Tree.RootNode().DescendantForRange(sitter.Point{
+									Row:    uint32(row),
+									Column: uint32(col),
+								},
+									sitter.Point{
+										Row:    uint32(row),
+										Column: uint32(col),
+									},
+								)
+								if node != nil && node.Type() == "string" {
+									log.Println("IN STRING")
+								}
+							}
+						}
+
+						for _, pair := range lang.AutoPairs {
+							if string(toDelete) != pair.Open {
+								continue
+							}
+							closeWidth := runewidth.StringWidth(pair.Close)
+							behindCursor := file.buffer.BytesRange(
+								buffer.Position{
+									Row: row,
+									Col: col,
+								},
+								buffer.Position{
+									Row: row,
+									Col: col + closeWidth,
+								},
+							)
+							if string(behindCursor) == pair.Close {
+								cmds = append(cmds, file.Replace(row, col, row, col+closeWidth, nil))
+								break
+							}
+						}
+					}
 				}
 			case key.Matches(msg, config.Keys.Editor.DuplicateLine):
 				s := file.Selection()
@@ -759,11 +809,55 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.ToggleComment):
 				cmds = append(cmds, file.ToggleComment())
 				overwriteCursorBlink = true
+			case key.Matches(msg, config.Keys.Editor.Debug):
+				if lang := file.Language(); lang != nil {
+					row, col := file.Cursor()
+
+					fileTree := file.Tree()
+					if fileTree != nil {
+						tree := fileTree.FindTree(buffer.Position{
+							Row: row,
+							Col: col,
+						})
+						if tree != nil {
+							query := tree.Language.Grammar.HighlightsQuery
+							cursor := sitter.NewQueryCursor()
+							cursor.Exec(query, tree.Tree.RootNode().DescendantForRange(
+								sitter.Point{
+									Row:    uint32(row),
+									Column: uint32(col),
+								},
+								sitter.Point{
+									Row:    uint32(row),
+									Column: uint32(col),
+								},
+							))
+
+							match, ok := cursor.NextMatch()
+							if ok {
+								for _, capture := range match.Captures {
+									log.Println("capture", capture.Node.Type(), query.CaptureNameForID(capture.Index))
+								}
+							}
+						}
+					}
+				}
 			default:
 				cmds = append(cmds, file.InsertRunes(msg.Runes))
 				if file.autocomplete.Visible() {
 					row, col := file.Cursor()
 					cmds = append(cmds, lsp.GetAutocompletion(file.Name(), row, col))
+				}
+
+				// handle auto pairs
+				if lang := file.Language(); lang != nil && len(lang.AutoPairs) > 0 {
+					for _, pair := range lang.AutoPairs {
+						if string(msg.Runes) == pair.Open {
+							row, col := file.Cursor()
+							cmds = append(cmds, file.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
+							break
+						}
+					}
 				}
 			}
 		}
@@ -827,9 +921,12 @@ func (e Editor) View(width int, height int) string {
 
 func (e Editor) FileTabsView(maxWidth int) string {
 	var files string
-	for path, buff := range e.files {
-		fileName := clampString(buff.FileName(), 16)
-		if buff.Dirty() {
+	for path, file := range e.files {
+		fileName := clampString(file.FileName(), 16)
+		if file.language != nil && file.language.Icon > 0 {
+			fileName = fmt.Sprintf("%c %s", file.language.Icon, fileName)
+		}
+		if file.Dirty() {
 			fileName += "*"
 		} else {
 			fileName += " "
