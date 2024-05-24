@@ -4,7 +4,7 @@ go 1.22
 
 replace (
 	github.com/charmbracelet/lipgloss => github.com/gopad-dev/lipgloss v0.0.0-20240422161526-eea0119313bc
-	github.com/muesli/termenv => github.com/topi314/termenv v0.0.0-20240413225005-5f4a43fcdd7b
+	github.com/muesli/termenv => github.com/gopad-dev/termenv v0.0.0-20240413225005-5f4a43fcdd7b
 )
 
 require (
@@ -13,6 +13,7 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.2
 	github.com/charmbracelet/lipgloss v0.10.0
+	github.com/charmbracelet/x/ansi v0.1.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/reflow v0.3.0
@@ -24,13 +25,12 @@ require (
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.1-0.20240203004437-3c0d4339e51f
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.7.0
 	golang.org/x/text v0.15.0
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/x/exp/term v0.0.0-20240509130423-e48c874ef5d2 // indirect
+	github.com/charmbracelet/x/exp/term v0.0.0-20240422143423-943add0689d8 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
@@ -46,6 +46,7 @@ require (
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

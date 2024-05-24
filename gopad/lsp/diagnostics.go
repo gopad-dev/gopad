@@ -49,9 +49,8 @@ func (d DiagnosticSeverity) String() string {
 		return "Information"
 	case DiagnosticSeverityHint:
 		return "Hint"
-	default:
-		return "Unknown"
 	}
+	return "Unknown"
 }
 
 func (d DiagnosticSeverity) Icon() string {
@@ -64,9 +63,8 @@ func (d DiagnosticSeverity) Icon() string {
 		return string(config.Theme.Icons.Information)
 	case DiagnosticSeverityHint:
 		return string(config.Theme.Icons.Hint)
-	default:
-		return " "
 	}
+	return " "
 }
 
 func (d DiagnosticSeverity) Style() lipgloss.Style {
@@ -79,9 +77,8 @@ func (d DiagnosticSeverity) Style() lipgloss.Style {
 		return config.Theme.Editor.Diagnostics.InformationStyle
 	case DiagnosticSeverityHint:
 		return config.Theme.Editor.Diagnostics.HintStyle
-	default:
-		return lipgloss.NewStyle()
 	}
+	return lipgloss.NewStyle()
 }
 
 func (d DiagnosticSeverity) CharStyle() lipgloss.Style {
@@ -94,9 +91,8 @@ func (d DiagnosticSeverity) CharStyle() lipgloss.Style {
 		return config.Theme.Editor.Diagnostics.InformationCharStyle
 	case DiagnosticSeverityHint:
 		return config.Theme.Editor.Diagnostics.HintCharStyle
-	default:
-		return lipgloss.NewStyle()
 	}
+	return lipgloss.NewStyle()
 }
 
 type DiagnosticType int
@@ -109,12 +105,11 @@ const (
 func (d DiagnosticType) String() string {
 	switch d {
 	case DiagnosticTypeTreeSitter:
-		return "Language"
+		return "TreeSitter"
 	case DiagnosticTypeLanguageServer:
 		return "LanguageServer"
-	default:
-		return "Unknown"
 	}
+	return "Unknown"
 }
 
 type Diagnostic struct {
@@ -135,7 +130,10 @@ func (d Diagnostic) ShortView() string {
 
 func (d Diagnostic) View(width int, height int) string {
 	width = min(width, 80)
-	height = min(height, 10)
+	height = max(height-2, 0)
 
-	return config.Theme.Editor.Documentation.Style.Render(fmt.Sprintf("%s\n%s", d.Severity.Style().Render(d.Severity.Icon()+" "), d.Message))
+	return config.Theme.Editor.Documentation.Style.
+		Width(width).
+		MaxHeight(height).
+		Render(fmt.Sprintf("%s: %s %s\n\n%s\n%s", d.Type, d.Source, d.Severity.Style().Render(d.Severity.Icon()+" "), d.Message, d.Source))
 }

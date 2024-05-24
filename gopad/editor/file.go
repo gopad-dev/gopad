@@ -9,8 +9,8 @@ import (
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/reflow/ansi"
 	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
@@ -144,140 +144,6 @@ func (f *File) SetLanguage(name string) {
 	// reset tree and matches when changing language
 	f.tree = nil
 	f.matches = nil
-}
-
-func (f *File) SetDiagnostic(version int32, diagnostics []lsp.Diagnostic) {
-	if version < f.diagnosticVersion {
-		return
-	}
-	if version > f.diagnosticVersion {
-		f.diagnostics = diagnostics
-		f.diagnosticVersion = version
-		return
-	}
-	f.diagnostics = append(f.diagnostics, diagnostics...)
-}
-
-func (f *File) Diagnostics() []lsp.Diagnostic {
-	return f.diagnostics
-}
-
-func (f *File) ClearDiagnosticsByType(dType lsp.DiagnosticType) {
-	diagnostics := f.diagnostics[:0]
-	for i := range f.diagnostics {
-		if f.diagnostics[i].Type != dType {
-			diagnostics = append(diagnostics, f.diagnostics[i])
-		}
-	}
-
-	f.diagnostics = diagnostics
-}
-
-func (f *File) DiagnosticsForLineCol(row int, col int) []lsp.Diagnostic {
-	pos := buffer.Position{Row: row, Col: col}
-
-	var diagnostics []lsp.Diagnostic
-	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) {
-			diagnostics = append(diagnostics, diag)
-		}
-	}
-	return diagnostics
-}
-
-func (f *File) HighestLineDiagnostic(row int) lsp.Diagnostic {
-	var diagnostic lsp.Diagnostic
-	for _, diag := range f.diagnostics {
-		if diag.Range.ContainsRow(row) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
-			diagnostic = diag
-		}
-	}
-	return diagnostic
-}
-
-func (f *File) HighestLineColDiagnostic(row int, col int) lsp.Diagnostic {
-	pos := buffer.Position{Row: row, Col: col}
-
-	var diagnostic lsp.Diagnostic
-	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
-			diagnostic = diag
-		}
-	}
-
-	return diagnostic
-}
-
-func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
-	pos := buffer.Position{Row: row, Col: col}
-
-	var diagnostic lsp.Diagnostic
-	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
-			diagnostic = diag
-		}
-	}
-
-	if diagnostic.Severity == 0 {
-		return style
-	}
-
-	return diagnostic.Severity.CharStyle().Copy().Inherit(style)
-}
-
-func (f *File) ShowCurrentDiagnostic() {
-	f.showCurrentDiagnostic = true
-}
-
-func (f *File) HideCurrentDiagnostic() {
-	f.showCurrentDiagnostic = false
-}
-
-func (f *File) SetMatches(version int32, matches []Match) {
-	if version < f.matchesVersion {
-		return
-	}
-	if version > f.matchesVersion {
-		f.matches = matches
-		f.matchesVersion = version
-		return
-	}
-	f.matches = append(f.matches, matches...)
-}
-
-func (f *File) Matches() []Match {
-	return f.matches
-}
-
-func (f *File) MatchesForLineCol(row int, col int) []Match {
-	pos := buffer.Position{Row: row, Col: col}
-
-	var matches []Match
-	for _, match := range f.matches {
-		if match.Range.Contains(pos) {
-			matches = append(matches, match)
-		}
-	}
-	return matches
-}
-
-func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
-	for _, match := range f.MatchesForLineCol(row, col) {
-		matchType := match.Type
-		for {
-			codeStyle, ok := config.Theme.Editor.CodeStyles[matchType]
-			if ok {
-				return style.Copy().Inherit(codeStyle)
-			}
-			lastDot := strings.LastIndex(matchType, ".")
-			if lastDot == -1 {
-				break
-			}
-			matchType = matchType[:lastDot]
-		}
-	}
-
-	return style
 }
 
 func (f *File) Tree() *Tree {
@@ -620,8 +486,12 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			col := ii + offsetCol
 			var char string
 			if col > len(chars) {
-				codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
-				break
+				//codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
+				//break
+				char = " "
+				if col == len(chars)+1 {
+					break
+				}
 			} else if col == len(chars) {
 				char = " "
 			} else {
@@ -649,13 +519,13 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		}
 
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
-			lineWidth := ansi.PrintableRuneWidth(string(codeLine))
+			lineWidth := ansi.StringWidth(string(codeLine))
 			if lineWidth < width {
 				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.ShortView())...)
 			}
 		}
 
-		lineWidth := ansi.PrintableRuneWidth(string(codeLine))
+		lineWidth := ansi.StringWidth(string(codeLine))
 		if lineWidth < width {
 			codeLine = append(codeLine, codeLineCharStyle.Render(strings.Repeat(" ", width-lineWidth))...)
 		}

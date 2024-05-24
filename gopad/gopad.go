@@ -19,8 +19,8 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
 
-func New(lspClient *lsp.LSP, version string, args []string) (*Gopad, error) {
-	e, err := editor.NewEditor(args)
+func New(lspClient *lsp.LSP, version string, workspace *string, args []string) (*Gopad, error) {
+	e, err := editor.NewEditor(workspace, args)
 	if err != nil {
 		return nil, err
 	}

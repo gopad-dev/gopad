@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -36,6 +35,7 @@ func main() {
 	pprof := pflag.StringP("pprof", "p", "", "enable & set pprof address:port")
 	configDir := pflag.StringP("config-dir", "c", "", "set config directory")
 	createConfig := pflag.String("create-config", "", "create a new config file in the specified directory")
+	workspace := pflag.String("workspace", "", "set workspace directory")
 	pflag.Parse()
 
 	if help != nil && *help {
@@ -109,7 +109,7 @@ func main() {
 	}
 
 	lspClient := lsp.New(Version, config.LSP, lspLogFile)
-	e, err := gopad.New(lspClient, Version, pflag.Args())
+	e, err := gopad.New(lspClient, Version, workspace, pflag.Args())
 	if err != nil {
 		log.Panicln("failed to start gopad:", err)
 	}

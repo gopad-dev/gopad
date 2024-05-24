@@ -37,7 +37,7 @@ var fileIconFunc = func(name string) rune {
 	return 0
 }
 
-func NewEditor(args []string) (*Editor, error) {
+func NewEditor(workspace *string, args []string) (*Editor, error) {
 	editor := Editor{
 		searchBar: config.NewSearchBar(
 			func(result searchbar.Result) tea.Cmd {
@@ -47,50 +47,14 @@ func NewEditor(args []string) (*Editor, error) {
 		),
 	}
 
-	if len(args) == 1 {
-		stat, err := os.Stat(args[0])
-		if errors.Is(err, os.ErrNotExist) {
-			if _, err = editor.CreateFile(args[0]); err != nil {
-				return nil, err
-			}
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to stat workspace or file: %w", err)
-		}
-
-		var workspacePath string
-		if stat != nil && stat.IsDir() {
-			if workspacePath, err = filepath.Abs(args[0]); err != nil {
-				return nil, fmt.Errorf("failed to get absolute path for workspace: %w", err)
-			}
-		}
-		editor.workspace = workspacePath
-		if editor.fileTree, err = config.NewFileTree(workspacePath, func(name string) tea.Cmd {
-			return OpenFile(name)
-		}, fileIconFunc); err != nil {
-			return nil, fmt.Errorf("failed to init file tree: %w", err)
-		}
-
-		if stat != nil && !stat.IsDir() {
-			if _, err = editor.OpenFile(args[0]); err != nil {
-				return nil, fmt.Errorf("failed to open file: %w", err)
-			}
-		} else if stat != nil {
-			editor.fileTree.Show()
-			editor.fileTree.Focus()
-		}
-
-		return &editor, nil
-	}
-
-	var err error
-	if editor.fileTree, err = config.NewFileTree("", func(name string) tea.Cmd {
-		return OpenFile(name)
-	}, fileIconFunc); err != nil {
-		return nil, fmt.Errorf("failed to init file tree: %w", err)
+	var workspacePath string
+	if workspace != nil {
+		workspacePath = *workspace
 	}
 
 	for _, arg := range args {
-		stat, err := os.Stat(args[0])
+		log.Println("arg", arg)
+		stat, err := os.Stat(arg)
 		if errors.Is(err, os.ErrNotExist) {
 			if _, err = editor.CreateFile(arg); err != nil {
 				return nil, err
@@ -100,13 +64,32 @@ func NewEditor(args []string) (*Editor, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if stat.IsDir() {
+			if workspacePath == "" {
+				workspacePath, err = filepath.Abs(args[0])
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			continue
 		}
 		if _, err = editor.OpenFile(arg); err != nil {
 			return nil, err
 		}
 	}
+
+	if workspacePath != "" {
+		editor.workspace = workspacePath
+		fileTree, err := config.NewFileTree(workspacePath, OpenFile, fileIconFunc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to init file tree: %w", err)
+		}
+		fileTree.Show()
+		editor.fileTree = fileTree
+	}
+
 	if file := editor.File(); file != nil {
 		file.Focus()
 	}

@@ -63,7 +63,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				EmptyStyle:                  lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center),
 				EntryPrefixStyle:            lipgloss.NewStyle().Faint(true),
 				EntryStyle:                  lipgloss.NewStyle(),
-				EntrySelectedStyle:          lipgloss.NewStyle().Foreground(colors.PrimaryTextColor).Reverse(true),
+				EntrySelectedStyle:          lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
 				EntrySelectedUnfocusedStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor).Reverse(true),
 			},
 			SearchBar: searchbar.Styles{
