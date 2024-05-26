@@ -71,6 +71,7 @@ type KeyMap struct {
 	ExpandWidth key.Binding
 	ShrinkWidth key.Binding
 	Open        key.Binding
+	Refresh     key.Binding
 }
 
 func (m KeyMap) FullHelpView() []help.KeyMapCategory {
@@ -108,6 +109,10 @@ var DefaultKeyMap = KeyMap{
 	Open: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "open file or directory"),
+	),
+	Refresh: key.NewBinding(
+		key.WithKeys("ctrl+r"),
+		key.WithHelp("ctrl+r", "refresh file tree"),
 	),
 }
 
@@ -329,6 +334,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if m.focus {
 			switch {
+			case key.Matches(msg, m.KeyMap.Refresh):
+				cmds = append(cmds, Refresh)
 			case key.Matches(msg, m.KeyMap.Open):
 				selected := m.Selected()
 				if selected.IsDir {

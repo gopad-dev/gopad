@@ -16,7 +16,7 @@ const SetThemeOverlayID = "theme"
 var _ overlay.Overlay = (*SetThemeOverlay)(nil)
 
 func NewSetThemeOverlay() SetThemeOverlay {
-	items := make([]list.Item, 0, len(config.Themes))
+	items := make([]config.RawThemeConfig, 0, len(config.Themes))
 	for _, theme := range config.Themes {
 		items = append(items, theme)
 	}
@@ -31,7 +31,7 @@ func NewSetThemeOverlay() SetThemeOverlay {
 }
 
 type SetThemeOverlay struct {
-	l list.Model
+	l list.Model[config.RawThemeConfig]
 }
 
 func (s SetThemeOverlay) ID() string {

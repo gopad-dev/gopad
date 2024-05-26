@@ -73,7 +73,9 @@ type EditorKeyMap struct {
 	DeleteFile key.Binding
 
 	Search         key.Binding
+	OpenOutline    key.Binding
 	ToggleFileTree key.Binding
+	FocusFileTree  key.Binding
 	NextFile       key.Binding
 	PrevFile       key.Binding
 
@@ -246,6 +248,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 
 			Search:         "ctrl+f",
 			ToggleFileTree: "ctrl+b",
+			FocusFileTree:  "alt+b",
 			NextFile:       "alt+right",
 			PrevFile:       "alt+left",
 
@@ -307,6 +310,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 				ExpandWidth: "ctrl+right",
 				ShrinkWidth: "ctrl+left",
 				Open:        "enter",
+				Refresh:     "ctrl+r",
 			},
 			SearchBar: SearchBarKeyConfig{
 				SelectPrev:   "up",
@@ -411,7 +415,9 @@ type EditorKeyConfig struct {
 	DeleteFile string `toml:"delete_file"`
 
 	Search         string `toml:"search"`
+	OpenOutline    string `toml:"open_outline"`
 	ToggleFileTree string `toml:"toggle_file_tree"`
+	FocusFileTree  string `toml:"focus_file_tree"`
 	NextFile       string `toml:"next_file"`
 	PrevFile       string `toml:"prev_file"`
 
@@ -507,9 +513,17 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			key.WithKeys(k.Search),
 			key.WithHelp(k.Search, "search in file"),
 		),
+		OpenOutline: key.NewBinding(
+			key.WithKeys(k.OpenOutline),
+			key.WithHelp(k.OpenOutline, "open outline"),
+		),
 		ToggleFileTree: key.NewBinding(
 			key.WithKeys(k.ToggleFileTree),
 			key.WithHelp(k.ToggleFileTree, "toggle file tree"),
+		),
+		FocusFileTree: key.NewBinding(
+			key.WithKeys(k.FocusFileTree),
+			key.WithHelp(k.FocusFileTree, "focus file tree"),
 		),
 		NextFile: key.NewBinding(
 			key.WithKeys(k.NextFile),
@@ -703,6 +717,7 @@ type FileTreeKeyConfig struct {
 	ExpandWidth string `toml:"expand_width"`
 	ShrinkWidth string `toml:"shrink_width"`
 	Open        string `toml:"open"`
+	Refresh     string `toml:"refresh"`
 }
 
 func (k FileTreeKeyConfig) KeyMap() filetree.KeyMap {
@@ -726,6 +741,10 @@ func (k FileTreeKeyConfig) KeyMap() filetree.KeyMap {
 		Open: key.NewBinding(
 			key.WithKeys(k.Open),
 			key.WithHelp(k.Open, "open file or directory"),
+		),
+		Refresh: key.NewBinding(
+			key.WithKeys(k.Refresh),
+			key.WithHelp(k.Refresh, "refresh file tree"),
 		),
 	}
 }

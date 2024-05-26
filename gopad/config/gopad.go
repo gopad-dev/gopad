@@ -9,6 +9,7 @@ import (
 type GopadConfig struct {
 	Theme    string         `toml:"theme"`
 	Editor   EditorConfig   `toml:"editor"`
+	FileView FileViewConfig `toml:"file_view"`
 	FileTree FileTreeConfig `toml:"file_tree"`
 }
 
@@ -28,6 +29,11 @@ func DefaultGopadConfig() GopadConfig {
 				BlinkInterval: Duration(cursor.DefaultBlinkInterval),
 				Shape:         cursor.ShapeBlock,
 			},
+		},
+		FileView: FileViewConfig{
+			OpenFilesWrap:   false,
+			ShowLineNumbers: true,
+			WordWrap:        false,
 		},
 		FileTree: FileTreeConfig{
 			Ignored: nil,
@@ -65,6 +71,12 @@ func (d *Duration) UnmarshalText(text []byte) error {
 
 func (d Duration) MarshalText() ([]byte, error) {
 	return []byte(time.Duration(d).String()), nil
+}
+
+type FileViewConfig struct {
+	OpenFilesWrap   bool `toml:"open_files_wrap"`
+	ShowLineNumbers bool `toml:"show_line_numbers"`
+	WordWrap        bool `toml:"word_wrap"`
 }
 
 type FileTreeConfig struct {

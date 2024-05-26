@@ -486,12 +486,8 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			col := ii + offsetCol
 			var char string
 			if col > len(chars) {
-				//codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
-				//break
-				char = " "
-				if col == len(chars)+1 {
-					break
-				}
+				codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
+				break
 			} else if col == len(chars) {
 				char = " "
 			} else {
@@ -504,9 +500,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			}
 
 			style := f.HighestMatchStyle(codeLineCharStyle, ln, col)
-			if col != len(chars) {
-				style = f.HighestLineColDiagnosticStyle(style, ln, col)
-			}
+			style = f.HighestLineColDiagnosticStyle(style, ln, col)
 
 			if selection != nil && selection.Contains(buffer.Position{Row: ln, Col: col}) {
 				char = styles.CodeSelectionStyle.Copy().Inherit(style).Render(char)

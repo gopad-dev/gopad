@@ -99,7 +99,8 @@ type DiagnosticStyles struct {
 }
 
 type DocumentationStyles struct {
-	Style lipgloss.Style
+	Style        lipgloss.Style
+	MessageStyle lipgloss.Style
 }
 
 type AutocompleteStyles struct {

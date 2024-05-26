@@ -22,7 +22,9 @@ new_file = 'ctrl+n'
 rename_file = 'ctrl+r'
 delete_file = 'ctrl+g'
 search = 'ctrl+f'
+open_outline = 'alt+o'
 toggle_file_tree = 'ctrl+b'
+focus_file_tree = 'alt+b'
 next_file = 'alt+right'
 prev_file = 'alt+left'
 autocomplete = 'ctrl+@'
@@ -76,6 +78,7 @@ select_next = 'down'
 expand_width = 'ctrl+right'
 shrink_width = 'ctrl+left'
 open = 'enter'
+refresh = 'ctrl+r'
 
 # Search bar key bindings configuration
 [editor.search_bar]

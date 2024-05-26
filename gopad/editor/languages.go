@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,6 +28,7 @@ var (
 		"locals.scm",
 		"indents.scm",
 		"folds.scm",
+		"outline.scm",
 	}
 	parseTimeout = 10 * time.Second
 )
@@ -37,22 +39,60 @@ type Language struct {
 	Grammar *Grammar
 }
 
-type Grammar struct {
-	Language        *sitter.Language
-	HighlightsQuery *sitter.Query
-	InjectionsQuery *sitter.Query
-	LocalsQuery     *sitter.Query
-	IndentsQuery    *sitter.Query
-	FoldsQuery      *sitter.Query
-	ParseTimeout    time.Duration
-}
-
 func (l *Language) Title() string {
 	return l.Name
 }
 
 func (l *Language) Description() string {
 	return ""
+}
+
+type Grammar struct {
+	Language        *sitter.Language
+	highlightsQuery *sitter.Query
+	injectionsQuery *sitter.Query
+	localsQuery     *sitter.Query
+	indentsQuery    *sitter.Query
+	foldsQuery      *sitter.Query
+	outlineQuery    *sitter.Query
+	ParseTimeout    time.Duration
+}
+
+func (g *Grammar) OutlineQuery() OutlineConfig {
+	indexes := GetCaptureIndexes(g.outlineQuery, []string{
+		"item",
+		"name",
+		"context",
+		"extra_context",
+	})
+
+	return OutlineConfig{
+		Query:                 g.outlineQuery,
+		ItemCaptureID:         *indexes[0],
+		NameCaptureID:         *indexes[1],
+		ContextCaptureID:      indexes[2],
+		ExtraContextCaptureID: indexes[3],
+	}
+}
+
+type OutlineConfig struct {
+	Query                 *sitter.Query
+	ItemCaptureID         uint32
+	NameCaptureID         uint32
+	ContextCaptureID      *uint32
+	ExtraContextCaptureID *uint32
+}
+
+func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
+	indexes := make([]*uint32, len(captureNames))
+	for id := range query.CaptureCount() {
+		name := query.CaptureNameForID(id)
+		index := slices.Index(captureNames, name)
+		if index >= 0 {
+			indexes[index] = &id
+		}
+	}
+	return indexes
 }
 
 func LoadLanguages(defaultConfigs embed.FS) error {
@@ -79,6 +119,10 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 }
 
 func loadTreeSitterGrammar(name string, cfg config.TreeSitterConfig, defaultConfigs embed.FS) (*Grammar, error) {
+	libPath := cfg.Path
+	if libPath == "" {
+
+	}
 	symbolName := cfg.SymbolName
 	if symbolName == "" {
 		symbolName = name
@@ -111,6 +155,7 @@ func loadTreeSitterGrammar(name string, cfg config.TreeSitterConfig, defaultConf
 		localsQuery     *sitter.Query
 		indentsQuery    *sitter.Query
 		foldsQuery      *sitter.Query
+		outlineQuery    *sitter.Query
 	)
 
 	for _, queryFile := range queryFiles {
@@ -141,16 +186,23 @@ func loadTreeSitterGrammar(name string, cfg config.TreeSitterConfig, defaultConf
 			indentsQuery = query
 		case "folds.scm":
 			foldsQuery = query
+		case "outline.scm":
+			outlineQuery = query
+		default:
+			continue
 		}
+
+		log.Printf("Loaded query %s/%s\n", name, queryFile.Name())
 	}
 
 	return &Grammar{
 		Language:        tsLang,
-		HighlightsQuery: highlightsQuery,
-		InjectionsQuery: injectionsQuery,
-		LocalsQuery:     localsQuery,
-		IndentsQuery:    indentsQuery,
-		FoldsQuery:      foldsQuery,
+		highlightsQuery: highlightsQuery,
+		injectionsQuery: injectionsQuery,
+		localsQuery:     localsQuery,
+		indentsQuery:    indentsQuery,
+		foldsQuery:      foldsQuery,
+		outlineQuery:    outlineQuery,
 		ParseTimeout:    parseTimeout,
 	}, nil
 }

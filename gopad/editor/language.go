@@ -16,7 +16,7 @@ const SetLanguageOverlayID = "editor.language"
 var _ overlay.Overlay = (*SetLanguageOverlay)(nil)
 
 func NewSetLanguageOverlay() SetLanguageOverlay {
-	items := make([]list.Item, 0, len(languages))
+	items := make([]*Language, 0, len(languages))
 	for _, language := range languages {
 		items = append(items, language)
 	}
@@ -31,7 +31,7 @@ func NewSetLanguageOverlay() SetLanguageOverlay {
 }
 
 type SetLanguageOverlay struct {
-	l list.Model
+	l list.Model[*Language]
 }
 
 func (s SetLanguageOverlay) ID() string {

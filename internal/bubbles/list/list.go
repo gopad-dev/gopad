@@ -10,11 +10,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type Item interface {
-	Title() string
-	Description() string
-}
-
 type KeyMap struct {
 	Up    key.Binding
 	Down  key.Binding
@@ -55,92 +50,95 @@ type Styles struct {
 	ItemDescriptionStyle lipgloss.Style
 }
 
-func New(items []Item) Model {
+func New[T Item](items []T) Model[T] {
 	ti := textinput.New()
 	ti.Placeholder = "Type to search"
 
-	return Model{
+	return Model[T]{
 		TextInput: ti,
 		Keys:      DefaultKeyMap,
 		Styles:    DefaultStyles,
-		items:     items,
+		items:     parseItems(items),
 	}
 }
 
-type Model struct {
+type Model[T Item] struct {
 	TextInput textinput.Model
 	Keys      KeyMap
 	Styles    Styles
 	width     int
 	height    int
-	items     []Item
+	items     []modelItem[T]
 	item      int
 	offset    int
 }
 
-func (m *Model) Focus() tea.Cmd {
+func (m *Model[T]) Focus() tea.Cmd {
 	return m.TextInput.Focus()
 }
 
-func (m *Model) Blur() {
+func (m *Model[T]) Blur() {
 	m.TextInput.Blur()
 }
 
-func (m *Model) Focused() bool {
+func (m *Model[T]) Focused() bool {
 	return m.TextInput.Focused()
 }
 
-func (m *Model) SetWidth(width int) {
+func (m *Model[T]) SetWidth(width int) {
 	m.width = width
 }
 
-func (m *Model) SetHeight(height int) {
+func (m *Model[T]) SetHeight(height int) {
 	m.height = height
 }
 
-func (m *Model) Selected() Item {
+func (m *Model[T]) selected() *modelItem[T] {
 	items := m.filteredItems()
 	if m.item < len(items) {
-		return items[m.item]
+		return &items[m.item]
 	}
 	return nil
 }
 
-func (m *Model) Select(i int) {
+func (m *Model[T]) Selected() Item {
+	if item := m.selected(); item != nil {
+		return item.item
+	}
+	return nil
+}
+
+func (m *Model[T]) Select(i int) {
 	if i >= 0 && i < len(m.items) {
 		m.item = i
 	}
 }
 
-func (m *Model) SelectedIndex() int {
-	return m.item
-}
-
-func (m *Model) Items() []Item {
-	return m.items
-}
-
-func (m *Model) SetItems(items []Item) {
-	m.items = items
-}
-
-func (m *Model) filteredItems() []Item {
-	value := strings.ToLower(m.TextInput.Value())
-	if value == "" {
-		return m.items
+func (m *Model[T]) SelectedIndex() int {
+	selected := m.selected()
+	if selected != nil {
+		return selected.index
 	}
-
-	var filtered []Item
-	for _, item := range m.items {
-		if strings.Contains(strings.ToLower(item.Title()), value) {
-			filtered = append(filtered, item)
-		}
-	}
-
-	return filtered
+	return -1
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model[T]) Items() []T {
+	return modelItems(m.filteredItems())
+}
+
+func (m *Model[T]) AllItems() []T {
+	return modelItems(m.items)
+}
+
+func (m *Model[T]) SetItems(items []T) {
+	m.items = parseItems(items)
+}
+
+func (m *Model[T]) filteredItems() []modelItem[T] {
+	return filterItems(m.items, m.TextInput.Value())
+}
+
+func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -169,8 +167,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// calculateOffset calculates the offset based on the current selected item and the height of the list
-func (m *Model) calculateOffset() {
+// calculateOffset calculates the offset based on the current selected modelItem and the height of the list
+func (m *Model[T]) calculateOffset() {
 	if m.height == 0 {
 		m.offset = 0
 		return
@@ -183,7 +181,7 @@ func (m *Model) calculateOffset() {
 	}
 }
 
-func (m Model) View() string {
+func (m Model[T]) View() string {
 	m.calculateOffset()
 	var listWidth int
 	if m.width > 0 {
@@ -202,7 +200,7 @@ func (m Model) View() string {
 	)
 }
 
-func (m Model) itemsView(width int, height int) string {
+func (m Model[T]) itemsView(width int, height int) string {
 	var str string
 
 	items := m.filteredItems()
@@ -222,9 +220,9 @@ func (m Model) itemsView(width int, height int) string {
 			style = m.Styles.ItemSelectedStyle
 		}
 
-		strs := []string{item.Title()}
-		if item.Description() != "" {
-			strs = append(strs, m.Styles.ItemDescriptionStyle.Render(item.Description()))
+		strs := []string{item.item.Title()}
+		if item.item.Description() != "" {
+			strs = append(strs, m.Styles.ItemDescriptionStyle.Render(item.item.Description()))
 		}
 
 		str += style.Render(strs...) + "\n"

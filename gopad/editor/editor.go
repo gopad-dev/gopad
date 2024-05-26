@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
@@ -53,7 +54,6 @@ func NewEditor(workspace *string, args []string) (*Editor, error) {
 	}
 
 	for _, arg := range args {
-		log.Println("arg", arg)
 		stat, err := os.Stat(arg)
 		if errors.Is(err, os.ErrNotExist) {
 			if _, err = editor.CreateFile(arg); err != nil {
@@ -92,19 +92,22 @@ func NewEditor(workspace *string, args []string) (*Editor, error) {
 
 	if file := editor.File(); file != nil {
 		file.Focus()
+	} else {
+		editor.fileTree.Focus()
 	}
 
 	return &editor, nil
 }
 
 type Editor struct {
-	fileTree        filetree.Model
-	workspace       string
-	searchBar       searchbar.Model
-	files           []*File
-	activeFile      int
-	focus           bool
-	treeSitterDebug bool
+	fileTree         filetree.Model
+	workspace        string
+	searchBar        searchbar.Model
+	files            []*File
+	activeFile       int
+	activeFileOffset int
+	focus            bool
+	treeSitterDebug  bool
 }
 
 func (e Editor) Workspace() string {
@@ -444,12 +447,6 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Editor.NextFile) && e.fileTree.Focused():
-			if len(e.files) > 0 {
-				e.fileTree.Blur()
-				cmds = append(cmds, e.files[e.activeFile].Focus())
-			}
-			return e, tea.Batch(cmds...)
 		case key.Matches(msg, config.Keys.Editor.ToggleFileTree) && e.focus:
 			file := e.File()
 			if e.fileTree.Visible() {
@@ -463,6 +460,22 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				e.fileTree.Show()
 				if file != nil {
 					file.Blur()
+				}
+			}
+			return e, tea.Batch(cmds...)
+		case key.Matches(msg, config.Keys.Editor.FocusFileTree) && e.focus:
+			if e.fileTree.Visible() {
+				file := e.File()
+				if e.fileTree.Focused() {
+					e.fileTree.Blur()
+					if file != nil {
+						cmds = append(cmds, file.Focus())
+					}
+				} else {
+					e.fileTree.Focus()
+					if file != nil {
+						file.Blur()
+					}
 				}
 			}
 			return e, tea.Batch(cmds...)
@@ -602,6 +615,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				e.activeFile = len(e.files) - 1
 			case key.Matches(msg, config.Keys.Editor.ShowCurrentDiagnostic):
 				file.ShowCurrentDiagnostic()
+			case key.Matches(msg, config.Keys.Editor.OpenOutline):
+				cmds = append(cmds, overlay.Open(NewOutlineOverlay(file)))
 			case key.Matches(msg, config.Keys.Editor.Search):
 				if !e.searchBar.Focused() {
 					e.searchBar.Show()
@@ -620,9 +635,6 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					e.activeFile--
 					file.Blur()
 					cmds = append(cmds, e.files[e.activeFile].Focus())
-				} else if e.fileTree.Visible() {
-					file.Blur()
-					e.fileTree.Focus()
 				}
 			case key.Matches(msg, config.Keys.Editor.CloseFile):
 				cmds = append(cmds, Close)
@@ -793,39 +805,11 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, file.ToggleComment())
 				overwriteCursorBlink = true
 			case key.Matches(msg, config.Keys.Editor.Debug):
-				if lang := file.Language(); lang != nil {
-					row, col := file.Cursor()
 
-					fileTree := file.Tree()
-					if fileTree != nil {
-						tree := fileTree.FindTree(buffer.Position{
-							Row: row,
-							Col: col,
-						})
-						if tree != nil {
-							query := tree.Language.Grammar.HighlightsQuery
-							cursor := sitter.NewQueryCursor()
-							cursor.Exec(query, tree.Tree.RootNode().DescendantForRange(
-								sitter.Point{
-									Row:    uint32(row),
-									Column: uint32(col),
-								},
-								sitter.Point{
-									Row:    uint32(row),
-									Column: uint32(col),
-								},
-							))
-
-							match, ok := cursor.NextMatch()
-							if ok {
-								for _, capture := range match.Captures {
-									log.Println("capture", capture.Node.Type(), query.CaptureNameForID(capture.Index))
-								}
-							}
-						}
-					}
-				}
 			default:
+				if msg.Alt {
+					break
+				}
 				cmds = append(cmds, file.InsertRunes(msg.Runes))
 				if file.autocomplete.Visible() {
 					row, col := file.Cursor()
@@ -859,7 +843,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	return e, tea.Batch(cmds...)
 }
 
-func (e Editor) View(width int, height int) string {
+func (e *Editor) View(width int, height int) string {
 	var fileTree string
 	if e.fileTree.Visible() {
 		fileTree = e.fileTree.View(height)
@@ -902,13 +886,38 @@ func (e Editor) View(width int, height int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, fileTree, editor)
 }
 
-func (e Editor) FileTabsView(maxWidth int) string {
-	var files string
+func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
+	if e.activeFileOffset == 0 {
+		return
+	}
+
+	filesWidth := lipgloss.Width(strings.Join(fileNames[:e.activeFile], ""))
+	if filesWidth < width {
+		e.activeFileOffset = 0
+	}
+
+	if filesWidth > width {
+		e.activeFileOffset = e.activeFile
+	}
+
+	for i := e.activeFileOffset; i > 0; i-- {
+		filesWidth = lipgloss.Width(strings.Join(fileNames[i:e.activeFile], ""))
+		if filesWidth < width {
+			e.activeFileOffset = i
+			break
+		}
+	}
+}
+
+func (e *Editor) FileTabsView(width int) string {
+	var fileNames []string
 	for path, file := range e.files {
 		fileName := clampString(file.FileName(), 16)
+		icon := config.Theme.Icons.File
 		if file.language != nil && file.language.Icon > 0 {
-			fileName = fmt.Sprintf("%c %s", file.language.Icon, fileName)
+			icon = file.language.Icon
 		}
+		fileName = fmt.Sprintf("%c %s", icon, fileName)
 		if file.Dirty() {
 			fileName += "*"
 		} else {
@@ -919,14 +928,29 @@ func (e Editor) FileTabsView(maxWidth int) string {
 		if path == e.activeFile {
 			style = config.Theme.Editor.FileSelectedStyle
 		}
-		file := style.Render(fileName)
-		if lipgloss.Width(files)+lipgloss.Width(file) > maxWidth {
-			break
-		}
-		files += file
+		fileNames = append(fileNames, style.Render(fileName))
 	}
 
-	return files
+	if config.Gopad.FileView.OpenFilesWrap {
+		var fileTabs string
+		var line string
+		for _, fileName := range fileNames {
+			fileNameWidth := lipgloss.Width(fileName)
+			if fileNameWidth+lipgloss.Width(line) > width {
+				fileTabs += line + "\n"
+				line = ""
+			}
+			line += fileName
+		}
+		if line != "" {
+			fileTabs += line + "\n"
+		}
+		return strings.TrimRight(fileTabs, "\n")
+	}
+
+	e.refreshActiveFileOffset(width, fileNames)
+
+	return strings.Join(fileNames[e.activeFileOffset:], "")
 }
 
 func clampString(s string, length int) string {

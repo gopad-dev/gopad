@@ -144,6 +144,9 @@ func (f *File) SelectionBytes() []byte {
 }
 
 func (f *File) SelectAll() {
+	f.cursor.start = false
+	f.cursor.end = false
+
 	f.cursor.mark = &Mark{
 		row: 0,
 		col: 0,

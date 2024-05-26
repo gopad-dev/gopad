@@ -258,6 +258,18 @@ func (b *Buffer) ByteIndex(row int, col int) int {
 	return n
 }
 
+// Position returns the row and column for the given byte index.
+func (b *Buffer) Position(index int) Position {
+	var n int
+	for i, line := range b.lines {
+		if n+len(line.Bytes()) >= index {
+			return Position{Row: i, Col: index - n}
+		}
+		n += len(line.Bytes()) + 1
+	}
+	return Position{Row: len(b.lines) - 1, Col: b.lines[len(b.lines)-1].Len()}
+}
+
 // Bytes returns the buffer as a byte slice. This uses \n as the line ending.
 func (b *Buffer) Bytes() []byte {
 	var bs []byte

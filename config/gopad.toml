@@ -20,8 +20,15 @@ mode = 'blink'
 blink_interval = '530ms'
 shape = 'block'
 
+[file_view]
+open_files_wrap = true
+line_numbers = true
+word_wrap = false
+scroll_past_end = true
+
 [file_tree]
 ignored = [
+    '.gopad',
     '.git',
     '.idea',
     '.vscode',

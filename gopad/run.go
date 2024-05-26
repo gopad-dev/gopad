@@ -39,7 +39,7 @@ func Terminal() tea.Cmd {
 }
 
 func NewRunOverlay() RunOverlay {
-	items := make([]list.Item, 0, len(Actions))
+	items := make([]Action, 0, len(Actions))
 	for _, action := range Actions {
 		items = append(items, action)
 	}
@@ -54,7 +54,7 @@ func NewRunOverlay() RunOverlay {
 }
 
 type RunOverlay struct {
-	list list.Model
+	list list.Model[Action]
 }
 
 func (r RunOverlay) ID() string {

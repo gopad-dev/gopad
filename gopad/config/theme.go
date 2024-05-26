@@ -63,8 +63,8 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				EmptyStyle:                  lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center),
 				EntryPrefixStyle:            lipgloss.NewStyle().Faint(true),
 				EntryStyle:                  lipgloss.NewStyle(),
-				EntrySelectedStyle:          lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
-				EntrySelectedUnfocusedStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor).Reverse(true),
+				EntrySelectedStyle:          lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Reverse(true),
+				EntrySelectedUnfocusedStyle: lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
 			},
 			SearchBar: searchbar.Styles{
 				Style:       lipgloss.NewStyle().Padding(0, 2),
@@ -81,7 +81,8 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				HintCharStyle:        c.Styles.Diagnostics.Hint.Style(),
 			},
 			Documentation: DocumentationStyles{
-				Style: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
+				Style:        lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
+				MessageStyle: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor),
 			},
 			Autocomplete: AutocompleteStyles{
 				Style: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),

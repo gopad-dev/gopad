@@ -114,6 +114,7 @@ func (d DiagnosticType) String() string {
 
 type Diagnostic struct {
 	Type            DiagnosticType
+	Name            string
 	Source          string
 	Range           buffer.Range
 	Severity        DiagnosticSeverity
@@ -129,11 +130,16 @@ func (d Diagnostic) ShortView() string {
 }
 
 func (d Diagnostic) View(width int, height int) string {
-	width = min(width, 80)
+	width = min(width, 60)
 	height = max(height-2, 0)
+
+	message := fmt.Sprintf("%s%s\n\n%s: %s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.Editor.Documentation.MessageStyle.Render(" "+d.Message), d.Type, d.Name, d.Source)
+	if d.Code != "" {
+		message += fmt.Sprintf(" %s: %s", d.Code, d.CodeDescription)
+	}
 
 	return config.Theme.Editor.Documentation.Style.
 		Width(width).
 		MaxHeight(height).
-		Render(fmt.Sprintf("%s: %s %s\n\n%s\n%s", d.Type, d.Source, d.Severity.Style().Render(d.Severity.Icon()+" "), d.Message, d.Source))
+		Render(message)
 }

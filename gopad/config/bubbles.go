@@ -18,7 +18,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-func NewList(items []list.Item) list.Model {
+func NewList[T list.Item](items []T) list.Model[T] {
 	l := list.New(items)
 	l.Styles = Theme.List
 	l.TextInput = NewTextInput()

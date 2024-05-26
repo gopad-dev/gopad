@@ -515,6 +515,7 @@ func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 
 		diagnostics = append(diagnostics, Diagnostic{
 			Type:   DiagnosticTypeLanguageServer,
+			Name:   c.Name(),
 			Source: diagnostic.Source,
 			Range: buffer.Range{
 				Start: buffer.Position{
