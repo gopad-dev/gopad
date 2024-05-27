@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	sitter "go.gopad.dev/go-tree-sitter"
+
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/lsp"
 )
@@ -258,7 +259,7 @@ func (f *File) ValidateTree() {
 
 	diagnostics := validateTree(f.tree.Copy())
 
-	f.SetDiagnostic(version, diagnostics)
+	f.SetDiagnostic(lsp.DiagnosticTypeTreeSitter, version, diagnostics)
 }
 
 func validateTree(tree *Tree) []lsp.Diagnostic {

@@ -45,8 +45,9 @@ func NewFileWithBuffer(b *buffer.Buffer, mode FileMode) *File {
 			col:    0,
 			cursor: config.NewCursor(),
 		},
-		language:     GetLanguageByFilename(b.Name()),
-		autocomplete: NewAutocompleter(),
+		language:           GetLanguageByFilename(b.Name()),
+		diagnosticVersions: map[lsp.DiagnosticType]int32{},
+		autocomplete:       NewAutocompleter(),
 	}
 }
 
@@ -84,7 +85,7 @@ type File struct {
 	language              *Language
 	tree                  *Tree
 	autocomplete          *Autocompleter
-	diagnosticVersion     int32
+	diagnosticVersions    map[lsp.DiagnosticType]int32
 	diagnostics           []lsp.Diagnostic
 	matchesVersion        int32
 	matches               []Match

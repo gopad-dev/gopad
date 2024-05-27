@@ -1,18 +1,26 @@
 # Language Server Protocol configuration
 # For a list of available language servers, see: https://langserver.org/#implementations-server
 
-[go]
+[gopls]
 command = 'gopls'
 args = []
 file_types = ['.go']
 files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
 
-#[golangci-lint]
-#command = 'golangci-lint-langserver'
-#args = ['-debug', '-severity', 'Hint']
-#config = { command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1'] }
-#file_types = ['.go']
-#files = []
+[gopls.config]
+'ui.completion.usePlaceholders' = true
+'ui.diagnostic.staticcheck' = true
+
+
+
+[golangci-lint]
+command = 'golangci-lint-langserver'
+args = ['-debug', '-severity', 'Hint']
+file_types = ['.go']
+files = []
+
+[golangci-lint.config]
+command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
 
 #[yaml]
 #command = 'yaml-language-server'

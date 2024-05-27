@@ -332,7 +332,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		if file == nil {
 			return e, nil
 		}
-		file.SetDiagnostic(msg.Version, msg.Diagnostics)
+		file.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
 		return e, tea.Batch(cmds...)
 	case lsp.UpdateAutocompletionMsg:
 		log.Println("update autocompletions", msg.Name, msg.Completions)

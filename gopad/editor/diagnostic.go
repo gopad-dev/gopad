@@ -1,21 +1,29 @@
 package editor
 
 import (
+	"slices"
+
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/lsp"
 )
 
-func (f *File) SetDiagnostic(version int32, diagnostics []lsp.Diagnostic) {
-	if version < f.diagnosticVersion {
+func (f *File) SetDiagnostic(dType lsp.DiagnosticType, version int32, diagnostics []lsp.Diagnostic) {
+	// ignore outdated diagnostics
+	if version < f.diagnosticVersions[dType] {
 		return
 	}
-	if version > f.diagnosticVersion {
-		f.diagnostics = diagnostics
-		f.diagnosticVersion = version
-		return
+
+	// if we have a new version of diagnostics, update the version
+	if version > f.diagnosticVersions[dType] {
+		f.diagnosticVersions[dType] = version
 	}
+
+	// always clear diagnostics of this type
+	f.ClearDiagnosticsByType(dType)
+
+	// add new diagnostics
 	f.diagnostics = append(f.diagnostics, diagnostics...)
 }
 
@@ -24,14 +32,9 @@ func (f *File) Diagnostics() []lsp.Diagnostic {
 }
 
 func (f *File) ClearDiagnosticsByType(dType lsp.DiagnosticType) {
-	diagnostics := f.diagnostics[:0]
-	for i := range f.diagnostics {
-		if f.diagnostics[i].Type != dType {
-			diagnostics = append(diagnostics, f.diagnostics[i])
-		}
-	}
-
-	f.diagnostics = diagnostics
+	f.diagnostics = slices.DeleteFunc(f.diagnostics, func(diag lsp.Diagnostic) bool {
+		return diag.Type == dType
+	})
 }
 
 func (f *File) DiagnosticsForLineCol(row int, col int) []lsp.Diagnostic {

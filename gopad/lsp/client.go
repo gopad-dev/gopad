@@ -535,7 +535,7 @@ func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 			Priority:        110,
 		})
 	}
-	c.send(UpdateFileDiagnostics(params.URI.Filename(), int32(params.Version), diagnostics))
+	c.send(UpdateFileDiagnostics(params.URI.Filename(), DiagnosticTypeLanguageServer, int32(params.Version), diagnostics))
 	return nil
 }
 

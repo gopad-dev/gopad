@@ -11,10 +11,11 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-func UpdateFileDiagnostics(name string, version int32, diagnostics []Diagnostic) tea.Cmd {
+func UpdateFileDiagnostics(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {
 	return func() tea.Msg {
 		return UpdateFileDiagnosticsMsg{
 			Name:        name,
+			Type:        dType,
 			Version:     version,
 			Diagnostics: diagnostics,
 		}
@@ -23,6 +24,7 @@ func UpdateFileDiagnostics(name string, version int32, diagnostics []Diagnostic)
 
 type UpdateFileDiagnosticsMsg struct {
 	Name        string
+	Type        DiagnosticType
 	Version     int32
 	Diagnostics []Diagnostic
 }
@@ -133,9 +135,15 @@ func (d Diagnostic) View(width int, height int) string {
 	width = min(width, 60)
 	height = max(height-2, 0)
 
-	message := fmt.Sprintf("%s%s\n\n%s: %s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.Editor.Documentation.MessageStyle.Render(" "+d.Message), d.Type, d.Name, d.Source)
+	message := fmt.Sprintf("%s%s\n\n%s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.Editor.Documentation.MessageStyle.Render(" "+d.Message), d.Type, d.Name)
+	if d.Source != "" {
+		message += fmt.Sprintf(" - %s", d.Source)
+	}
 	if d.Code != "" {
-		message += fmt.Sprintf(" %s: %s", d.Code, d.CodeDescription)
+		message += fmt.Sprintf(" - %s", d.Code)
+	}
+	if d.CodeDescription != "" {
+		message += fmt.Sprintf(" (%s)", d.CodeDescription)
 	}
 
 	return config.Theme.Editor.Documentation.Style.
