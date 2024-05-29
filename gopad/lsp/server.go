@@ -6,24 +6,36 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"os/exec"
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
-	"go.uber.org/zap"
 )
 
 func newServer(ctx context.Context, rwc io.ReadWriteCloser, client protocol.Client, w io.Writer) (jsonrpc2.Conn, protocol.Server, error) {
 	stream := jsonrpc2.NewStream(rwc)
-	if w != nil {
+	if w != io.Discard {
 		stream = protocol.LoggingStream(stream, w)
 	}
-	_, conn, server := protocol.NewClient(ctx, client, stream, zap.NewNop())
+
+	logger := slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelInfo,
+	}))
+
+	_, conn, server := protocol.NewClient(ctx, client, stream, logger)
 	return conn, server, nil
 }
 
-func newCmdStream(ctx context.Context, name string, arg ...string) (*exec.Cmd, io.ReadWriteCloser, error) {
-	log.Println("newCmdStream", name, arg)
+func newCmdStream(ctx context.Context, w io.Writer, name string, arg ...string) (*exec.Cmd, io.ReadWriteCloser, error) {
+	logger := log.New(w, name, log.LstdFlags)
+	logger.Println("newCmdStream", name, arg)
+
+	if r := recover(); r != nil {
+		logger.Println("panic while running lsp command", r)
+	}
+
 	cmd := exec.CommandContext(ctx, name, arg...)
 
 	stdin, err := cmd.StdinPipe()
@@ -46,13 +58,16 @@ func newCmdStream(ctx context.Context, name string, arg ...string) (*exec.Cmd, i
 	go func() {
 		s := bufio.NewScanner(stderr)
 		for s.Scan() {
-			log.Printf("lsp client %s: %s", name, s.Text())
+			logger.Printf("lsp client %s: %s", name, s.Text())
 		}
 	}()
 
 	go func() {
+		if r := recover(); r != nil {
+			logger.Println("panic while running lsp command", r)
+		}
 		if err = cmd.Wait(); err != nil {
-			log.Println("error while running lsp command", err)
+			logger.Println("error while running lsp command", err)
 		}
 	}()
 

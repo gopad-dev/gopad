@@ -11,9 +11,9 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-func UpdateFileDiagnostics(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {
+func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {
 	return func() tea.Msg {
-		return UpdateFileDiagnosticsMsg{
+		return UpdateFileDiagnosticMsg{
 			Name:        name,
 			Type:        dType,
 			Version:     version,
@@ -22,7 +22,7 @@ func UpdateFileDiagnostics(name string, dType DiagnosticType, version int32, dia
 	}
 }
 
-type UpdateFileDiagnosticsMsg struct {
+type UpdateFileDiagnosticMsg struct {
 	Name        string
 	Type        DiagnosticType
 	Version     int32

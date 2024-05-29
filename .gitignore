@@ -6,3 +6,4 @@ dist/
 go.work
 go.work.sum
 /debug.log
+/lsp.log

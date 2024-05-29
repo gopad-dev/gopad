@@ -2,7 +2,16 @@ package buffer
 
 import (
 	"fmt"
+
+	"go.lsp.dev/protocol"
 )
+
+func ParsePosition(p protocol.Position) Position {
+	return Position{
+		Row: int(p.Line),
+		Col: int(p.Character),
+	}
+}
 
 type Position struct {
 	Row int
@@ -45,6 +54,20 @@ func (p Position) String() string {
 	return fmt.Sprintf("[%d:%d]", p.Row+1, p.Col+1)
 }
 
+func (p Position) ToProtocol() protocol.Position {
+	return protocol.Position{
+		Line:      uint32(p.Row),
+		Character: uint32(p.Col),
+	}
+}
+
+func ParseRange(r protocol.Range) Range {
+	return Range{
+		Start: ParsePosition(r.Start),
+		End:   ParsePosition(r.End),
+	}
+}
+
 type Range struct {
 	Start Position
 	End   Position
@@ -72,4 +95,15 @@ func (r Range) Equal(other Range) bool {
 
 func (r Range) String() string {
 	return r.Start.String() + "-" + r.End.String()
+}
+
+func (r Range) IsEmpty() bool {
+	return r.Start.Equal(r.End)
+}
+
+func (r Range) ToProtocol() protocol.Range {
+	return protocol.Range{
+		Start: r.Start.ToProtocol(),
+		End:   r.End.ToProtocol(),
+	}
 }

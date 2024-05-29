@@ -182,3 +182,7 @@ func ReplaceRange(s []byte, start int, end int, b ...byte) []byte {
 
 	return slices.Replace(s, startIndex, endIndex, b...)
 }
+
+func RuneCount(s []byte) int {
+	return utf8.RuneCount(s)
+}

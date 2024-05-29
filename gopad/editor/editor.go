@@ -169,6 +169,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 	if err = file.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
+	cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -193,6 +194,7 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	if err = file.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
+	cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -318,6 +320,7 @@ func (e Editor) Init() tea.Cmd {
 	}
 	if file := e.File(); file != nil {
 		cmds = append(cmds, lsp.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()))
+		cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
 	}
 	return tea.Batch(cmds...)
 }
@@ -327,10 +330,10 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	var overwriteCursorBlink bool
 
 	switch msg := msg.(type) {
-	case lsp.UpdateFileDiagnosticsMsg:
+	case lsp.UpdateFileDiagnosticMsg:
 		file := e.FileByName(msg.Name)
 		if file == nil {
-			return e, nil
+			return e, tea.Batch(cmds...)
 		}
 		file.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
 		return e, tea.Batch(cmds...)
@@ -338,9 +341,22 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		log.Println("update autocompletions", msg.Name, msg.Completions)
 		file := e.FileByName(msg.Name)
 		if file == nil {
-			return e, nil
+			return e, tea.Batch(cmds...)
 		}
 		file.autocomplete.SetCompletions(msg.Completions)
+		return e, tea.Batch(cmds...)
+	case lsp.UpdateInlayHintMsg:
+		file := e.FileByName(msg.Name)
+		if file == nil {
+			return e, tea.Batch(cmds...)
+		}
+		file.SetInlayHint(msg.Hints)
+		return e, tea.Batch(cmds...)
+	case lsp.RefreshInlayHintMsg:
+		// refresh inlay hints for all open files
+		for _, file := range e.files {
+			cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
+		}
 		return e, tea.Batch(cmds...)
 	case openDirMsg:
 		e.fileTree.Show()
@@ -805,6 +821,18 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, file.ToggleComment())
 				overwriteCursorBlink = true
 			case key.Matches(msg, config.Keys.Editor.Debug):
+				log.Println("DEBUG")
+				cmds = append(cmds, lsp.GetInlayHint(file.Name(), buffer.Range{
+					Start: buffer.Position{
+						Row: 0,
+						Col: 0,
+					},
+					End: buffer.Position{
+						Row: file.buffer.LinesLen(),
+						Col: file.buffer.LineLen(max(file.buffer.LinesLen()-1, 0)),
+					},
+				}))
+				return e, tea.Batch(cmds...)
 
 			default:
 				if msg.Alt {

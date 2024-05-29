@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -70,7 +71,7 @@ func (c *Client) Start(send SendFunc) error {
 
 	var err error
 	ctx := context.Background()
-	c.cmd, c.rwc, err = newCmdStream(ctx, c.cfg.Command, c.cfg.Args...)
+	c.cmd, c.rwc, err = newCmdStream(ctx, c.w, c.cfg.Command, c.cfg.Args...)
 	if err != nil {
 		return fmt.Errorf("error creating command stream: %w", err)
 	}
@@ -143,6 +144,9 @@ func (c *Client) Start(send SendFunc) error {
 				//			DidDelete:           true,
 				//			WillDelete:          false,
 				//		},
+				InlayHint: &protocol.InlayHintWorkspaceClientCapabilities{
+					RefreshSupport: true,
+				},
 			},
 			TextDocument: &protocol.TextDocumentClientCapabilities{
 				//		Synchronization: &protocol.TextDocumentSyncClientCapabilities{
@@ -258,6 +262,17 @@ func (c *Client) Start(send SendFunc) error {
 				//		Moniker: &protocol.MonikerClientCapabilities{
 				//			DynamicRegistration: false,
 				//		},
+				InlineValue: &protocol.InlineValueClientCapabilities{
+					DynamicRegistration: false,
+				},
+				InlayHint: &protocol.InlayHintClientCapabilities{
+					DynamicRegistration: false,
+					ResolveSupport:      nil,
+				},
+				Diagnostic: &protocol.DiagnosticClientCapabilities{
+					DynamicRegistration:    false,
+					RelatedDocumentSupport: false,
+				},
 			},
 		},
 	}); err != nil {
@@ -312,9 +327,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 					},
 				},
 			}); err != nil {
-				return func() tea.Msg {
-					return err
-				}
+				return Err(err)
 			}
 		}
 	case WorkspaceClosedMsg:
@@ -330,9 +343,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 					},
 				},
 			}); err != nil {
-				return func() tea.Msg {
-					return err
-				}
+				return Err(err)
 			}
 		}
 	}
@@ -342,11 +353,57 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
+	case GetInlayHintMsg:
+		result, err := c.server.InlayHint(context.Background(), &protocol.InlayHintParams{
+			TextDocument: protocol.TextDocumentIdentifier{
+				URI: protocol.DocumentURI("file://" + msg.Name),
+			},
+			Range: msg.Range.ToProtocol(),
+		})
+		if err != nil {
+			return Err(err)
+		}
+		log.Println("InlayHints", result)
+
+		hints := make([]InlayHint, 0, len(result))
+		for _, hint := range result {
+			kind := InlayHintTypeNone
+			if hint.Kind != nil {
+				kind = InlayHintType(*hint.Kind)
+			}
+
+			var label string
+			switch l := hint.Label.(type) {
+			case string:
+				label = l
+			case []protocol.InlayHintLabelPart:
+				for _, part := range l {
+					label += part.Value
+				}
+			}
+
+			var tooltip string
+			switch t := hint.Tooltip.(type) {
+			case string:
+				tooltip = t
+			case *protocol.MarkupContent:
+				tooltip = t.Value
+			}
+			hints = append(hints, InlayHint{
+				Type:         kind,
+				Position:     buffer.ParsePosition(hint.Position),
+				Label:        label,
+				Tooltip:      tooltip,
+				PaddingLeft:  hint.PaddingLeft,
+				PaddingRight: hint.PaddingRight,
+			})
+		}
+		cmds = append(cmds, UpdateInlayHint(msg.Name, hints))
 	case GetAutocompletionMsg:
 		result, err := c.server.Completion(context.Background(), &protocol.CompletionParams{
 			TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 				TextDocument: protocol.TextDocumentIdentifier{
-					URI: protocol.DocumentURI("file://" + msg.File),
+					URI: protocol.DocumentURI("file://" + msg.Name),
 				},
 				Position: protocol.Position{
 					Line:      uint32(msg.Row),
@@ -355,9 +412,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 			},
 		})
 		if err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 
 		items := make([]CompletionItem, 0, len(result.Items))
@@ -370,23 +425,14 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 
 			if resultItem.TextEdit != nil {
 				item.Edit = &TextEdit{
-					Range: buffer.Range{
-						Start: buffer.Position{
-							Row: int(resultItem.TextEdit.Range.Start.Line),
-							Col: int(resultItem.TextEdit.Range.Start.Character),
-						},
-						End: buffer.Position{
-							Row: int(resultItem.TextEdit.Range.End.Line),
-							Col: int(resultItem.TextEdit.Range.End.Character),
-						},
-					},
+					Range:   buffer.ParseRange(resultItem.TextEdit.Range),
 					NewText: resultItem.TextEdit.NewText,
 				}
 			}
 
 			items = append(items, item)
 		}
-		cmds = append(cmds, UpdateAutocompletion(msg.File, items))
+		cmds = append(cmds, UpdateAutocompletion(msg.Name, items))
 	case FileOpenedMsg:
 		if err := c.server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
 			TextDocument: protocol.TextDocumentItem{
@@ -396,9 +442,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				Text:       string(msg.Text),
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileClosedMsg:
 		if err := c.server.DidClose(context.Background(), &protocol.DidCloseTextDocumentParams{
@@ -406,9 +450,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				URI: protocol.DocumentURI("file://" + msg.Name),
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileCreatedMsg:
 		if err := c.server.DidCreateFiles(context.Background(), &protocol.CreateFilesParams{
@@ -418,9 +460,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				},
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileDeletedMsg:
 		if err := c.server.DidDeleteFiles(context.Background(), &protocol.DeleteFilesParams{
@@ -430,9 +470,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				},
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileRenamedMsg:
 		if err := c.server.DidRenameFiles(context.Background(), &protocol.RenameFilesParams{
@@ -443,9 +481,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				},
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileChangedMsg:
 		if err := c.server.DidChange(context.Background(), &protocol.DidChangeTextDocumentParams{
@@ -461,9 +497,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				},
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	case FileSavedMsg:
 		if err := c.server.DidSave(context.Background(), &protocol.DidSaveTextDocumentParams{
@@ -472,9 +506,7 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 				URI: protocol.DocumentURI("file://" + msg.Name),
 			},
 		}); err != nil {
-			return func() tea.Msg {
-				return err
-			}
+			return Err(err)
 		}
 	}
 
@@ -514,19 +546,10 @@ func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 		}
 
 		diagnostics = append(diagnostics, Diagnostic{
-			Type:   DiagnosticTypeLanguageServer,
-			Name:   c.Name(),
-			Source: diagnostic.Source,
-			Range: buffer.Range{
-				Start: buffer.Position{
-					Row: int(diagnostic.Range.Start.Line),
-					Col: int(diagnostic.Range.Start.Character),
-				},
-				End: buffer.Position{
-					Row: int(diagnostic.Range.End.Line),
-					Col: int(diagnostic.Range.End.Character),
-				},
-			},
+			Type:            DiagnosticTypeLanguageServer,
+			Name:            c.Name(),
+			Source:          diagnostic.Source,
+			Range:           buffer.ParseRange(diagnostic.Range),
 			Severity:        DiagnosticSeverity(diagnostic.Severity),
 			Code:            code,
 			CodeDescription: codeDescription,
@@ -535,7 +558,7 @@ func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 			Priority:        110,
 		})
 	}
-	c.send(UpdateFileDiagnostics(params.URI.Filename(), DiagnosticTypeLanguageServer, int32(params.Version), diagnostics))
+	c.send(UpdateFileDiagnostic(params.URI.Filename(), DiagnosticTypeLanguageServer, int32(params.Version), diagnostics))
 	return nil
 }
 
@@ -577,4 +600,9 @@ func (c *Client) WorkspaceFolders(ctx context.Context) ([]protocol.WorkspaceFold
 		})
 	}
 	return workspaceFolders, nil
+}
+
+func (c *Client) InlayHintRefresh(ctx context.Context) error {
+	c.send(RefreshInlayHint())
+	return nil
 }

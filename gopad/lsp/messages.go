@@ -4,6 +4,12 @@ import (
 	"github.com/charmbracelet/bubbletea"
 )
 
+func Err(err error) tea.Cmd {
+	return func() tea.Msg {
+		return err
+	}
+}
+
 func WorkspaceOpened(workspace string) tea.Cmd {
 	return func() tea.Msg {
 		return WorkspaceOpenedMsg{

@@ -17,6 +17,7 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/internal/xio"
 )
 
 var (
@@ -62,7 +63,7 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
-	var lspLogFile *os.File
+	var lspLogFile io.WriteCloser
 	if debugLsp != nil && *debugLsp != "" {
 		var err error
 		lspLogFile, err = os.OpenFile(*debugLsp, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
@@ -70,6 +71,8 @@ func main() {
 			log.Panicln("failed to open debug lsp log file:", err)
 		}
 		defer lspLogFile.Close()
+	} else {
+		lspLogFile = xio.NopCloser(io.Discard)
 	}
 
 	if createConfig != nil && *createConfig != "" {

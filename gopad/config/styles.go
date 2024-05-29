@@ -76,6 +76,7 @@ type EditorStyles struct {
 
 	CodeSelectionStyle lipgloss.Style
 	CodeBarStyle       lipgloss.Style
+	CodeInlayHintStyle lipgloss.Style
 
 	FileTree      filetree.Styles
 	SearchBar     searchbar.Styles

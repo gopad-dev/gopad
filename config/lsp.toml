@@ -10,17 +10,16 @@ files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
 [gopls.config]
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
+'ui.hints' = { assignVariableTypes = true, compositeLiteralFields = true, compositeLiteralTypes = true, constantValues = true, functionTypeParameters = true, parameterNames = true, rangeVariableTypes = true }
 
-
-
-[golangci-lint]
-command = 'golangci-lint-langserver'
-args = ['-debug', '-severity', 'Hint']
-file_types = ['.go']
-files = []
-
-[golangci-lint.config]
-command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
+#[golangci-lint]
+#command = 'golangci-lint-langserver'
+#args = ['-debug', '-severity', 'Hint']
+#file_types = ['.go']
+#files = []
+#
+#[golangci-lint.config]
+#command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
 
 #[yaml]
 #command = 'yaml-language-server'

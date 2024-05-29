@@ -57,6 +57,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 
 			CodeSelectionStyle: lipgloss.NewStyle().Reverse(true),
 			CodeBarStyle:       lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true).Padding(0, 1),
+			CodeInlayHintStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor).Background(colors.SecondaryBackgroundColor).Bold(true).Italic(true),
 
 			FileTree: filetree.Styles{
 				Style:                       lipgloss.NewStyle(),

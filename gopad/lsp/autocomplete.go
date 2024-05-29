@@ -6,10 +6,10 @@ import (
 	"go.gopad.dev/gopad/gopad/buffer"
 )
 
-func GetAutocompletion(file string, row int, col int) tea.Cmd {
+func GetAutocompletion(name string, row int, col int) tea.Cmd {
 	return func() tea.Msg {
 		return GetAutocompletionMsg{
-			File: file,
+			Name: name,
 			Row:  row,
 			Col:  col,
 		}
@@ -17,7 +17,7 @@ func GetAutocompletion(file string, row int, col int) tea.Cmd {
 }
 
 type GetAutocompletionMsg struct {
-	File string
+	Name string
 	Row  int
 	Col  int
 }

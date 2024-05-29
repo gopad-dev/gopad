@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/mattn/go-runewidth"
 	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
@@ -87,6 +86,7 @@ type File struct {
 	autocomplete          *Autocompleter
 	diagnosticVersions    map[lsp.DiagnosticType]int32
 	diagnostics           []lsp.Diagnostic
+	inlayHints            []lsp.InlayHint
 	matchesVersion        int32
 	matches               []Match
 	locals                []Local
@@ -147,6 +147,13 @@ func (f *File) SetLanguage(name string) {
 	f.matches = nil
 }
 
+func (f *File) Range() buffer.Range {
+	return buffer.Range{
+		Start: buffer.Position{Row: 0, Col: 0},
+		End:   buffer.Position{Row: f.buffer.LinesLen(), Col: f.buffer.LineLen(max(f.buffer.LinesLen()-1, 0))},
+	}
+}
+
 func (f *File) Tree() *Tree {
 	return f.tree
 }
@@ -171,7 +178,7 @@ func (f *File) recordChange(change Change) tea.Cmd {
 
 	f.changes = append(f.changes, change)
 
-	cmds = append(cmds, lsp.FileChanged(f.Name(), f.Version(), change.Text))
+	cmds = append(cmds, tea.Sequence(lsp.FileChanged(f.Name(), f.Version(), change.Text), lsp.GetInlayHint(f.Name(), f.Range())))
 
 	return tea.Batch(cmds...)
 }
@@ -204,7 +211,7 @@ func (f *File) Insert(text []byte) tea.Cmd {
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),
 		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + runewidth.StringWidth(string(text)) + 1),
+		NewEndIndex: uint32(startIndex + len(text) + 1),
 		Text:        f.buffer.Bytes(),
 	})
 }
@@ -226,7 +233,7 @@ func (f *File) InsertAt(row int, col int, text []byte) tea.Cmd {
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),
 		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + runewidth.StringWidth(string(text)) + 1),
+		NewEndIndex: uint32(startIndex + len(text) + 1),
 		Text:        f.buffer.Bytes(),
 	})
 }
@@ -242,7 +249,7 @@ func (f *File) Replace(fromRow int, fromCol int, toRow int, toCol int, text []by
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),
 		OldEndIndex: uint32(endIndex),
-		NewEndIndex: uint32(startIndex + runewidth.StringWidth(string(text))),
+		NewEndIndex: uint32(startIndex + len(text)),
 		Text:        f.buffer.Bytes(),
 	})
 }
@@ -433,7 +440,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	width -= prefixLength + styles.CodePrefixStyle.GetHorizontalFrameSize() + 1
 
 	if debug {
-		height = max(height-2, 0)
+		height = max(height-3, 0)
 	}
 
 	f.refreshCursorViewOffset(width-2, height)
@@ -485,6 +492,9 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		// always draw one character off the screen to ensure the cursor is visible
 		for ii := range width - prefixLength + 1 {
 			col := ii + offsetCol
+
+			inSelection := selection != nil && selection.Contains(buffer.Position{Row: ln, Col: col})
+
 			var char string
 			if col > len(chars) {
 				codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
@@ -503,7 +513,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			style := f.HighestMatchStyle(codeLineCharStyle, ln, col)
 			style = f.HighestLineColDiagnosticStyle(style, ln, col)
 
-			if selection != nil && selection.Contains(buffer.Position{Row: ln, Col: col}) {
+			if inSelection {
 				char = styles.CodeSelectionStyle.Copy().Inherit(style).Render(char)
 			} else if ln == cursorRow && ii == realCursorCol {
 				char = f.cursor.cursor.View(char, style)
@@ -511,6 +521,25 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 				char = style.Render(char)
 			}
 			codeLine = append(codeLine, char...)
+
+			paddingStyle := codeLineCharStyle
+			labelStyle := config.Theme.Editor.CodeInlayHintStyle
+			if inSelection {
+				paddingStyle = styles.CodeSelectionStyle.Copy().Inherit(paddingStyle)
+				labelStyle = styles.CodeSelectionStyle.Copy().Inherit(labelStyle)
+			}
+			for _, hint := range f.InlayHintsForLineCol(ln, col+1) {
+				var label string
+				if hint.PaddingLeft {
+					label += paddingStyle.Render(" ")
+				}
+				label += labelStyle.Render(hint.Label)
+				if hint.PaddingRight {
+					label += paddingStyle.Render(" ")
+				}
+				codeLine = append(codeLine, label...)
+			}
+
 		}
 
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
@@ -561,6 +590,13 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d]) ", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Diagnostics: %s", strings.Join(currentDiagnostics, ", ")))
+
+		hints := f.InlayHintsForLine(cursorRow)
+		var currentHints []string
+		for _, hint := range hints {
+			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d]) ", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
+		}
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", ")))
 	}
 
 	return editorCode

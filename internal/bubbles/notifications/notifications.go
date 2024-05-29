@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"log"
 	"slices"
 	"time"
 
@@ -77,6 +78,7 @@ func (m *Model) Active() bool {
 func (m *Model) add(content string) tea.Cmd {
 	m.lastID++
 	id := m.lastID
+	log.Printf("Adding notification with ID %d: %s\n", id, content)
 	m.notifications = append(m.notifications, notification{
 		ID:      id,
 		Content: content,
