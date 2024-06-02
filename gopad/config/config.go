@@ -34,7 +34,7 @@ var (
 	Themes    []RawThemeConfig
 )
 
-func FindDir() (string, error) {
+func FindHome() (string, error) {
 	gopadHome := os.Getenv("GOPAD_CONFIG_HOME")
 	if gopadHome == "" {
 		xdgHome := os.Getenv("XDG_CONFIG_HOME")

@@ -19,7 +19,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/rivo/uniseg v0.4.7
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2
 	go.gopad.dev/go-tree-sitter v0.0.0-20240507175314-113ee9508a43
@@ -38,6 +38,7 @@ require (
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -48,6 +49,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/encoding v0.4.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect

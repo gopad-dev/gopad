@@ -10,7 +10,7 @@ files = []
 line_comment_tokens = ['//']
 block_comment_tokens = [{ start = '/*', end = '*/' }]
 auto_pairs = [{ open = '(', close = ')' }, { open = '{', close = '}' }, { open = '[', close = ']' }, { open = '"', close = '"' }, { open = "'", close = "'" }, { open = '`', close = '`' }]
-tree_sitter = { symbol_name = 'go', path = '/usr/lib/libtree-sitter-go.so' }
+grammar = { symbol_name = 'go', path = '/usr/lib/libtree-sitter-go.so' }
 
 [go-mod]
 icon = 0xe627
@@ -21,7 +21,7 @@ files = ['go.mod']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'gomod', path = '/usr/lib/libtree-sitter-gomod.so' }
+grammar = { symbol_name = 'gomod', path = '/usr/lib/libtree-sitter-gomod.so' }
 
 [go-sum]
 icon = 0xe627
@@ -32,7 +32,7 @@ files = ['go.sum', 'go.work.sum']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'gosum', path = '/usr/lib/libtree-sitter-gosum.so' }
+grammar = { symbol_name = 'gosum', path = '/usr/lib/libtree-sitter-gosum.so' }
 
 [go-work]
 icon = 0xe627
@@ -43,7 +43,7 @@ files = ['go.work']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'gowork', path = '/usr/lib/libtree-sitter-gowork.so' }
+grammar = { symbol_name = 'gowork', path = '/usr/lib/libtree-sitter-gowork.so' }
 
 [toml]
 icon = 0xe6b2
@@ -54,7 +54,7 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = "'", close = "'" }]
-tree_sitter = { symbol_name = 'toml', path = '/usr/lib/libtree-sitter-toml.so' }
+grammar = { symbol_name = 'toml', path = '/usr/lib/libtree-sitter-toml.so' }
 
 [query]
 icon = 0xe21c
@@ -65,7 +65,7 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-tree_sitter = { symbol_name = 'query', path = '/usr/lib/libtree-sitter-query.so' }
+grammar = { symbol_name = 'query', path = '/usr/lib/libtree-sitter-query.so' }
 
 [markdown]
 icon = 0xf0354
@@ -76,7 +76,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-#tree_sitter = { symbol_name = 'markdown', path = '/usr/lib/libtree-sitter-markdown.so' }
+#grammar = { symbol_name = 'markdown', path = '/usr/lib/libtree-sitter-markdown.so' }
 
 [comment]
 icon = 0xf075
@@ -87,7 +87,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'comment', path = '/usr/lib/libtree-sitter-comment.so' }
+grammar = { symbol_name = 'comment', path = '/usr/lib/libtree-sitter-comment.so' }
 
 [json]
 icon = 0xe60b
@@ -98,7 +98,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-tree_sitter = { symbol_name = 'json', path = '/usr/lib/libtree-sitter-json.so' }
+grammar = { symbol_name = 'json', path = '/usr/lib/libtree-sitter-json.so' }
 
 [json5]
 icon = 0xe60b
@@ -109,7 +109,7 @@ files = []
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-tree_sitter = { symbol_name = 'json5', path = '/usr/lib/libtree-sitter-json5.so' }
+grammar = { symbol_name = 'json5', path = '/usr/lib/libtree-sitter-json5.so' }
 
 [yaml]
 icon = 0xf0b20
@@ -120,7 +120,7 @@ files = []
 line_comment_tokens = ["#"]
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'yaml', path = '/usr/lib/libtree-sitter-yaml.so' }
+grammar = { symbol_name = 'yaml', path = '/usr/lib/libtree-sitter-yaml.so' }
 
 [gitignore]
 icon = 0xf05e
@@ -131,7 +131,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'gitignore', path = '/usr/lib/libtree-sitter-gitignore.so' }
+grammar = { symbol_name = 'gitignore', path = '/usr/lib/libtree-sitter-gitignore.so' }
 
 [git-commit]
 icon = 0xf05e
@@ -142,4 +142,4 @@ files = ['COMMIT_EDITMSG']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-tree_sitter = { symbol_name = 'git_commit', path = '/usr/lib/libtree-sitter-git-commit.so' }
+grammar = { symbol_name = 'git_commit', path = '/usr/lib/libtree-sitter-git-commit.so' }

@@ -17,7 +17,7 @@ type LanguageConfig struct {
 	LineCommentTokens  []string                   `toml:"line_comment_tokens"`
 	BlockCommentTokens []buffer.BlockCommentToken `toml:"block_comment_tokens"`
 	AutoPairs          []LanguageAutoPairs        `toml:"auto_pairs"`
-	TreeSitter         *TreeSitterConfig          `toml:"tree_sitter"`
+	Grammar            *GrammarConfig             `toml:"grammar"`
 }
 
 type LanguageAutoPairs struct {
@@ -25,8 +25,18 @@ type LanguageAutoPairs struct {
 	Close string `toml:"close"`
 }
 
-type TreeSitterConfig struct {
-	SymbolName string `toml:"symbol_name"`
-	QueriesDir string `toml:"queries_dir"`
-	Path       string `toml:"path"`
+type GrammarConfig struct {
+	Name       string                `toml:"name"`
+	SymbolName string                `toml:"symbol_name"`
+	QueriesDir string                `toml:"queries_dir"`
+	Path       string                `toml:"path"`
+	Install    *GrammarInstallConfig `toml:"install"`
+}
+
+type GrammarInstallConfig struct {
+	Git  string   `toml:"git"`
+	Rev  string   `toml:"rev"`
+	Dir  string   `toml:"dir"`
+	Cmd  string   `toml:"cmd"`
+	Args []string `toml:"args"`
 }

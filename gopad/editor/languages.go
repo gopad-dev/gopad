@@ -103,8 +103,8 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 			Name:           name,
 		}
 
-		if language.TreeSitter != nil {
-			grammar, err := loadTreeSitterGrammar(name, *language.TreeSitter, defaultConfigs)
+		if language.Grammar != nil {
+			grammar, err := loadTreeSitterGrammar(name, *language.Grammar, defaultConfigs)
 			if err != nil {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
@@ -118,7 +118,7 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 	return nil
 }
 
-func loadTreeSitterGrammar(name string, cfg config.TreeSitterConfig, defaultConfigs embed.FS) (*Grammar, error) {
+func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs embed.FS) (*Grammar, error) {
 	libPath := cfg.Path
 	if libPath == "" {
 

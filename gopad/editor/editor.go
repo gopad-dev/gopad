@@ -38,7 +38,7 @@ var fileIconFunc = func(name string) rune {
 	return 0
 }
 
-func NewEditor(workspace *string, args []string) (*Editor, error) {
+func NewEditor(workspace string, args []string) (*Editor, error) {
 	editor := Editor{
 		searchBar: config.NewSearchBar(
 			func(result searchbar.Result) tea.Cmd {
@@ -46,11 +46,6 @@ func NewEditor(workspace *string, args []string) (*Editor, error) {
 			},
 			FocusFile(""),
 		),
-	}
-
-	var workspacePath string
-	if workspace != nil {
-		workspacePath = *workspace
 	}
 
 	for _, arg := range args {
@@ -66,8 +61,8 @@ func NewEditor(workspace *string, args []string) (*Editor, error) {
 		}
 
 		if stat.IsDir() {
-			if workspacePath == "" {
-				workspacePath, err = filepath.Abs(args[0])
+			if workspace == "" {
+				workspace, err = filepath.Abs(args[0])
 				if err != nil {
 					return nil, err
 				}
@@ -80,9 +75,9 @@ func NewEditor(workspace *string, args []string) (*Editor, error) {
 		}
 	}
 
-	if workspacePath != "" {
-		editor.workspace = workspacePath
-		fileTree, err := config.NewFileTree(workspacePath, OpenFile, fileIconFunc)
+	if workspace != "" {
+		editor.workspace = workspace
+		fileTree, err := config.NewFileTree(workspace, OpenFile, fileIconFunc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to init file tree: %w", err)
 		}
