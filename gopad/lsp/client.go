@@ -20,7 +20,7 @@ import (
 
 type SendFunc func(msg tea.Cmd)
 
-func newClient(name string, version string, cfg config.LSPServerConfig, w io.Writer) *Client {
+func newClient(name string, version string, cfg config.LSPConfig, w io.Writer) *Client {
 	return &Client{
 		name:    name,
 		version: version,
@@ -35,7 +35,7 @@ type Client struct {
 
 	workspace string
 	send      SendFunc
-	cfg       config.LSPServerConfig
+	cfg       config.LSPConfig
 	server    protocol.Server
 	cmd       *exec.Cmd
 	rwc       io.ReadWriteCloser

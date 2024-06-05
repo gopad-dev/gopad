@@ -1,11 +1,53 @@
 package config
 
 import (
+	"slices"
+
 	"go.gopad.dev/gopad/gopad/buffer"
 )
 
-func DefaultLanguageConfigs() map[string]LanguageConfig {
-	return make(map[string]LanguageConfig)
+type Use struct {
+	Only   []string `toml:"only"`
+	Except []string `toml:"except"`
+}
+
+func DefaultLanguageConfigs() LanguagesConfig {
+	return LanguagesConfig{
+		GrammarDir: "grammars",
+		QueriesDir: "queries",
+		Languages:  make(map[string]LanguageConfig),
+	}
+}
+
+type LanguagesConfig struct {
+	GrammarDir  string `toml:"grammar_dir"`
+	QueriesDir  string `toml:"queries_dir"`
+	UseGrammars Use    `toml:"use_grammars"`
+
+	Languages map[string]LanguageConfig `toml:"languages"`
+}
+
+func (l LanguagesConfig) filter() LanguagesConfig {
+	languages := make(map[string]LanguageConfig)
+	for name, language := range l.Languages {
+		if len(l.UseGrammars.Only) > 0 {
+			if !slices.Contains(l.UseGrammars.Only, name) {
+				continue
+			}
+		} else if len(l.UseGrammars.Except) > 0 {
+			if slices.Contains(l.UseGrammars.Except, name) {
+				continue
+			}
+		}
+
+		languages[name] = language
+	}
+
+	return LanguagesConfig{
+		GrammarDir:  l.GrammarDir,
+		UseGrammars: l.UseGrammars,
+		Languages:   languages,
+	}
 }
 
 type LanguageConfig struct {
@@ -34,9 +76,10 @@ type GrammarConfig struct {
 }
 
 type GrammarInstallConfig struct {
-	Git  string   `toml:"git"`
-	Rev  string   `toml:"rev"`
-	Dir  string   `toml:"dir"`
-	Cmd  string   `toml:"cmd"`
-	Args []string `toml:"args"`
+	Git    string   `toml:"git"`
+	Rev    string   `toml:"rev"`
+	SubDir string   `toml:"sub_dir"`
+	Cmd    string   `toml:"cmd"`
+	Args   []string `toml:"args"`
+	Path   string   `toml:"path"`
 }

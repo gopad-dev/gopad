@@ -96,8 +96,7 @@ func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
 }
 
 func LoadLanguages(defaultConfigs embed.FS) error {
-	languageMap := config.Languages
-	for name, language := range languageMap {
+	for name, language := range config.Languages.Languages {
 		lang := &Language{
 			LanguageConfig: language,
 			Name:           name,
@@ -121,15 +120,19 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs embed.FS) (*Grammar, error) {
 	libPath := cfg.Path
 	if libPath == "" {
-
+		libPath = filepath.Join(config.Path, "grammars", fmt.Sprintf("libtree-sitter-%s.so", name))
 	}
+
 	symbolName := cfg.SymbolName
 	if symbolName == "" {
-		symbolName = name
+		symbolName = cfg.Name
 	}
-	tsLang, err := sitter.LoadLanguage(symbolName, cfg.Path)
+
+	log.Printf("Loading tree-sitter grammar %q path=%q symbol=%q\n", name, libPath, symbolName)
+
+	tsLang, err := sitter.LoadLanguage(symbolName, libPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading tree-sitter language %q path: %q symbol: %q: %w", name, libPath, symbolName, err)
 	}
 
 	queriesConfigDir := cfg.QueriesDir

@@ -34,7 +34,7 @@
         (var_spec
             name: (identifier) @name) @item))
 
-(method_spec
+(method_declaration
     name: (_) @name
     parameters: (parameter_list
       "(" @context

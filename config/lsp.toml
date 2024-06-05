@@ -1,46 +1,50 @@
 # Language Server Protocol configuration
 # For a list of available language servers, see: https://langserver.org/#implementations-server
 
-[gopls]
+use_servers = { only = ['gopls'], except = [] }
+
+[lsps]
+
+[lsps.gopls]
 command = 'gopls'
 args = []
 file_types = ['.go']
 files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
 
-[gopls.config]
+[lsps.gopls.config]
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
 'ui.hints' = { assignVariableTypes = true, compositeLiteralFields = true, compositeLiteralTypes = true, constantValues = true, functionTypeParameters = true, parameterNames = true, rangeVariableTypes = true }
 
-#[golangci-lint]
-#command = 'golangci-lint-langserver'
-#args = ['-debug', '-severity', 'Hint']
-#file_types = ['.go']
-#files = []
-#
-#[golangci-lint.config]
-#command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
+[lsps.golangci-lint]
+command = 'golangci-lint-langserver'
+args = ['-debug', '-severity', 'Hint']
+file_types = ['.go']
+files = []
 
-#[yaml]
-#command = 'yaml-language-server'
-#args = ['--stdio']
-#file_types = ['.yaml', '.yml']
-#files = []
+[lsps.golangci-lint.config]
+command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
 
-#[json]
-#command = 'vscode-json-languageserver'
-#args = ['--stdio']
-#file_types = ['.json', '.jsonc']
-#files = []
+[lsps.yaml]
+command = 'yaml-language-server'
+args = ['--stdio']
+file_types = ['.yaml', '.yml']
+files = []
 
-#[html]
-#command = 'vscode-html-language-server'
-#args = ['--stdio']
-#file_types = ['.html', '.htm']
-#files = []
+[lsps.json]
+command = 'vscode-json-languageserver'
+args = ['--stdio']
+file_types = ['.json', '.jsonc']
+files = []
 
-#[toml]
-#command = 'taplo'
-#args = ['lsp', 'stdio']
-#file_types = ['.toml']
-#files = []
+[lsps.html]
+command = 'vscode-html-language-server'
+args = ['--stdio']
+file_types = ['.html', '.htm']
+files = []
+
+[lsps.toml]
+command = 'taplo'
+args = ['lsps', 'stdio']
+file_types = ['.toml']
+files = []

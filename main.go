@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"go.gopad.dev/gopad/cmd"
 )
@@ -25,7 +26,7 @@ func main() {
 	cmd.NewGrammarCmd(rootCmd)
 	cmd.NewCompletionCmd(rootCmd)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {

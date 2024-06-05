@@ -27,8 +27,8 @@ const (
 var (
 	Path      string
 	Gopad     GopadConfig
-	Languages map[string]LanguageConfig
-	LSP       LSPConfig
+	Languages LanguagesConfig
+	LSP       LSPConfigs
 	Keys      KeyMap
 	Theme     ThemeConfig
 	Themes    []RawThemeConfig
@@ -128,8 +128,8 @@ func Load(name string, defaultConfigs embed.FS) error {
 
 	Path = name
 	Gopad = gopad
-	Languages = languages
-	LSP = lsp
+	Languages = languages.filter()
+	LSP = lsp.filter()
 	Keys = keymap.Keys()
 	Themes = themes
 	Theme = theme.Theme()

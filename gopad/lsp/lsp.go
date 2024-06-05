@@ -15,9 +15,9 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-func New(version string, cfg config.LSPConfig, w io.Writer) *LSP {
-	clients := make(map[string]*Client, len(cfg))
-	for name, serverCfg := range cfg {
+func New(version string, cfg config.LSPConfigs, w io.Writer) *LSP {
+	clients := make(map[string]*Client, len(cfg.LSPs))
+	for name, serverCfg := range cfg.LSPs {
 		log.Println("Creating lsp client for", name)
 		clients[name] = newClient(name, version, serverCfg, w)
 	}

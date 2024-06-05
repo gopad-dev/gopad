@@ -96,10 +96,10 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringP("config-dir", "c", "", "set config directory")
-	cmd.NonInheritedFlags().StringP("workspace", "w", "", "set workspace directory")
-	cmd.NonInheritedFlags().StringP("debug", "d", "", "enable & set debug log file (use - for stdout)")
-	cmd.NonInheritedFlags().StringP("debug-lsp", "l", "", "enable & set debug log file for lsp")
-	cmd.NonInheritedFlags().StringP("pprof", "p", "", "enable & set pprof address:port")
+	cmd.Flags().StringP("workspace", "w", "", "set workspace directory")
+	cmd.Flags().StringP("debug", "d", "", "enable & set debug log file (use - for stdout)")
+	cmd.Flags().StringP("debug-lsp", "l", "", "enable & set debug log file for lsp")
+	cmd.Flags().StringP("pprof", "p", "", "enable & set pprof address:port")
 
 	return cmd
 }

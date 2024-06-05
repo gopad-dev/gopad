@@ -1,7 +1,13 @@
 # Languages configuration
 # Language icons can be found at https://www.nerdfonts.com/cheat-sheet, make sure you have a Nerd Font installed
 
-[go]
+grammar_dir = 'grammars'
+queries_dir = 'queries'
+use_grammars = { only = [], except = [] }
+
+[languages]
+
+[languages.go]
 icon = 0xe627
 alt_names = ['golang']
 mime_types = ['text/x-gosrc']
@@ -10,9 +16,9 @@ files = []
 line_comment_tokens = ['//']
 block_comment_tokens = [{ start = '/*', end = '*/' }]
 auto_pairs = [{ open = '(', close = ')' }, { open = '{', close = '}' }, { open = '[', close = ']' }, { open = '"', close = '"' }, { open = "'", close = "'" }, { open = '`', close = '`' }]
-grammar = { symbol_name = 'go', path = '/usr/lib/libtree-sitter-go.so' }
+grammar = { name = 'go', symbol_name = 'go', install = { git = 'https://github.com/tree-sitter/tree-sitter-go', rev = '7ee8d928db5202f6831a78f8112fd693bf69f98b' } }
 
-[go-mod]
+[languages.go-mod]
 icon = 0xe627
 alt_names = ['go.mod']
 mime_types = []
@@ -21,9 +27,9 @@ files = ['go.mod']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'gomod', path = '/usr/lib/libtree-sitter-gomod.so' }
+grammar = { name = 'go-mod', symbol_name = 'gomod', install = { git = 'https://github.com/camdencheek/tree-sitter-go-mod', rev = 'bbe2fe3be4b87e06a613e685250f473d2267f430' } }
 
-[go-sum]
+[languages.go-sum]
 icon = 0xe627
 alt_names = ['go.sum', 'go.work.sum']
 mime_types = []
@@ -32,9 +38,9 @@ files = ['go.sum', 'go.work.sum']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'gosum', path = '/usr/lib/libtree-sitter-gosum.so' }
+grammar = { name = 'go-sum', symbol_name = 'gosum', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-go-sum', rev = 'e2ac513b2240c7ff1069ae33b2df29ce90777c11' } }
 
-[go-work]
+[languages.go-work]
 icon = 0xe627
 alt_names = ['go.work']
 mime_types = []
@@ -43,9 +49,9 @@ files = ['go.work']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'gowork', path = '/usr/lib/libtree-sitter-gowork.so' }
+grammar = { name = 'go-work', symbol_name = 'gowork', install = { git = 'https://github.com/omertuc/tree-sitter-go-work', rev = '949a8a470559543857a62102c84700d291fc984c' } }
 
-[toml]
+[languages.toml]
 icon = 0xe6b2
 alt_names = []
 mime_types = []
@@ -54,9 +60,9 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = "'", close = "'" }]
-grammar = { symbol_name = 'toml', path = '/usr/lib/libtree-sitter-toml.so' }
+grammar = { name = 'toml', symbol_name = 'toml', install = { git = 'https://github.com/ikatyang/tree-sitter-toml', rev = '8bd2056818b21860e3d756b5a58c4f6e05fb744e' } }
 
-[query]
+[languages.query]
 icon = 0xe21c
 alt_names = ['tree sitter query']
 mime_types = []
@@ -65,9 +71,9 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { symbol_name = 'query', path = '/usr/lib/libtree-sitter-query.so' }
+grammar = { name = 'query', symbol_name = 'query', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-query', rev = 'f767fb0ac5e711b6d44c5e0c8d1f349687a86ce0' } }
 
-[markdown]
+[languages.markdown]
 icon = 0xf0354
 alt_names = ['md']
 mime_types = []
@@ -76,9 +82,20 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-#grammar = { symbol_name = 'markdown', path = '/usr/lib/libtree-sitter-markdown.so' }
+grammar = { name = 'markdown', symbol_name = 'markdown', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', sub_dir = 'tree-sitter-markdown' } }
 
-[comment]
+[languages.markdown-inline]
+icon = 0xf0354
+alt_names = []
+mime_types = []
+file_types = []
+files = []
+line_comment_tokens = []
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'markdown-inline', symbol_name = 'markdown_inline', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', sub_dir = 'tree-sitter-markdown-inline' } }
+
+[languages.comment]
 icon = 0xf075
 alt_names = []
 mime_types = []
@@ -87,9 +104,9 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'comment', path = '/usr/lib/libtree-sitter-comment.so' }
+grammar = { name = 'comment', symbol_name = 'comment', install = { git = 'https://github.com/stsewd/tree-sitter-comment', rev = '5d8b29f6ef3bf64d59430dcfe76b31cc44b5abfd' } }
 
-[json]
+[languages.json]
 icon = 0xe60b
 alt_names = []
 mime_types = []
@@ -98,20 +115,20 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { symbol_name = 'json', path = '/usr/lib/libtree-sitter-json.so' }
+grammar = { name = 'json', symbol_name = 'json', install = { git = 'https://github.com/tree-sitter/tree-sitter-json', rev = '94f5c527b2965465956c2000ed6134dd24daf2a7' } }
 
-[json5]
+[languages.json5]
 icon = 0xe60b
 alt_names = []
 mime_types = []
-file_types = ['.json5']
+file_types = ['.json5', '.jsonc']
 files = []
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { symbol_name = 'json5', path = '/usr/lib/libtree-sitter-json5.so' }
+grammar = { name = 'json5', symbol_name = 'json5', install = { git = 'https://github.com/Joakker/tree-sitter-json5', rev = 'ab0ba8229d639ec4f3fa5f674c9133477f4b77bd' } }
 
-[yaml]
+[languages.yaml]
 icon = 0xf0b20
 alt_names = ['yml']
 mime_types = []
@@ -120,9 +137,9 @@ files = []
 line_comment_tokens = ["#"]
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'yaml', path = '/usr/lib/libtree-sitter-yaml.so' }
+grammar = { name = 'yaml', symbol_name = 'yaml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-yaml', rev = '7b03feefd36b5f155465ca736c6304aca983b267' } }
 
-[gitignore]
+[languages.gitignore]
 icon = 0xf05e
 alt_names = []
 mime_types = []
@@ -131,15 +148,48 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'gitignore', path = '/usr/lib/libtree-sitter-gitignore.so' }
+grammar = { name = 'gitignore', symbol_name = 'gitignore', install = { git = 'https://github.com/shunsambongi/tree-sitter-gitignore', rev = 'f4685bf11ac466dd278449bcfe5fd014e94aa504' } }
 
-[git-commit]
+[languages.git-commit]
 icon = 0xf05e
-alt_names = []
+alt_names = ['gitcommit']
 mime_types = []
 file_types = []
 files = ['COMMIT_EDITMSG']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { symbol_name = 'git_commit', path = '/usr/lib/libtree-sitter-git-commit.so' }
+grammar = { name = 'git-commit', symbol_name = 'git_commit', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-commit', rev = '6f193a66e9aa872760823dff020960c6cedc37b3' } }
+
+[languages.git-config]
+icon = 0xf05e
+alt_names = ['gitconfig']
+mime_types = []
+file_types = []
+files = ['.gitconfig', '.git/config']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'git-config', symbol_name = 'git_config', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-config', rev = '9c2a1b7894e6d9eedfe99805b829b4ecd871375e' } }
+
+[languages.git-rebase]
+icon = 0xf05e
+alt_names = ['gitrebase']
+mime_types = []
+file_types = []
+files = ['git-rebase-todo']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'git-rebase', symbol_name = 'git_rebase', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-rebase', rev = 'd8a4207ebbc47bd78bacdf48f883db58283f9fd8' } }
+
+[languages.gitattributes]
+icon = 0xf05e
+alt_names = []
+mime_types = []
+file_types = []
+files = ['.gitattributes']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'gitattributes', symbol_name = 'gitattributes', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-gitattributes', rev = '41940e199ba5763abea1d21b4f717014b45f01ea' } }
