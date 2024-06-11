@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"go.gopad.dev/go-tree-sitter"
+	"go.gopad.dev/gopad/cmd/grammar"
 
 	"go.gopad.dev/gopad/gopad/config"
 )
@@ -120,7 +121,7 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs embed.FS) (*Grammar, error) {
 	libPath := cfg.Path
 	if libPath == "" {
-		libPath = filepath.Join(config.Path, "grammars", fmt.Sprintf("libtree-sitter-%s.so", name))
+		libPath = filepath.Join(config.Path, "grammars", grammar.LibName(name))
 	}
 
 	symbolName := cfg.SymbolName

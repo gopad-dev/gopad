@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -15,6 +16,15 @@ import (
 )
 
 const remoteName = "origin"
+
+func LibName(name string) string {
+	switch runtime.GOOS {
+	case "windows":
+		return fmt.Sprintf("tree-sitter-%s.dll", name)
+	default:
+		return fmt.Sprintf("libtree-sitter-%s.so", name)
+	}
+}
 
 func NewInstallCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
@@ -100,13 +110,13 @@ func installGrammar(ctx context.Context, configDir string, grammarPath string, g
 	if grammar.Install.SubDir != "" {
 		grammarDir = grammar.Install.SubDir
 	}
-	cmd = exec.CommandContext(ctx, "tree-sitter", "build", "--output", "grammar.so", grammarDir)
+	cmd = exec.CommandContext(ctx, "tree-sitter", "build", "--output", LibName(grammar.Name), grammarDir)
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
 		return fmt.Errorf("failed to build tree sitter grammar library: %w", err)
 	}
 
-	file, err := os.OpenFile(filepath.Join(dir, "grammar.so"), os.O_RDONLY, 0)
+	file, err := os.OpenFile(filepath.Join(dir, LibName(grammar.Name)), os.O_RDONLY, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open tree sitter grammar library: %w", err)
 	}
@@ -126,7 +136,7 @@ func installGrammar(ctx context.Context, configDir string, grammarPath string, g
 		return fmt.Errorf("failed to create tree sitter grammar library install dir")
 	}
 
-	libFile, err := os.Create(filepath.Join(installPath, fmt.Sprintf("libtree-sitter-%s.so", grammar.Name)))
+	libFile, err := os.Create(filepath.Join(installPath, LibName(grammar.Name)))
 	if err != nil {
 		return fmt.Errorf("failed to create tree sitter grammar library: %w", err)
 	}
