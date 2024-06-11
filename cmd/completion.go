@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,18 +45,38 @@ func NewCompletionCmd(parent *cobra.Command) {
 
 	for _, child := range cmd.Commands() {
 		child.RunE = func(cmd *cobra.Command, args []string) error {
+			shellName := cmd.Name()
 			shouldPrint, _ := cmd.Flags().GetBool("print")
 			if shouldPrint {
-				return cmd.Root().GenBashCompletionV2(parent.OutOrStdout(), !noDesc)
+				switch shellName {
+				case "bash":
+					return cmd.Root().GenBashCompletionV2(parent.OutOrStdout(), !noDesc)
+				case "zsh":
+					return cmd.Root().GenZshCompletion(parent.OutOrStdout())
+				case "fish":
+					return cmd.Root().GenFishCompletion(parent.OutOrStdout(), !noDesc)
+				case "powershell":
+					return cmd.Root().GenPowerShellCompletion(parent.OutOrStdout())
+				}
+				return fmt.Errorf("unsupported shell: %s", shellName)
 			}
 
 			filename, _ := cmd.Flags().GetString("install")
 			if filename != "" {
-				return cmd.Root().GenBashCompletionFileV2(filename, !noDesc)
+				switch shellName {
+				case "bash":
+					return cmd.Root().GenBashCompletionFileV2(filename, !noDesc)
+				case "zsh":
+					return cmd.Root().GenZshCompletionFile(filename)
+				case "fish":
+					return cmd.Root().GenFishCompletionFile(filename, !noDesc)
+				case "powershell":
+					return cmd.Root().GenPowerShellCompletionFile(filename)
+				}
+				return fmt.Errorf("unsupported shell: %s", shellName)
 			}
-			command := completionInstallCommands[cmd.Name()]
 
-			cmd.Println(strings.ReplaceAll(command, "${name}", cmd.Root().Name()))
+			cmd.Println(strings.ReplaceAll(completionInstallCommands[shellName], "${name}", cmd.Root().Name()))
 			return nil
 		}
 	}

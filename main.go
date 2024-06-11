@@ -11,6 +11,10 @@ import (
 	"go.gopad.dev/gopad/cmd"
 )
 
+const (
+	Test = true
+)
+
 var (
 	Version = "dev"
 	Commit  = "unknown"

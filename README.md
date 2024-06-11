@@ -39,6 +39,8 @@ gopad is a simple terminal-based text editor written in Go. It is inspired mostl
 go install go.gopad.dev/gopad@latest
 ```
 
+> lol
+
 ## Usage
 
 ```bash

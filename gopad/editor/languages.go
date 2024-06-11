@@ -132,7 +132,7 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 
 	tsLang, err := sitter.LoadLanguage(symbolName, libPath)
 	if err != nil {
-		return nil, fmt.Errorf("error loading tree-sitter language %q path: %q symbol: %q: %w", name, libPath, symbolName, err)
+		return nil, fmt.Errorf("error loading tree-sitter language %q path: %q: %w", name, libPath, err)
 	}
 
 	queriesConfigDir := cfg.QueriesDir

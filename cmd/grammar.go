@@ -17,7 +17,7 @@ func NewGrammarCmd(parent *cobra.Command) {
 	parent.AddCommand(cmd)
 
 	grammar.NewInstallCmd(cmd)
+	grammar.NewListCmd(cmd)
 	grammar.NewRemoveCmd(cmd)
 	grammar.NewUpdateCmd(cmd)
-	grammar.NewListCmd(cmd)
 }

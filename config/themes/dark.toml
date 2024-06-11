@@ -36,35 +36,60 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 
 # Code style configuration
 [code]
-comment.foreground = '8'
-property.foreground = '9'
-type.foreground = '11'
-keyword.foreground = '13'
-constant.foreground = '11'
-"constant.builtin".foreground = '9'
-function.foreground = '14'
-string = { foreground = '10', bold = true }
-"string.special".foreground = '9'
-"string.special.url".foreground = '4'
-number.foreground = '3'
-"variable.other.member".foreground = '9'
-"string.escape".foreground = '14'
-"punctuation.delimiter".foreground = '11'
-"punctuation.bracket".foreground = '11'
-"markup.heading" = { foreground = '6', bold = true }
-"markup.italic" = { italic = true }
-"markup.bold" = { bold = true }
-"markup.underline" = { underline = true }
-"markup.strikethrough" = { strikethrough = true }
-"markup.link" = { foreground = '4', underline = true }
-"markup.list".foreground = '13'
-"markup.raw".foreground = '7'
-label.foreground = '11'
-tag.foreground = '9'
-attribute.foreground = '3'
+"tag" = { foreground = '9' }
+"attribute" = { foreground = '3' }
+"property" = { foreground = '9' }
+"label" = { foreground = '11' }
+
+"comment" = { foreground = '8' }
 "comment.error" = { foreground = '1', bold = true }
 "comment.warning" = { foreground = '3', bold = true }
 "comment.note" = { foreground = '2', bold = true }
 "comment.todo" = { foreground = '15', bold = true }
-"diff.addition".foreground = '10'
-"diff.deletion".foreground = '9'
+
+"constant" = { foreground = '11' }
+"constant.numeric" = { foreground = '3' }
+"constant.builtin" = { foreground = '9' }
+"constant.builtin.boolean" = { foreground = '3' }
+"constant.character.escape" = { foreground = '10' }
+
+"function" = { foreground = '14' }
+"function.builtin" = { foreground = '14' }
+"function.macro" = { foreground = '14' }
+"constructor" = { foreground = '14' }
+"keyword" = { foreground = '13' }
+"section" = { foreground = '13' }
+
+"punctuation.delimiter" = { foreground = '11' }
+"punctuation.special" = { foreground = '13' }
+"punctuation.bracket" = { foreground = '11' }
+
+"operator" = { }
+"keyword.operator" = { }
+"special" = { foreground = '14' }
+"string" = { foreground = '10', bold = true }
+"string.escape" = { foreground = '14' }
+"string.special" = { foreground = '9' }
+"string.special.url" = { foreground = '4' }
+"number" = { foreground = '3' }
+"boolean" = { foreground = '3' }
+"type" = { foreground = '11' }
+
+"variable.builtin" = { foreground = '14' }
+"variable.parameter" = { foreground = '9' }
+"variable.other.member" = { foreground = '9' }
+
+"markup.heading" = { foreground = '6' }
+"markup.raw" = { foreground = '7' }
+"markup.list" = { foreground = '13' }
+"markup.quote" = { foreground = '11' }
+"markup.link.url" = { foreground = '14', underline = true }
+"markup.link.text" = { foreground = '13' }
+"markup.bold" = { bold = true }
+"markup.italic" = { italic = true }
+"markup.underline" = { underline = true }
+"markup.strikethrough" = { strikethrough = true }
+
+"diff.plus" = { foreground = '10' }
+"diff.delta" = { foreground = '11' }
+"diff.minus" = { foreground = '9' }

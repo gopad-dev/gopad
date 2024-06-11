@@ -2,14 +2,11 @@ package grammar
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -25,27 +22,14 @@ func NewInstallCmd(parent *cobra.Command) {
 		Short:   "Used to install your tree sitter grammars",
 		Example: "gopad grammar install go",
 		Args:    cobra.ArbitraryArgs,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := ensureGitInstalled(cmd.Context()); err != nil {
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			if err := ensureGitInstalled(); err != nil {
 				return err
 			}
-			if err := ensureTreeSitterInstalled(cmd.Context()); err != nil {
-				return err
-			}
-			return nil
+			return ensureTreeSitterInstalled()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var languages []config.LanguageConfig
-
-			for name, language := range config.Languages.Languages {
-				if len(args) > 0 && !slices.Contains(args, name) {
-					continue
-				}
-				if language.Grammar == nil || language.Grammar.Install == nil {
-					continue
-				}
-				languages = append(languages, language)
-			}
+			languages := filterLanguages(args, true)
 
 			var wg sync.WaitGroup
 			for _, language := range languages {
@@ -53,7 +37,19 @@ func NewInstallCmd(parent *cobra.Command) {
 
 				go func() {
 					defer wg.Done()
-					installLanguage(cmd.Context(), config.Path, config.Languages.GrammarDir, *language.Grammar)
+					err := installGrammar(cmd.Context(), config.Path, config.Languages.GrammarDir, *language.Grammar)
+
+					var status string
+					if err == nil {
+						status = successStyle.Render("installed")
+						if language.Grammar.Install != nil {
+							status += fmt.Sprintf(" (%s)", infoStyle.Render(language.Grammar.Install.Hyperlink()))
+						}
+					} else {
+						status = errorStyle.Render("error installing")
+					}
+
+					cmd.Printf("grammar %s: %s\n%s", grammarStyle.Render(language.Grammar.Hyperlink()), status, msgFromErr(err))
 				}()
 			}
 
@@ -66,63 +62,38 @@ func NewInstallCmd(parent *cobra.Command) {
 	parent.AddCommand(cmd)
 }
 
-func ensureGitInstalled(ctx context.Context) error {
-	_, err := exec.LookPath("git")
-	if err != nil {
-		return fmt.Errorf("git is not installed: %w", err)
-	}
-	return nil
-}
-
-func ensureTreeSitterInstalled(ctx context.Context) error {
-	_, err := exec.LookPath("tree-sitter")
-	if err != nil {
-		return fmt.Errorf("tree-sitter is not installed: %w", err)
-	}
-	return nil
-}
-
-func installLanguage(ctx context.Context, configDir string, grammarPath string, grammar config.GrammarConfig) {
-	log.Printf("installing %q grammar\n", grammar.Name)
-
+func installGrammar(ctx context.Context, configDir string, grammarPath string, grammar config.GrammarConfig) error {
 	dir, err := os.MkdirTemp("", fmt.Sprintf("tree-sitter-%s-", grammar.Name))
 	if err != nil {
-		log.Printf("failed to create temp install dir for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to create temp install dir: %w", err)
 	}
 
 	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			log.Printf("failed to cleanup git temp dir for %q grammar at %q\n", grammar.Name, dir)
-		}
+		_ = os.RemoveAll(dir)
 	}()
 
 	cmd := exec.CommandContext(ctx, "git", "init")
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
-		logCmdErrorf(err, "failed to init temp git repo for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to init temp git repo: %w", err)
 	}
 
 	cmd = exec.CommandContext(ctx, "git", "remote", "add", remoteName, grammar.Install.Git)
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
-		logCmdErrorf(err, "failed to set git remote for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to set git remote: %w", err)
 	}
 
 	cmd = exec.CommandContext(ctx, "git", "fetch", "--depth", "1", remoteName, grammar.Install.Rev)
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
-		logCmdErrorf(err, "failed to fetch from git remote for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to fetch from git remote: %w", err)
 	}
 
 	cmd = exec.CommandContext(ctx, "git", "checkout", grammar.Install.Rev)
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
-		logCmdErrorf(err, "failed to fetch from git remote for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to checkout git rev: %w", err)
 	}
 
 	grammarDir := "."
@@ -132,19 +103,17 @@ func installLanguage(ctx context.Context, configDir string, grammarPath string, 
 	cmd = exec.CommandContext(ctx, "tree-sitter", "build", "--output", "grammar.so", grammarDir)
 	cmd.Dir = dir
 	if err = cmd.Run(); err != nil {
-		logCmdErrorf(err, "failed to build tree sitter grammar library for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to build tree sitter grammar library: %w", err)
 	}
 
 	file, err := os.OpenFile(filepath.Join(dir, "grammar.so"), os.O_RDONLY, 0)
 	if err != nil {
-		log.Printf("failed to open tree sitter grammar library for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to open tree sitter grammar library: %w", err)
 	}
 
 	defer file.Close()
 
-	installPath := grammar.Install.Path
+	installPath := grammar.Path
 	if installPath == "" {
 		if filepath.IsAbs(grammarPath) {
 			installPath = grammarPath
@@ -154,34 +123,19 @@ func installLanguage(ctx context.Context, configDir string, grammarPath string, 
 	}
 
 	if err = os.MkdirAll(installPath, 0755); err != nil {
-		log.Printf("failed to create tree sitter grammar library install dir for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to create tree sitter grammar library install dir")
 	}
 
 	libFile, err := os.Create(filepath.Join(installPath, fmt.Sprintf("libtree-sitter-%s.so", grammar.Name)))
 	if err != nil {
-		log.Printf("failed to create tree sitter grammar library for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to create tree sitter grammar library: %w", err)
 	}
 
 	defer libFile.Close()
 
 	if _, err = io.Copy(libFile, file); err != nil {
-		log.Printf("failed to copy tree sitter grammar library for %q grammar: %s\n", grammar.Name, err.Error())
-		return
+		return fmt.Errorf("failed to copy tree sitter grammar library: %w", err)
 	}
-}
 
-func logCmdErrorf(err error, message string, a ...any) {
-	var stderr []byte
-
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		stderr = exitErr.Stderr
-	}
-	msg := fmt.Sprintf(message, a...)
-	if len(stderr) > 0 {
-		msg += fmt.Sprintf("stderr: %s\n", stderr)
-	}
-	log.Println(msg)
+	return nil
 }

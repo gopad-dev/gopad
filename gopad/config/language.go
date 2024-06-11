@@ -3,6 +3,8 @@ package config
 import (
 	"slices"
 
+	"github.com/muesli/termenv"
+
 	"go.gopad.dev/gopad/gopad/buffer"
 )
 
@@ -75,11 +77,34 @@ type GrammarConfig struct {
 	Install    *GrammarInstallConfig `toml:"install"`
 }
 
-type GrammarInstallConfig struct {
-	Git    string   `toml:"git"`
-	Rev    string   `toml:"rev"`
-	SubDir string   `toml:"sub_dir"`
-	Cmd    string   `toml:"cmd"`
-	Args   []string `toml:"args"`
-	Path   string   `toml:"path"`
+func (c GrammarConfig) Hyperlink() string {
+	if c.Install == nil {
+		return c.Name
+	}
+	return termenv.Hyperlink(c.Install.Git, c.Name)
 }
+
+type GrammarInstallConfig struct {
+	Git     string  `toml:"git"`
+	Rev     string  `toml:"rev"`
+	Ref     string  `toml:"ref"`
+	RefType RefType `toml:"ref_type"`
+	SubDir  string  `toml:"sub_dir"`
+}
+
+func (c GrammarInstallConfig) Hyperlink() string {
+	switch c.RefType {
+	case RefTypeCommit:
+		return termenv.Hyperlink(c.Git+"/commit/"+c.Rev, c.Rev)
+	case RefTypeTag:
+		return termenv.Hyperlink(c.Git+"/releases/tag/"+c.Ref, c.Ref)
+	}
+	return c.Ref
+}
+
+type RefType string
+
+const (
+	RefTypeCommit RefType = "commit"
+	RefTypeTag    RefType = "tag"
+)

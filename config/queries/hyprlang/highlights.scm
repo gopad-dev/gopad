@@ -13,7 +13,7 @@
   (name) @property)
 
 (section
-  (name) @module)
+  (name) @section)
 
 (section
   device: (device_name) @type)
@@ -23,6 +23,8 @@
 "$" @punctuation.special
 
 (boolean) @boolean
+
+(string) @string
 
 (mod) @constant
 

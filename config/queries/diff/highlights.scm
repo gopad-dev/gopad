@@ -1,5 +1,5 @@
-[(addition) (new_file)] @diff.addition
-[(deletion) (old_file)] @diff.deletion
+[(addition) (new_file)] @diff.plus
+[(deletion) (old_file)] @diff.minus
 
 (commit) @constant
 (location) @attribute

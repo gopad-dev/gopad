@@ -16,7 +16,7 @@ files = []
 line_comment_tokens = ['//']
 block_comment_tokens = [{ start = '/*', end = '*/' }]
 auto_pairs = [{ open = '(', close = ')' }, { open = '{', close = '}' }, { open = '[', close = ']' }, { open = '"', close = '"' }, { open = "'", close = "'" }, { open = '`', close = '`' }]
-grammar = { name = 'go', symbol_name = 'go', install = { git = 'https://github.com/tree-sitter/tree-sitter-go', rev = '7ee8d928db5202f6831a78f8112fd693bf69f98b' } }
+grammar = { name = 'go', symbol_name = 'go', install = { git = 'https://github.com/tree-sitter/tree-sitter-go', rev = '7ee8d928db5202f6831a78f8112fd693bf69f98b', ref = 'master', ref_type = 'commit' } }
 
 [languages.go-mod]
 icon = 0xe627
@@ -27,7 +27,7 @@ files = ['go.mod']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'go-mod', symbol_name = 'gomod', install = { git = 'https://github.com/camdencheek/tree-sitter-go-mod', rev = 'bbe2fe3be4b87e06a613e685250f473d2267f430' } }
+grammar = { name = 'go-mod', symbol_name = 'gomod', install = { git = 'https://github.com/camdencheek/tree-sitter-go-mod', rev = 'bbe2fe3be4b87e06a613e685250f473d2267f430', ref = 'main', ref_type = 'commit' } }
 
 [languages.go-sum]
 icon = 0xe627
@@ -38,7 +38,7 @@ files = ['go.sum', 'go.work.sum']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'go-sum', symbol_name = 'gosum', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-go-sum', rev = 'e2ac513b2240c7ff1069ae33b2df29ce90777c11' } }
+grammar = { name = 'go-sum', symbol_name = 'gosum', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-go-sum', rev = 'e2ac513b2240c7ff1069ae33b2df29ce90777c11', ref = 'master', ref_type = 'commit' } }
 
 [languages.go-work]
 icon = 0xe627
@@ -49,7 +49,7 @@ files = ['go.work']
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'go-work', symbol_name = 'gowork', install = { git = 'https://github.com/omertuc/tree-sitter-go-work', rev = '949a8a470559543857a62102c84700d291fc984c' } }
+grammar = { name = 'go-work', symbol_name = 'gowork', install = { git = 'https://github.com/omertuc/tree-sitter-go-work', rev = '949a8a470559543857a62102c84700d291fc984c', ref = 'main', ref_type = 'commit' } }
 
 [languages.toml]
 icon = 0xe6b2
@@ -60,7 +60,7 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = "'", close = "'" }]
-grammar = { name = 'toml', symbol_name = 'toml', install = { git = 'https://github.com/ikatyang/tree-sitter-toml', rev = '8bd2056818b21860e3d756b5a58c4f6e05fb744e' } }
+grammar = { name = 'toml', symbol_name = 'toml', install = { git = 'https://github.com/ikatyang/tree-sitter-toml', rev = '8bd2056818b21860e3d756b5a58c4f6e05fb744e', ref = 'master', ref_type = 'commit' } }
 
 [languages.query]
 icon = 0xe21c
@@ -71,7 +71,7 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { name = 'query', symbol_name = 'query', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-query', rev = 'f767fb0ac5e711b6d44c5e0c8d1f349687a86ce0' } }
+grammar = { name = 'query', symbol_name = 'query', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-query', rev = 'f767fb0ac5e711b6d44c5e0c8d1f349687a86ce0', ref = 'master', ref_type = 'commit' } }
 
 [languages.markdown]
 icon = 0xf0354
@@ -82,7 +82,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'markdown', symbol_name = 'markdown', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', sub_dir = 'tree-sitter-markdown' } }
+grammar = { name = 'markdown', symbol_name = 'markdown', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', ref = 'split_parser', ref_type = 'commit', sub_dir = 'tree-sitter-markdown' } }
 
 [languages.markdown-inline]
 icon = 0xf0354
@@ -93,7 +93,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'markdown-inline', symbol_name = 'markdown_inline', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', sub_dir = 'tree-sitter-markdown-inline' } }
+grammar = { name = 'markdown-inline', symbol_name = 'markdown_inline', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-markdown', rev = '7fe453beacecf02c86f7736439f238f5bb8b5c9b', ref = 'split_parser', ref_type = 'commit', sub_dir = 'tree-sitter-markdown-inline' } }
 
 [languages.comment]
 icon = 0xf075
@@ -104,7 +104,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'comment', symbol_name = 'comment', install = { git = 'https://github.com/stsewd/tree-sitter-comment', rev = '5d8b29f6ef3bf64d59430dcfe76b31cc44b5abfd' } }
+grammar = { name = 'comment', symbol_name = 'comment', install = { git = 'https://github.com/stsewd/tree-sitter-comment', rev = '5d8b29f6ef3bf64d59430dcfe76b31cc44b5abfd', ref = 'master', ref_type = 'commit' } }
 
 [languages.json]
 icon = 0xe60b
@@ -115,7 +115,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { name = 'json', symbol_name = 'json', install = { git = 'https://github.com/tree-sitter/tree-sitter-json', rev = '94f5c527b2965465956c2000ed6134dd24daf2a7' } }
+grammar = { name = 'json', symbol_name = 'json', install = { git = 'https://github.com/tree-sitter/tree-sitter-json', rev = '94f5c527b2965465956c2000ed6134dd24daf2a7', ref = 'master', ref_type = 'commit' } }
 
 [languages.json5]
 icon = 0xe60b
@@ -126,7 +126,7 @@ files = []
 line_comment_tokens = ['//']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
-grammar = { name = 'json5', symbol_name = 'json5', install = { git = 'https://github.com/Joakker/tree-sitter-json5', rev = 'ab0ba8229d639ec4f3fa5f674c9133477f4b77bd' } }
+grammar = { name = 'json5', symbol_name = 'json5', install = { git = 'https://github.com/Joakker/tree-sitter-json5', rev = 'ab0ba8229d639ec4f3fa5f674c9133477f4b77bd', ref = 'master', ref_type = 'commit' } }
 
 [languages.yaml]
 icon = 0xf0b20
@@ -137,7 +137,7 @@ files = []
 line_comment_tokens = ["#"]
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'yaml', symbol_name = 'yaml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-yaml', rev = '7b03feefd36b5f155465ca736c6304aca983b267' } }
+grammar = { name = 'yaml', symbol_name = 'yaml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-yaml', rev = '7b03feefd36b5f155465ca736c6304aca983b267', ref = 'master', ref_type = 'commit' } }
 
 [languages.gitignore]
 icon = 0xf05e
@@ -148,7 +148,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'gitignore', symbol_name = 'gitignore', install = { git = 'https://github.com/shunsambongi/tree-sitter-gitignore', rev = 'f4685bf11ac466dd278449bcfe5fd014e94aa504' } }
+grammar = { name = 'gitignore', symbol_name = 'gitignore', install = { git = 'https://github.com/shunsambongi/tree-sitter-gitignore', rev = 'f4685bf11ac466dd278449bcfe5fd014e94aa504', ref = 'main', ref_type = 'commit' } }
 
 [languages.git-commit]
 icon = 0xf05e
@@ -159,7 +159,7 @@ files = ['COMMIT_EDITMSG']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'git-commit', symbol_name = 'git_commit', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-commit', rev = '6f193a66e9aa872760823dff020960c6cedc37b3' } }
+grammar = { name = 'git-commit', symbol_name = 'git_commit', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-commit', rev = '6f193a66e9aa872760823dff020960c6cedc37b3', ref = 'main', ref_type = 'commit' } }
 
 [languages.git-config]
 icon = 0xf05e
@@ -170,7 +170,7 @@ files = ['.gitconfig', '.git/config']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'git-config', symbol_name = 'git_config', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-config', rev = '9c2a1b7894e6d9eedfe99805b829b4ecd871375e' } }
+grammar = { name = 'git-config', symbol_name = 'git_config', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-config', rev = '9c2a1b7894e6d9eedfe99805b829b4ecd871375e', ref = 'main', ref_type = 'commit' } }
 
 [languages.git-rebase]
 icon = 0xf05e
@@ -181,7 +181,7 @@ files = ['git-rebase-todo']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'git-rebase', symbol_name = 'git_rebase', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-rebase', rev = 'd8a4207ebbc47bd78bacdf48f883db58283f9fd8' } }
+grammar = { name = 'git-rebase', symbol_name = 'git_rebase', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-rebase', rev = '127f5b56c1ad3e8a449a7d6e0c7412ead7f7724c', ref = 'main', ref_type = 'commit' } }
 
 [languages.gitattributes]
 icon = 0xf05e
@@ -192,4 +192,15 @@ files = ['.gitattributes']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'gitattributes', symbol_name = 'gitattributes', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-gitattributes', rev = '41940e199ba5763abea1d21b4f717014b45f01ea' } }
+grammar = { name = 'gitattributes', symbol_name = 'gitattributes', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-gitattributes', rev = '41940e199ba5763abea1d21b4f717014b45f01ea', ref = 'master', ref_type = 'commit' } }
+
+[languages.hyprlang]
+icon = 0xf359
+alt_names = []
+mime_types = []
+file_types = []
+files = ['**/hypr/*.conf']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'hyprlang', symbol_name = 'hyprlang', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-hyprlang', rev = 'e5da7d0aa44403153e0394d87d9edea4e5bd6609', ref = 'master', ref_type = 'commit' } }
