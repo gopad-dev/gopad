@@ -16,12 +16,7 @@ const SetLanguageOverlayID = "editor.language"
 var _ overlay.Overlay = (*SetLanguageOverlay)(nil)
 
 func NewSetLanguageOverlay() SetLanguageOverlay {
-	items := make([]*Language, 0, len(languages))
-	for _, language := range languages {
-		items = append(items, language)
-	}
-
-	l := config.NewList(items)
+	l := config.NewList(languages)
 	l.TextInput.Placeholder = "Type a language and press enter to set it"
 	l.Focus()
 

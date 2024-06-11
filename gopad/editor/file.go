@@ -539,7 +539,6 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 				}
 				codeLine = append(codeLine, label...)
 			}
-
 		}
 
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {

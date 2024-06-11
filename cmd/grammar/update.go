@@ -171,7 +171,6 @@ func checkUpdatedGrammarTag(ctx context.Context, grammar config.GrammarConfig) (
 			rev:    grammar.Install.Hyperlink(),
 			newRev: termenv.Hyperlink(grammar.Install.Git+"/releases/tag/"+ref, ref),
 		}, errors.New("outdated")
-
 	}
 
 	return nil, nil

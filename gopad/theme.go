@@ -16,12 +16,7 @@ const SetThemeOverlayID = "theme"
 var _ overlay.Overlay = (*SetThemeOverlay)(nil)
 
 func NewSetThemeOverlay() SetThemeOverlay {
-	items := make([]config.RawThemeConfig, 0, len(config.Themes))
-	for _, theme := range config.Themes {
-		items = append(items, theme)
-	}
-
-	l := config.NewList(items)
+	l := config.NewList(config.Themes)
 	l.TextInput.Placeholder = "Type a theme and press enter to set it"
 	l.Focus()
 

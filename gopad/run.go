@@ -39,12 +39,7 @@ func Terminal() tea.Cmd {
 }
 
 func NewRunOverlay() RunOverlay {
-	items := make([]Action, 0, len(Actions))
-	for _, action := range Actions {
-		items = append(items, action)
-	}
-
-	l := config.NewList(items)
+	l := config.NewList(Actions)
 	l.TextInput.Placeholder = "Type a command and press enter to run it"
 	l.Focus()
 
