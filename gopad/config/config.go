@@ -17,21 +17,21 @@ import (
 )
 
 const (
-	gopadConfig     = "gopad.toml"
-	keymapConfig    = "keymap.toml"
-	languagesConfig = "languages.toml"
-	lspConfig       = "lsp.toml"
-	themeDir        = "themes"
+	gopadConfig           = "gopad.toml"
+	keymapConfig          = "keymap.toml"
+	languagesConfig       = "languages.toml"
+	languageServersConfig = "language_servers.toml"
+	themeDir              = "themes"
 )
 
 var (
-	Path      string
-	Gopad     GopadConfig
-	Languages LanguagesConfig
-	LSP       LSPConfigs
-	Keys      KeyMap
-	Theme     ThemeConfig
-	Themes    []RawThemeConfig
+	Path            string
+	Gopad           GopadConfig
+	Languages       LanguagesConfig
+	LanguageServers LanguageServerConfigs
+	Keys            KeyMap
+	Theme           ThemeConfig
+	Themes          []RawThemeConfig
 )
 
 func FindHome() (string, error) {
@@ -59,7 +59,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	gopad := DefaultGopadConfig()
 	keymap := DefaultKeyMapConfig()
 	languages := DefaultLanguageConfigs()
-	lsp := DefaultLSPConfig()
+	languageServers := DefaultLanguageServerConfigs()
 	themes := make([]RawThemeConfig, 0)
 
 	if err := readTOMLFile(filepath.Join(name, gopadConfig), &gopad); err != nil {
@@ -74,8 +74,8 @@ func Load(name string, defaultConfigs embed.FS) error {
 		return fmt.Errorf("error reading languages config: %w", err)
 	}
 
-	if err := readTOMLFile(filepath.Join(name, lspConfig), &lsp); err != nil {
-		return fmt.Errorf("error reading LSP config: %w", err)
+	if err := readTOMLFile(filepath.Join(name, languageServersConfig), &languageServers); err != nil {
+		return fmt.Errorf("error reading LanguageServers config: %w", err)
 	}
 
 	themeConfigDir := name
@@ -129,7 +129,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	Path = name
 	Gopad = gopad
 	Languages = languages.filter()
-	LSP = lsp.filter()
+	LanguageServers = languageServers.filter()
 	Keys = keymap.Keys()
 	Themes = themes
 	Theme = theme.Theme()

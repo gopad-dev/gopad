@@ -1,8 +1,14 @@
+; Identifiers
+
+(type_identifier) @type
+(field_identifier) @property
+(identifier) @variable
+
 ; Function calls
 
 (call_expression
   function: (identifier) @function.builtin
-  (.match? @function.builtin "^(append|cap|close|complex|copy|delete|imag|len|make|new|panic|print|println|real|recover)$"))
+  (#match? @function.builtin "^(append|cap|close|complex|copy|delete|imag|len|make|new|panic|print|println|real|recover|min|max)$"))
 
 (call_expression
   function: (identifier) @function)
@@ -10,6 +16,15 @@
 (call_expression
   function: (selector_expression
     field: (field_identifier) @function.method))
+
+; Types
+
+(type_parameter_list
+  (type_parameter_declaration
+    name: (identifier) @type.parameter))
+
+((type_identifier) @type.builtin
+  (#match? @type.builtin "^(any|bool|byte|comparable|complex128|complex64|error|float32|float64|int|int16|int32|int64|int8|rune|string|uint|uint16|uint32|uint64|uint8|uintptr)$"))
 
 ; Function definitions
 
@@ -19,11 +34,10 @@
 (method_declaration
   name: (field_identifier) @function.method)
 
-; Identifiers
+; Labels
 
-(type_identifier) @type
-(field_identifier) @property
-(identifier) @variable
+(labeled_statement
+  (label_name) @label)
 
 ; Operators
 
@@ -97,6 +111,24 @@
   "var"
 ] @keyword
 
+; Delimiters
+
+[
+  ":"
+  "."
+  ","
+  ";"
+  ] @punctuation.delimiter
+
+[
+  "("
+  ")"
+  "["
+  "]"
+  "{"
+  "}"
+  ] @punctuation.bracket
+
 ; Literals
 
 [
@@ -105,13 +137,15 @@
   (rune_literal)
 ] @string
 
-(escape_sequence) @escape
-
+(escape_sequence) @constant.character.escape
 [
   (int_literal)
+  ] @constant.numeric.integer
+
+[
   (float_literal)
   (imaginary_literal)
-] @number
+  ] @constant.numeric.float
 
 [
   (true)

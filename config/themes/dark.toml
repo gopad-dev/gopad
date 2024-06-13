@@ -60,16 +60,16 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "keyword" = { foreground = '13' }
 "section" = { foreground = '13' }
 
-"punctuation.delimiter" = { foreground = '11' }
+#"punctuation.delimiter" = { foreground = '11' }
 "punctuation.special" = { foreground = '13' }
-"punctuation.bracket" = { foreground = '11' }
+#"punctuation.bracket" = { foreground = '11' }
 
 "operator" = { }
 "keyword.operator" = { }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
 "string.escape" = { foreground = '14' }
-"string.special" = { foreground = '9' }
+"string.special" = { foreground = '3' }
 "string.special.url" = { foreground = '4' }
 "number" = { foreground = '3' }
 "boolean" = { foreground = '3' }

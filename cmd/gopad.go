@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -78,8 +79,8 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Panicln("failed to load languages:", err)
 			}
 
-			lspClient := lsp.New(version, config.LSP, lspLogFile)
-			e, err := gopad.New(lspClient, version, workspace, args)
+			lspClient := lsp.New(version, config.LanguageServers, lspLogFile)
+			e, err := gopad.New(lspClient, version, getWorkspace(workspace, args), args)
 			if err != nil {
 				log.Panicln("failed to start gopad:", err)
 			}
@@ -102,4 +103,29 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 	cmd.Flags().StringP("pprof", "p", "", "enable & set pprof address:port")
 
 	return cmd
+}
+
+func getWorkspace(workspace string, args []string) string {
+	if workspace == "" {
+		if len(args) > 0 {
+			for _, arg := range args {
+				stat, err := os.Stat(arg)
+				if err == nil && stat.IsDir() {
+					workspace = arg
+				}
+			}
+		} else {
+			dir, err := os.Getwd()
+			if err == nil {
+				workspace = dir
+			}
+		}
+
+		absWorkspace, err := filepath.Abs(workspace)
+		if err == nil {
+			workspace = absWorkspace
+		}
+	}
+
+	return workspace
 }

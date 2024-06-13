@@ -395,7 +395,7 @@ func (f *File) ToggleBlockComment(start buffer.Position, end buffer.Position) te
 	startIndex := f.buffer.ByteIndex(r.Start.Row, r.Start.Col)
 	endIndex := f.buffer.ByteIndex(r.End.Row, r.End.Col)
 
-	f.SetCursor(f.buffer.ToggleBlockComment(r.Start, r.End, row, col, f.language.BlockCommentTokens))
+	f.SetCursor(f.buffer.ToggleBlockComment(r.Start, r.End, row, col, f.language.Config.BlockCommentTokens))
 
 	var newRuneCount int
 	for i := r.Start.Row; i <= r.End.Row; i++ {
@@ -411,7 +411,7 @@ func (f *File) ToggleBlockComment(start buffer.Position, end buffer.Position) te
 }
 
 func (f *File) ToggleLineComment() tea.Cmd {
-	if f.language == nil || len(f.language.LineCommentTokens) == 0 {
+	if f.language == nil || len(f.language.Config.LineCommentTokens) == 0 {
 		return nil
 	}
 
@@ -419,7 +419,7 @@ func (f *File) ToggleLineComment() tea.Cmd {
 	line := f.buffer.Line(row)
 	startIndex := f.buffer.ByteIndex(row, 0)
 
-	f.SetCursor(f.buffer.ToggleLineComment(row, col, f.language.LineCommentTokens))
+	f.SetCursor(f.buffer.ToggleLineComment(row, col, f.language.Config.LineCommentTokens))
 
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),

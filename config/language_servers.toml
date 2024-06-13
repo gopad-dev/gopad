@@ -3,48 +3,50 @@
 
 use_servers = { only = ['gopls'], except = [] }
 
-[lsps]
+[language_servers]
 
-[lsps.gopls]
+[language_servers.gopls]
 command = 'gopls'
 args = []
 file_types = ['.go']
 files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
+roots = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
+features = ['inlay_hints', 'diagnostics', 'completion']
 
-[lsps.gopls.config]
+[language_servers.gopls.config]
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
 'ui.hints' = { assignVariableTypes = true, compositeLiteralFields = true, compositeLiteralTypes = true, constantValues = true, functionTypeParameters = true, parameterNames = true, rangeVariableTypes = true }
 
-[lsps.golangci-lint]
+[language_servers.golangci-lint]
 command = 'golangci-lint-langserver'
 args = ['-debug', '-severity', 'Hint']
 file_types = ['.go']
 files = []
 
-[lsps.golangci-lint.config]
+[language_servers.golangci-lint.config]
 command = ['golangci-lint', 'run', '--out-format', 'json', '--issues-exit-code=1']
 
-[lsps.yaml]
+[language_servers.yaml]
 command = 'yaml-language-server'
 args = ['--stdio']
 file_types = ['.yaml', '.yml']
 files = []
 
-[lsps.json]
+[language_servers.json]
 command = 'vscode-json-languageserver'
 args = ['--stdio']
 file_types = ['.json', '.jsonc']
 files = []
 
-[lsps.html]
+[language_servers.html]
 command = 'vscode-html-language-server'
 args = ['--stdio']
 file_types = ['.html', '.htm']
 files = []
 
-[lsps.toml]
+[language_servers.toml]
 command = 'taplo'
-args = ['lsps', 'stdio']
+args = ['language_servers', 'stdio']
 file_types = ['.toml']
 files = []

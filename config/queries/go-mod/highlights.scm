@@ -17,7 +17,7 @@
 
 (comment) @comment @spell
 
-(module_path) @string.special.url
+(module_path) @string
 
 (file_path) @string
 

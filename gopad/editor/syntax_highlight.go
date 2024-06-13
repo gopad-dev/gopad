@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -38,12 +39,20 @@ func (f *File) MatchesForLineCol(row int, col int) []Match {
 }
 
 func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
+	var currentStyle *lipgloss.Style
 	for _, match := range f.MatchesForLineCol(row, col) {
+		//log.Printf("Match: [%d:%d] %s", row, col, match.Type)
 		matchType := match.Type
 		for {
-			codeStyle, ok := config.Theme.Editor.CodeStyles[matchType]
+			codeStyle, ok := config.Theme.Editor.CodeStyles[fmt.Sprintf("%s.%s", matchType, f.language.Config.Grammar.Name)]
 			if ok {
-				return style.Copy().Inherit(codeStyle)
+				currentStyle = &codeStyle
+				break
+			}
+			codeStyle, ok = config.Theme.Editor.CodeStyles[matchType]
+			if ok {
+				currentStyle = &codeStyle
+				break
 			}
 			lastDot := strings.LastIndex(matchType, ".")
 			if lastDot == -1 {
@@ -53,5 +62,9 @@ func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipglos
 		}
 	}
 
-	return style
+	if currentStyle == nil {
+		return style
+	}
+
+	return style.Copy().Inherit(*currentStyle)
 }

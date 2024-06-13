@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/charmbracelet/bubbletea"
 	"go.lsp.dev/protocol"
@@ -18,28 +20,58 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
+type ClientConfig struct {
+	name string
+	cfg  config.LanguageServerConfig
+	new  func(name string, cfg config.LanguageServerConfig, workspace string) (*Client, error)
+}
+
+func (c *ClientConfig) New(workspace string) (*Client, error) {
+	return c.new(c.name, c.cfg, workspace)
+}
+
+func (c *ClientConfig) Supported(workspace string) bool {
+	var supports bool
+	for _, root := range c.cfg.Roots {
+		if _, err := os.Stat(filepath.Join(workspace, root)); err == nil {
+			supports = true
+			break
+		}
+	}
+
+	return supports
+}
+
 type SendFunc func(msg tea.Cmd)
 
-func newClient(name string, version string, cfg config.LSPConfig, w io.Writer) *Client {
-	return &Client{
-		name:    name,
-		version: version,
-		cfg:     cfg,
-		w:       w,
+func newClient(name string, send SendFunc, workspace string, version string, cfg config.LanguageServerConfig, w io.Writer) (*Client, error) {
+	c := &Client{
+		name:      name,
+		workspace: workspace,
+		version:   version,
+		send:      send,
+		cfg:       cfg,
+		w:         w,
 	}
+
+	if err := c.Start(); err != nil {
+		return nil, fmt.Errorf("error starting client: %w", err)
+	}
+
+	return c, nil
 }
 
 type Client struct {
-	name    string
-	version string
-
+	name      string
 	workspace string
-	send      SendFunc
-	cfg       config.LSPConfig
-	server    protocol.Server
-	cmd       *exec.Cmd
-	rwc       io.ReadWriteCloser
-	w         io.Writer
+	version   string
+
+	send   SendFunc
+	cfg    config.LanguageServerConfig
+	server protocol.Server
+	cmd    *exec.Cmd
+	rwc    io.ReadWriteCloser
+	w      io.Writer
 }
 
 func (c *Client) Name() string {
@@ -50,33 +82,14 @@ func (c *Client) SupportedFile(name string) bool {
 	return slices.Contains(c.cfg.FileTypes, filepath.Ext(name)) || slices.Contains(c.cfg.Files, filepath.Base(name))
 }
 
-func (c *Client) Running() bool {
-	return c.cmd != nil && c.cmd.ProcessState == nil
-}
-
-func (c *Client) EnsureRunning(send SendFunc) error {
-	if c.Running() {
-		return nil
-	}
-
-	if err := c.Start(send); err != nil {
-		return fmt.Errorf("error starting lsp client: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Client) Start(send SendFunc) error {
-	c.send = send
-
+func (c *Client) Start() error {
 	var err error
-	ctx := context.Background()
-	c.cmd, c.rwc, err = newCmdStream(ctx, c.w, c.cfg.Command, c.cfg.Args...)
+	c.cmd, c.rwc, err = newCmdStream(context.Background(), c.w, c.cfg.Command, c.cfg.Args...)
 	if err != nil {
 		return fmt.Errorf("error creating command stream: %w", err)
 	}
 
-	_, c.server, err = newServer(ctx, c.rwc, c, c.w)
+	_, c.server, err = newServer(context.Background(), c.rwc, c, c.w)
 	if err != nil {
 		return fmt.Errorf("error creating server: %w", err)
 	}
@@ -89,6 +102,8 @@ func (c *Client) Start(send SendFunc) error {
 		})
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	if _, err = c.server.Initialize(ctx, &protocol.InitializeParams{
 		ClientInfo: &protocol.ClientInfo{
 			Name:    c.name,
@@ -97,189 +112,14 @@ func (c *Client) Start(send SendFunc) error {
 		Locale:                "de",
 		InitializationOptions: c.cfg.Config,
 		WorkspaceFolders:      workspaceFolders,
-		Capabilities: protocol.ClientCapabilities{
-			Workspace: &protocol.WorkspaceClientCapabilities{
-				//		ApplyEdit: true,
-				//		WorkspaceEdit: &protocol.WorkspaceClientCapabilitiesWorkspaceEdit{
-				//			DocumentChanges:       false,
-				//			FailureHandling:       "",
-				//			ResourceOperations:    nil,
-				//			NormalizesLineEndings: false,
-				//			ChangeAnnotationSupport: &protocol.WorkspaceClientCapabilitiesWorkspaceEditChangeAnnotationSupport{
-				//				GroupsOnLabel: false,
-				//			},
-				//		},
-				//		DidChangeConfiguration: &protocol.DidChangeConfigurationWorkspaceClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		DidChangeWatchedFiles: &protocol.DidChangeWatchedFilesWorkspaceClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		Symbol: &protocol.WorkspaceSymbolClientCapabilities{
-				//			DynamicRegistration: false,
-				//			SymbolKind: &protocol.SymbolKindCapabilities{
-				//				ValueSet: nil,
-				//			},
-				//			TagSupport: &protocol.TagSupportCapabilities{
-				//				ValueSet: nil,
-				//			},
-				//		},
-				//		ExecuteCommand: &protocol.ExecuteCommandClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				WorkspaceFolders: true,
-				//		Configuration:    false,
-				//		SemanticTokens: &protocol.SemanticTokensWorkspaceClientCapabilities{
-				//			RefreshSupport: false,
-				//		},
-				//		CodeLens: &protocol.CodeLensWorkspaceClientCapabilities{
-				//			RefreshSupport: false,
-				//		},
-				//		FileOperations: &protocol.WorkspaceClientCapabilitiesFileOperations{
-				//			DynamicRegistration: false,
-				//			DidCreate:           true,
-				//			WillCreate:          false,
-				//			DidRename:           false,
-				//			WillRename:          false,
-				//			DidDelete:           true,
-				//			WillDelete:          false,
-				//		},
-				InlayHint: &protocol.InlayHintWorkspaceClientCapabilities{
-					RefreshSupport: true,
-				},
-			},
-			TextDocument: &protocol.TextDocumentClientCapabilities{
-				//		Synchronization: &protocol.TextDocumentSyncClientCapabilities{
-				//			DynamicRegistration: false,
-				//			WillSave:            false,
-				//			WillSaveWaitUntil:   false,
-				//			DidSave:             true,
-				//		},
-				Completion: &protocol.CompletionTextDocumentClientCapabilities{
-					DynamicRegistration: false,
-					CompletionItem: &protocol.CompletionTextDocumentClientCapabilitiesItem{
-						SnippetSupport:          false,
-						CommitCharactersSupport: false,
-						DocumentationFormat:     nil,
-						DeprecatedSupport:       false,
-						PreselectSupport:        false,
-						TagSupport: &protocol.CompletionTextDocumentClientCapabilitiesItemTagSupport{
-							ValueSet: nil,
-						},
-						InsertReplaceSupport: false,
-						ResolveSupport: &protocol.CompletionTextDocumentClientCapabilitiesItemResolveSupport{
-							Properties: nil,
-						},
-						InsertTextModeSupport: &protocol.CompletionTextDocumentClientCapabilitiesItemInsertTextModeSupport{
-							ValueSet: nil,
-						},
-					},
-					CompletionItemKind: &protocol.CompletionTextDocumentClientCapabilitiesItemKind{
-						ValueSet: nil,
-					},
-					ContextSupport: false,
-				},
-				//		Hover: &protocol.HoverTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			ContentFormat:       nil,
-				//		},
-				//		SignatureHelp: &protocol.SignatureHelpTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			SignatureInformation: &protocol.TextDocumentClientCapabilitiesSignatureInformation{
-				//				DocumentationFormat: nil,
-				//				ParameterInformation: &protocol.TextDocumentClientCapabilitiesParameterInformation{
-				//					LabelOffsetSupport: false,
-				//				},
-				//				ActiveParameterSupport: false,
-				//			},
-				//			ContextSupport: false,
-				//		},
-				//		Declaration: &protocol.DeclarationTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			LinkSupport:         false,
-				//		},
-				//		Definition: &protocol.DefinitionTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			LinkSupport:         false,
-				//		},
-				//		TypeDefinition: &protocol.TypeDefinitionTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			LinkSupport:         false,
-				//		},
-				//		Implementation: &protocol.ImplementationTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//			LinkSupport:         false,
-				//		},
-				//		References: &protocol.ReferencesTextDocumentClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		DocumentHighlight: &protocol.DocumentHighlightClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		DocumentSymbol: &protocol.DocumentSymbolClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		CodeAction: &protocol.CodeActionClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		CodeLens: &protocol.CodeLensClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		DocumentLink: &protocol.DocumentLinkClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		ColorProvider: &protocol.DocumentColorClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		Formatting: &protocol.DocumentFormattingClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		RangeFormatting: &protocol.DocumentRangeFormattingClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		OnTypeFormatting: &protocol.DocumentOnTypeFormattingClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				PublishDiagnostics: &protocol.PublishDiagnosticsClientCapabilities{
-					RelatedInformation: false,
-					TagSupport: &protocol.PublishDiagnosticsClientCapabilitiesTagSupport{
-						ValueSet: nil,
-					},
-					VersionSupport:         false,
-					CodeDescriptionSupport: true,
-					DataSupport:            false,
-				},
-				//		Rename: &protocol.RenameClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		FoldingRange:   &protocol.FoldingRangeClientCapabilities{},
-				//		SelectionRange: &protocol.SelectionRangeClientCapabilities{},
-				//		CallHierarchy:  &protocol.CallHierarchyClientCapabilities{},
-				//		SemanticTokens: &protocol.SemanticTokensClientCapabilities{},
-				//		LinkedEditingRange: &protocol.LinkedEditingRangeClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				//		Moniker: &protocol.MonikerClientCapabilities{
-				//			DynamicRegistration: false,
-				//		},
-				InlineValue: &protocol.InlineValueClientCapabilities{
-					DynamicRegistration: false,
-				},
-				InlayHint: &protocol.InlayHintClientCapabilities{
-					DynamicRegistration: false,
-					ResolveSupport:      nil,
-				},
-				Diagnostic: &protocol.DiagnosticClientCapabilities{
-					DynamicRegistration:    false,
-					RelatedDocumentSupport: false,
-				},
-			},
-		},
+		Capabilities:          clientCapabilities(c.cfg),
 	}); err != nil {
 		return fmt.Errorf("error initializing server: %w", err)
 	}
 
-	if err = c.server.Initialized(ctx, &protocol.InitializedParams{}); err != nil {
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel2()
+	if err = c.server.Initialized(ctx2, &protocol.InitializedParams{}); err != nil {
 		return fmt.Errorf("error sending initialized: %w", err)
 	}
 
@@ -316,40 +156,33 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case WorkspaceOpenedMsg:
 		c.workspace = msg.Workspace
-		if c.server != nil {
-			if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
-				Event: protocol.WorkspaceFoldersChangeEvent{
-					Added: []protocol.WorkspaceFolder{
-						{
-							URI:  "file://" + c.workspace,
-							Name: filepath.Base(c.workspace),
-						},
+		if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
+			Event: protocol.WorkspaceFoldersChangeEvent{
+				Added: []protocol.WorkspaceFolder{
+					{
+						URI:  "file://" + c.workspace,
+						Name: filepath.Base(c.workspace),
 					},
 				},
-			}); err != nil {
-				return Err(err)
-			}
+			},
+		}); err != nil {
+			return Err(err)
 		}
+
 	case WorkspaceClosedMsg:
 		c.workspace = ""
-		if c.server != nil {
-			if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
-				Event: protocol.WorkspaceFoldersChangeEvent{
-					Removed: []protocol.WorkspaceFolder{
-						{
-							URI:  "file://" + c.workspace,
-							Name: filepath.Base(c.workspace),
-						},
+		if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
+			Event: protocol.WorkspaceFoldersChangeEvent{
+				Removed: []protocol.WorkspaceFolder{
+					{
+						URI:  "file://" + c.workspace,
+						Name: filepath.Base(c.workspace),
 					},
 				},
-			}); err != nil {
-				return Err(err)
-			}
+			},
+		}); err != nil {
+			return Err(err)
 		}
-	}
-
-	if c.server == nil {
-		return nil
 	}
 
 	switch msg := msg.(type) {
@@ -525,7 +358,7 @@ func (c *Client) WorkDoneProgressCreate(ctx context.Context, params *protocol.Wo
 
 func (c *Client) LogMessage(ctx context.Context, params *protocol.LogMessageParams) error {
 	// log.Println("LogMessage", params)
-	// c.gopad.Send(notifications.Add(params.Message)())
+	// c.gopad.send(notifications.Add(params.Message)())
 	return nil
 }
 

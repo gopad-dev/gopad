@@ -107,7 +107,7 @@ const (
 func (d DiagnosticType) String() string {
 	switch d {
 	case DiagnosticTypeTreeSitter:
-		return "TreeSitter"
+		return "Grammar"
 	case DiagnosticTypeLanguageServer:
 		return "LanguageServer"
 	}

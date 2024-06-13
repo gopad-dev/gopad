@@ -32,13 +32,15 @@ const (
 
 var fileIconFunc = func(name string) rune {
 	lang := GetLanguageByFilename(name)
-	if lang != nil && lang.Icon != 0 {
-		return lang.Icon
+	if lang != nil && lang.Config.Icon != 0 {
+		return lang.Config.Icon
 	}
 	return 0
 }
 
 func NewEditor(workspace string, args []string) (*Editor, error) {
+	var cmds []tea.Cmd
+
 	editor := Editor{
 		searchBar: config.NewSearchBar(
 			func(result searchbar.Result) tea.Cmd {
@@ -46,33 +48,6 @@ func NewEditor(workspace string, args []string) (*Editor, error) {
 			},
 			FocusFile(""),
 		),
-	}
-
-	for _, arg := range args {
-		stat, err := os.Stat(arg)
-		if errors.Is(err, os.ErrNotExist) {
-			if _, err = editor.CreateFile(arg); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if stat.IsDir() {
-			if workspace == "" {
-				workspace, err = filepath.Abs(args[0])
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			continue
-		}
-		if _, err = editor.OpenFile(arg); err != nil {
-			return nil, err
-		}
 	}
 
 	if workspace != "" {
@@ -83,18 +58,46 @@ func NewEditor(workspace string, args []string) (*Editor, error) {
 		}
 		fileTree.Show()
 		editor.fileTree = fileTree
+		cmds = append(cmds, lsp.WorkspaceOpened(workspace))
+	}
+
+	for _, arg := range args {
+		stat, err := os.Stat(arg)
+		if errors.Is(err, os.ErrNotExist) {
+			cmd, err := editor.CreateFile(arg)
+			if err != nil {
+				return nil, err
+			}
+			cmds = append(cmds, cmd)
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if stat.IsDir() {
+			continue
+		}
+		cmd, err := editor.OpenFile(arg)
+		if err != nil {
+			return nil, err
+		}
+		cmds = append(cmds, cmd)
 	}
 
 	if file := editor.File(); file != nil {
-		file.Focus()
+		cmds = append(cmds, file.Focus())
 	} else {
 		editor.fileTree.Focus()
 	}
+
+	editor.init = cmds
 
 	return &editor, nil
 }
 
 type Editor struct {
+	init             []tea.Cmd
 	fileTree         filetree.Model
 	workspace        string
 	searchBar        searchbar.Model
@@ -309,15 +312,7 @@ func (e *Editor) ToggleTreeSitterDebug() {
 }
 
 func (e Editor) Init() tea.Cmd {
-	var cmds []tea.Cmd
-	if e.workspace != "" {
-		cmds = append(cmds, lsp.WorkspaceOpened(e.workspace))
-	}
-	if file := e.File(); file != nil {
-		cmds = append(cmds, lsp.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()))
-		cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
-	}
-	return tea.Batch(cmds...)
+	return tea.Sequence(e.init...)
 }
 
 func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
@@ -733,7 +728,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					row, col := file.Cursor()
 					toDelete := file.buffer.Line(row).RuneBytes(col - 1)
 					cmds = append(cmds, file.DeleteBefore(1))
-					if lang := file.Language(); lang != nil && len(lang.AutoPairs) > 0 {
+					if lang := file.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
 						row, col = file.Cursor()
 
 						fileTree := file.Tree()
@@ -758,7 +753,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 							}
 						}
 
-						for _, pair := range lang.AutoPairs {
+						for _, pair := range lang.Config.AutoPairs {
 							if string(toDelete) != pair.Open {
 								continue
 							}
@@ -840,8 +835,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				}
 
 				// handle auto pairs
-				if lang := file.Language(); lang != nil && len(lang.AutoPairs) > 0 {
-					for _, pair := range lang.AutoPairs {
+				if lang := file.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
+					for _, pair := range lang.Config.AutoPairs {
 						if string(msg.Runes) == pair.Open {
 							row, col := file.Cursor()
 							cmds = append(cmds, file.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
@@ -937,8 +932,8 @@ func (e *Editor) FileTabsView(width int) string {
 	for path, file := range e.files {
 		fileName := clampString(file.FileName(), 16)
 		icon := config.Theme.Icons.File
-		if file.language != nil && file.language.Icon > 0 {
-			icon = file.language.Icon
+		if file.language != nil && file.language.Config.Icon > 0 {
+			icon = file.language.Config.Icon
 		}
 		fileName = fmt.Sprintf("%c %s", icon, fileName)
 		if file.Dirty() {

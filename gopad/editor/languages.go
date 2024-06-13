@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"go.gopad.dev/go-tree-sitter"
+
 	"go.gopad.dev/gopad/cmd/grammar"
 
 	"go.gopad.dev/gopad/gopad/config"
@@ -35,8 +36,8 @@ var (
 )
 
 type Language struct {
-	config.LanguageConfig
 	Name    string
+	Config  config.LanguageConfig
 	Grammar *Grammar
 }
 
@@ -99,8 +100,8 @@ func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
 func LoadLanguages(defaultConfigs embed.FS) error {
 	for name, language := range config.Languages.Languages {
 		lang := &Language{
-			LanguageConfig: language,
-			Name:           name,
+			Config: language,
+			Name:   name,
 		}
 
 		if language.Grammar != nil {
@@ -223,7 +224,7 @@ func readQuery(config string, query os.DirEntry) ([]byte, error) {
 
 func GetLanguage(name string) *Language {
 	for _, lang := range languages {
-		if lang.Name == name || slices.Contains(lang.AltNames, name) {
+		if lang.Name == name || slices.Contains(lang.Config.AltNames, name) {
 			return lang
 		}
 	}
@@ -233,7 +234,7 @@ func GetLanguage(name string) *Language {
 
 func GetLanguageByMIMEType(mimeType string) *Language {
 	for _, language := range languages {
-		if slices.Contains(language.MIMETypes, mimeType) {
+		if slices.Contains(language.Config.MIMETypes, mimeType) {
 			return language
 		}
 	}
@@ -245,7 +246,7 @@ func GetLanguageByFilename(filename string) *Language {
 	fileName := filepath.Base(filename)
 
 	for _, language := range languages {
-		if slices.Contains(language.FileTypes, ext) || slices.Contains(language.Files, fileName) || matchGlobs(language.Files, filename) {
+		if slices.Contains(language.Config.FileTypes, ext) || slices.Contains(language.Config.Files, fileName) || matchGlobs(language.Config.Files, filename) {
 			return language
 		}
 	}
