@@ -107,3 +107,7 @@ func (r Range) ToProtocol() protocol.Range {
 		End:   r.End.ToProtocol(),
 	}
 }
+
+func (r Range) Lines() int {
+	return r.End.Row - r.Start.Row + 1
+}

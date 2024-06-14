@@ -11,7 +11,7 @@ import (
 	sitter "go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 )
 
 func (f *File) InitTree() error {
@@ -99,7 +99,7 @@ func parseTree(ctx context.Context, content []byte, oldTree *Tree, language Lang
 		node := capture.Node
 		if query.CaptureNameForID(capture.Index) == "injection.content" {
 			subLanguage := getLanguageByMatch(&language, match)
-			if subLanguage == nil || subLanguage.Grammar == nil {
+			if subLanguage == nil || subLanguage.Config.Grammar == nil {
 				continue
 			}
 
@@ -258,12 +258,12 @@ func (f *File) ValidateTree() {
 
 	diagnostics := validateTree(f.tree.Copy())
 
-	f.SetDiagnostic(lsp.DiagnosticTypeTreeSitter, version, diagnostics)
+	f.SetDiagnostic(ls.DiagnosticTypeTreeSitter, version, diagnostics)
 }
 
-func validateTree(tree *Tree) []lsp.Diagnostic {
+func validateTree(tree *Tree) []ls.Diagnostic {
 	iter := sitter.NewIterator(tree.Tree.RootNode(), sitter.BFSMode)
-	var diagnostics []lsp.Diagnostic
+	var diagnostics []ls.Diagnostic
 	for {
 		node, err := iter.Next()
 		if err != nil {
@@ -280,8 +280,8 @@ func validateTree(tree *Tree) []lsp.Diagnostic {
 				endCol += tree.OffsetCol
 			}
 
-			diagnostics = append(diagnostics, lsp.Diagnostic{
-				Type:   lsp.DiagnosticTypeTreeSitter,
+			diagnostics = append(diagnostics, ls.Diagnostic{
+				Type:   ls.DiagnosticTypeTreeSitter,
 				Name:   tree.Language.Name,
 				Source: "syntax",
 				Range: buffer.Range{
@@ -294,7 +294,7 @@ func validateTree(tree *Tree) []lsp.Diagnostic {
 						Col: endCol,
 					},
 				},
-				Severity: lsp.DiagnosticSeverityError,
+				Severity: ls.DiagnosticSeverityError,
 				Message:  "Syntax error",
 				Priority: 100,
 			})
@@ -343,11 +343,10 @@ func highlightTree(tree *Tree) []Match {
 
 		capture := match.Captures[index]
 
-		node := capture.Node
-		realRow := int(node.StartPoint().Row) + tree.OffsetRow
-		realCol := int(node.StartPoint().Column)
-		realEndRow := int(node.EndPoint().Row) + tree.OffsetRow
-		realEndCol := int(node.EndPoint().Column)
+		realRow := int(capture.StartPoint().Row) + tree.OffsetRow
+		realCol := int(capture.StartPoint().Column)
+		realEndRow := int(capture.EndPoint().Row) + tree.OffsetRow
+		realEndCol := int(capture.EndPoint().Column)
 		if realRow == tree.OffsetRow {
 			realCol += tree.OffsetCol
 			realEndCol += tree.OffsetCol

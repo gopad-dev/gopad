@@ -7,6 +7,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
@@ -23,6 +24,8 @@ type KeyMap struct {
 	Right key.Binding
 	Up    key.Binding
 	Down  key.Binding
+	Start key.Binding
+	End   key.Binding
 
 	Editor     EditorKeyMap
 	FilePicker filepicker.KeyMap
@@ -61,6 +64,15 @@ func (k KeyMap) FullHelpView() []help.KeyMapCategory {
 	binds = append(binds, k.Editor.FullHelpView()...)
 	binds = append(binds, k.FilePicker.FullHelpView()...)
 	return binds
+}
+
+func (k KeyMap) List() list.KeyMap {
+	return list.KeyMap{
+		Up:    k.Up,
+		Down:  k.Down,
+		Start: k.Start,
+		End:   k.End,
+	}
 }
 
 type EditorKeyMap struct {
@@ -237,6 +249,8 @@ func DefaultKeyMapConfig() KeyMapConfig {
 		Right:  "right",
 		Up:     "up",
 		Down:   "down",
+		Start:  "home",
+		End:    "end",
 		Editor: EditorKeyConfig{
 			OpenFile:   "ctrl+o",
 			OpenFolder: "alt+ctrl+o",
@@ -346,6 +360,8 @@ type KeyMapConfig struct {
 	Right string `toml:"right"`
 	Up    string `toml:"up"`
 	Down  string `toml:"down"`
+	Start string `toml:"start"`
+	End   string `toml:"end"`
 
 	Editor     EditorKeyConfig     `toml:"editor"`
 	FilePicker FilePickerKeyConfig `toml:"file_picker"`
@@ -387,6 +403,14 @@ func (k KeyMapConfig) Keys() KeyMap {
 		Down: key.NewBinding(
 			key.WithKeys(k.Down),
 			key.WithHelp(k.Down, "down"),
+		),
+		Start: key.NewBinding(
+			key.WithKeys(k.Start),
+			key.WithHelp(k.Start, "start"),
+		),
+		End: key.NewBinding(
+			key.WithKeys(k.End),
+			key.WithHelp(k.End, "end"),
 		),
 		Editor:     k.Editor.KeyMap(),
 		FilePicker: k.FilePicker.KeyMap(),

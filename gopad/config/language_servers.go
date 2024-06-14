@@ -17,8 +17,8 @@ type LanguageServerConfigs struct {
 }
 
 func (l LanguageServerConfigs) filter() LanguageServerConfigs {
-	lsps := make(map[string]LanguageServerConfig)
-	for name, lsp := range l.LanguageServers {
+	servers := make(map[string]LanguageServerConfig)
+	for name, server := range l.LanguageServers {
 		if len(l.UseServers.Only) > 0 {
 			if !slices.Contains(l.UseServers.Only, name) {
 				continue
@@ -29,12 +29,12 @@ func (l LanguageServerConfigs) filter() LanguageServerConfigs {
 			}
 		}
 
-		lsps[name] = lsp
+		servers[name] = server
 	}
 
 	return LanguageServerConfigs{
 		UseServers:      l.UseServers,
-		LanguageServers: lsps,
+		LanguageServers: servers,
 	}
 }
 

@@ -6,10 +6,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/buffer"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func (f *File) SetDiagnostic(dType lsp.DiagnosticType, version int32, diagnostics []lsp.Diagnostic) {
+func (f *File) SetDiagnostic(dType ls.DiagnosticType, version int32, diagnostics []ls.Diagnostic) {
 	// ignore outdated diagnostics
 	if version < f.diagnosticVersions[dType] {
 		return
@@ -27,20 +27,20 @@ func (f *File) SetDiagnostic(dType lsp.DiagnosticType, version int32, diagnostic
 	f.diagnostics = append(f.diagnostics, diagnostics...)
 }
 
-func (f *File) Diagnostics() []lsp.Diagnostic {
+func (f *File) Diagnostics() []ls.Diagnostic {
 	return f.diagnostics
 }
 
-func (f *File) ClearDiagnosticsByType(dType lsp.DiagnosticType) {
-	f.diagnostics = slices.DeleteFunc(f.diagnostics, func(diag lsp.Diagnostic) bool {
+func (f *File) ClearDiagnosticsByType(dType ls.DiagnosticType) {
+	f.diagnostics = slices.DeleteFunc(f.diagnostics, func(diag ls.Diagnostic) bool {
 		return diag.Type == dType
 	})
 }
 
-func (f *File) DiagnosticsForLineCol(row int, col int) []lsp.Diagnostic {
+func (f *File) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
 	pos := buffer.Position{Row: row, Col: col}
 
-	var diagnostics []lsp.Diagnostic
+	var diagnostics []ls.Diagnostic
 	for _, diag := range f.diagnostics {
 		if diag.Range.Contains(pos) {
 			diagnostics = append(diagnostics, diag)
@@ -49,8 +49,8 @@ func (f *File) DiagnosticsForLineCol(row int, col int) []lsp.Diagnostic {
 	return diagnostics
 }
 
-func (f *File) HighestLineDiagnostic(row int) lsp.Diagnostic {
-	var diagnostic lsp.Diagnostic
+func (f *File) HighestLineDiagnostic(row int) ls.Diagnostic {
+	var diagnostic ls.Diagnostic
 	for _, diag := range f.diagnostics {
 		if diag.Range.ContainsRow(row) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
@@ -59,10 +59,10 @@ func (f *File) HighestLineDiagnostic(row int) lsp.Diagnostic {
 	return diagnostic
 }
 
-func (f *File) HighestLineColDiagnostic(row int, col int) lsp.Diagnostic {
+func (f *File) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 	pos := buffer.Position{Row: row, Col: col}
 
-	var diagnostic lsp.Diagnostic
+	var diagnostic ls.Diagnostic
 	for _, diag := range f.diagnostics {
 		if diag.Range.Contains(pos) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
@@ -75,7 +75,7 @@ func (f *File) HighestLineColDiagnostic(row int, col int) lsp.Diagnostic {
 func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
 	pos := buffer.Position{Row: row, Col: col}
 
-	var diagnostic lsp.Diagnostic
+	var diagnostic ls.Diagnostic
 	for _, diag := range f.diagnostics {
 		if diag.Range.Contains(pos) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
 			diagnostic = diag

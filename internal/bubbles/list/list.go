@@ -56,7 +56,7 @@ func New[T Item](items []T) Model[T] {
 
 	return Model[T]{
 		TextInput: ti,
-		Keys:      DefaultKeyMap,
+		KeyMap:    DefaultKeyMap,
 		Styles:    DefaultStyles,
 		items:     parseItems(items),
 	}
@@ -64,7 +64,7 @@ func New[T Item](items []T) Model[T] {
 
 type Model[T Item] struct {
 	TextInput textinput.Model
-	Keys      KeyMap
+	KeyMap    KeyMap
 	Styles    Styles
 	width     int
 	height    int
@@ -142,20 +142,20 @@ func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.Keys.Up):
+		case key.Matches(msg, m.KeyMap.Up):
 			if m.item > 0 {
 				m.item--
 			}
 			return m, nil
-		case key.Matches(msg, m.Keys.Down):
+		case key.Matches(msg, m.KeyMap.Down):
 			if m.item < len(m.items)-1 {
 				m.item++
 			}
 			return m, nil
-		case key.Matches(msg, m.Keys.Start):
+		case key.Matches(msg, m.KeyMap.Start):
 			m.item = 0
 			return m, nil
-		case key.Matches(msg, m.Keys.End):
+		case key.Matches(msg, m.KeyMap.End):
 			m.item = len(m.items) - 1
 			return m, nil
 		}

@@ -1,4 +1,4 @@
-package lsp
+package ls
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 	"go.lsp.dev/protocol"
 )
 
-func newServer(ctx context.Context, rwc io.ReadWriteCloser, client protocol.Client, w io.Writer) (jsonrpc2.Conn, protocol.Server, error) {
+func newServerConn(ctx context.Context, rwc io.ReadWriteCloser, client protocol.Client, w io.Writer) (jsonrpc2.Conn, protocol.Server, error) {
 	stream := jsonrpc2.NewStream(rwc)
 	if w != io.Discard {
 		stream = protocol.LoggingStream(stream, w)
@@ -28,9 +28,9 @@ func newServer(ctx context.Context, rwc io.ReadWriteCloser, client protocol.Clie
 	return conn, server, nil
 }
 
-func newCmdStream(ctx context.Context, w io.Writer, name string, arg ...string) (*exec.Cmd, io.ReadWriteCloser, error) {
+func newServerCmdStream(ctx context.Context, w io.Writer, name string, arg ...string) (*exec.Cmd, io.ReadWriteCloser, error) {
 	logger := log.New(w, name, log.LstdFlags)
-	logger.Println("newCmdStream", name, arg)
+	logger.Println("newServerCmdStream", name, arg)
 
 	if r := recover(); r != nil {
 		logger.Println("panic while running lsp command", r)

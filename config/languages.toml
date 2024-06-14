@@ -51,6 +51,28 @@ block_comment_tokens = []
 auto_pairs = []
 grammar = { name = 'go-work', symbol_name = 'gowork', install = { git = 'https://github.com/omertuc/tree-sitter-go-work', rev = '949a8a470559543857a62102c84700d291fc984c', ref = 'main', ref_type = 'commit' } }
 
+[languages.go-template]
+icon = 0xe627
+alt_names = ['gotmpl']
+mime_types = []
+file_types = ['.tmpl', '.gotmpl', '.gohtml']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'go-template', symbol_name = 'gotmpl', install = { git = 'https://github.com/ngalaiko/tree-sitter-go-template', rev = '9d3f6e526dd074b9edae9070b7bb778f00e87a5b', ref = 'master', ref_type = 'commit' } }
+
+[languages.printf]
+icon = 0
+alt_names = []
+mime_types = []
+file_types = []
+files = []
+line_comment_tokens = []
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'printf', symbol_name = 'printf', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-printf', rev = '0e0aceabbf607ea09e03562f5d8a56f048ddea3d', ref = 'main', ref_type = 'commit' } }
+
 [languages.toml]
 icon = 0xe6b2
 alt_names = []

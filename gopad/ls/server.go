@@ -1,4 +1,4 @@
-package lsp
+package ls
 
 import (
 	"context"
@@ -20,17 +20,17 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
-type ClientConfig struct {
+type ServerConfig struct {
 	name string
 	cfg  config.LanguageServerConfig
-	new  func(name string, cfg config.LanguageServerConfig, workspace string) (*Client, error)
+	new  func(name string, cfg config.LanguageServerConfig, workspace string) (*Server, error)
 }
 
-func (c *ClientConfig) New(workspace string) (*Client, error) {
+func (c *ServerConfig) New(workspace string) (*Server, error) {
 	return c.new(c.name, c.cfg, workspace)
 }
 
-func (c *ClientConfig) Supported(workspace string) bool {
+func (c *ServerConfig) Supported(workspace string) bool {
 	var supports bool
 	for _, root := range c.cfg.Roots {
 		if _, err := os.Stat(filepath.Join(workspace, root)); err == nil {
@@ -44,8 +44,8 @@ func (c *ClientConfig) Supported(workspace string) bool {
 
 type SendFunc func(msg tea.Cmd)
 
-func newClient(name string, send SendFunc, workspace string, version string, cfg config.LanguageServerConfig, w io.Writer) (*Client, error) {
-	c := &Client{
+func newServer(name string, send SendFunc, workspace string, version string, cfg config.LanguageServerConfig, w io.Writer) (*Server, error) {
+	c := &Server{
 		name:      name,
 		workspace: workspace,
 		version:   version,
@@ -54,14 +54,14 @@ func newClient(name string, send SendFunc, workspace string, version string, cfg
 		w:         w,
 	}
 
-	if err := c.Start(); err != nil {
+	if err := c.start(); err != nil {
 		return nil, fmt.Errorf("error starting client: %w", err)
 	}
 
 	return c, nil
 }
 
-type Client struct {
+type Server struct {
 	name      string
 	workspace string
 	version   string
@@ -74,22 +74,22 @@ type Client struct {
 	w      io.Writer
 }
 
-func (c *Client) Name() string {
+func (c *Server) Name() string {
 	return c.name
 }
 
-func (c *Client) SupportedFile(name string) bool {
+func (c *Server) SupportedFile(name string) bool {
 	return slices.Contains(c.cfg.FileTypes, filepath.Ext(name)) || slices.Contains(c.cfg.Files, filepath.Base(name))
 }
 
-func (c *Client) Start() error {
+func (c *Server) start() error {
 	var err error
-	c.cmd, c.rwc, err = newCmdStream(context.Background(), c.w, c.cfg.Command, c.cfg.Args...)
+	c.cmd, c.rwc, err = newServerCmdStream(context.Background(), c.w, c.cfg.Command, c.cfg.Args...)
 	if err != nil {
 		return fmt.Errorf("error creating command stream: %w", err)
 	}
 
-	_, c.server, err = newServer(context.Background(), c.rwc, c, c.w)
+	_, c.server, err = newServerConn(context.Background(), c.rwc, c, c.w)
 	if err != nil {
 		return fmt.Errorf("error creating server: %w", err)
 	}
@@ -126,31 +126,27 @@ func (c *Client) Start() error {
 	return nil
 }
 
-func (c *Client) Stop() error {
-	if c.cmd == nil {
-		return nil
+func (c *Server) Stop(ctx context.Context) error {
+	if err := c.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("error sending shutdown: %w", err)
 	}
 
-	if err := c.server.Shutdown(context.Background()); err != nil {
-		return err
-	}
-
-	if err := c.server.Exit(context.Background()); err != nil {
-		return err
+	if err := c.server.Exit(ctx); err != nil {
+		return fmt.Errorf("error sending exit: %w", err)
 	}
 
 	if err := c.cmd.Process.Kill(); err != nil {
-		return err
+		return fmt.Errorf("error killing process: %w", err)
 	}
 
 	if err := c.rwc.Close(); err != nil {
-		return err
+		return fmt.Errorf("error closing rwc: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Client) Update(msg tea.Msg) tea.Cmd {
+func (c *Server) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -346,23 +342,23 @@ func (c *Client) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (c *Client) Progress(ctx context.Context, params *protocol.ProgressParams) error {
+func (c *Server) Progress(ctx context.Context, params *protocol.ProgressParams) error {
 	// log.Println("Progress", params)
 	return nil
 }
 
-func (c *Client) WorkDoneProgressCreate(ctx context.Context, params *protocol.WorkDoneProgressCreateParams) error {
+func (c *Server) WorkDoneProgressCreate(ctx context.Context, params *protocol.WorkDoneProgressCreateParams) error {
 	// log.Println("WorkDoneProgressCreate", params)
 	return nil
 }
 
-func (c *Client) LogMessage(ctx context.Context, params *protocol.LogMessageParams) error {
+func (c *Server) LogMessage(ctx context.Context, params *protocol.LogMessageParams) error {
 	// log.Println("LogMessage", params)
 	// c.gopad.send(notifications.Add(params.Message)())
 	return nil
 }
 
-func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.PublishDiagnosticsParams) error {
+func (c *Server) PublishDiagnostics(ctx context.Context, params *protocol.PublishDiagnosticsParams) error {
 	diagnostics := make([]Diagnostic, 0, len(params.Diagnostics))
 	for _, diagnostic := range params.Diagnostics {
 		var code string
@@ -395,36 +391,36 @@ func (c *Client) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 	return nil
 }
 
-func (c *Client) ShowMessage(ctx context.Context, params *protocol.ShowMessageParams) error {
+func (c *Server) ShowMessage(ctx context.Context, params *protocol.ShowMessageParams) error {
 	c.send(notifications.Add(params.Message))
 	return nil
 }
 
-func (c *Client) ShowMessageRequest(ctx context.Context, params *protocol.ShowMessageRequestParams) (*protocol.MessageActionItem, error) {
+func (c *Server) ShowMessageRequest(ctx context.Context, params *protocol.ShowMessageRequestParams) (*protocol.MessageActionItem, error) {
 	return nil, nil
 }
 
-func (c *Client) Telemetry(ctx context.Context, params any) error {
+func (c *Server) Telemetry(ctx context.Context, params any) error {
 	return nil
 }
 
-func (c *Client) RegisterCapability(ctx context.Context, params *protocol.RegistrationParams) error {
+func (c *Server) RegisterCapability(ctx context.Context, params *protocol.RegistrationParams) error {
 	return nil
 }
 
-func (c *Client) UnregisterCapability(ctx context.Context, params *protocol.UnregistrationParams) error {
+func (c *Server) UnregisterCapability(ctx context.Context, params *protocol.UnregistrationParams) error {
 	return nil
 }
 
-func (c *Client) ApplyEdit(ctx context.Context, params *protocol.ApplyWorkspaceEditParams) (*protocol.ApplyWorkspaceEditResponse, error) {
+func (c *Server) ApplyEdit(ctx context.Context, params *protocol.ApplyWorkspaceEditParams) (*protocol.ApplyWorkspaceEditResponse, error) {
 	return nil, nil
 }
 
-func (c *Client) Configuration(ctx context.Context, params *protocol.ConfigurationParams) ([]any, error) {
+func (c *Server) Configuration(ctx context.Context, params *protocol.ConfigurationParams) ([]any, error) {
 	return nil, nil
 }
 
-func (c *Client) WorkspaceFolders(ctx context.Context) ([]protocol.WorkspaceFolder, error) {
+func (c *Server) WorkspaceFolders(ctx context.Context) ([]protocol.WorkspaceFolder, error) {
 	var workspaceFolders []protocol.WorkspaceFolder
 	if c.workspace != "" {
 		workspaceFolders = append(workspaceFolders, protocol.WorkspaceFolder{
@@ -435,7 +431,7 @@ func (c *Client) WorkspaceFolders(ctx context.Context) ([]protocol.WorkspaceFold
 	return workspaceFolders, nil
 }
 
-func (c *Client) InlayHintRefresh(ctx context.Context) error {
+func (c *Server) InlayHintRefresh(ctx context.Context) error {
 	c.send(RefreshInlayHint())
 	return nil
 }

@@ -23,7 +23,7 @@ func NewList[T list.Item](items []T) list.Model[T] {
 	l.Styles = Theme.List
 	l.TextInput = NewTextInput()
 	l.TextInput.Cursor = NewCursor()
-	// l.KeyMap = Keys.List
+	l.KeyMap = Keys.List()
 	return l
 }
 

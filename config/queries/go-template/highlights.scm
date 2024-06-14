@@ -14,12 +14,14 @@
 
 (method_call
   method: (selector_expression
-            field: (field_identifier) @function))
+            field: (field_identifier) @function.method))
 
 ; Operators
 
-"|" @operator
-":=" @operator
+[
+  "|"
+  ":="
+  ] @operator
 
 ; Builtin functions
 
@@ -28,26 +30,33 @@
 
 ; Delimiters
 
-"." @punctuation.delimiter
-"," @punctuation.delimiter
+[
+  "."
+  ","
+  ] @punctuation.delimiter
 
-"{{" @punctuation.bracket
-"}}" @punctuation.bracket
-"{{-" @punctuation.bracket
-"-}}" @punctuation.bracket
-")" @punctuation.bracket
-"(" @punctuation.bracket
+[
+  "{{"
+  "}}"
+  "{{-"
+  "-}}"
+  "-}}"
+  ")"
+  "("
+  ] @punctuation.bracket
 
 ; Keywords
 
-"else" @keyword
-"if" @keyword
-"range" @keyword
-"with" @keyword
-"end" @keyword
-"template" @keyword
-"define" @keyword
-"block" @keyword
+[
+  "else"
+  "if"
+  "range"
+  "with"
+  "end"
+  "template"
+  "define"
+  "block"
+  ] @keyword
 
 ; Literals
 
@@ -59,17 +68,19 @@
 
 (escape_sequence) @string.special
 
+(int_literal) @constant.numeric.integer
+
 [
-  (int_literal)
   (float_literal)
   (imaginary_literal)
-  ] @number
+  ] @constant.numeric.float
 
 [
   (true)
   (false)
-  (nil)
-  ] @constant.builtin
+  ] @constant.builtin.boolean
 
-(comment) @comment
-(ERROR) @error
+
+(nil) @constant.builtin
+
+(comment) @comment @spell

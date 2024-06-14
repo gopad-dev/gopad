@@ -13,13 +13,13 @@ import (
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
 
-func New(lspClient *lsp.LSP, version string, workspace string, args []string) (*Gopad, error) {
+func New(lsClient *ls.Client, version string, workspace string, args []string) (*Gopad, error) {
 	e, err := editor.NewEditor(workspace, args)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func New(lspClient *lsp.LSP, version string, workspace string, args []string) (*
 	o := config.NewOverlays()
 	n := config.NewNotifications()
 	return &Gopad{
-		lspClient:     lspClient,
+		lsClient:      lsClient,
 		version:       version,
 		editor:        *e,
 		overlays:      o,
@@ -38,8 +38,8 @@ func New(lspClient *lsp.LSP, version string, workspace string, args []string) (*
 }
 
 type Gopad struct {
-	lspClient *lsp.LSP
-	version   string
+	lsClient *ls.Client
+	version  string
 
 	height int
 	width  int
@@ -167,71 +167,77 @@ func (g Gopad) AppBar() string {
 
 func (g Gopad) CodeBar() string {
 	width := g.width - config.Theme.Editor.CodeBarStyle.GetHorizontalFrameSize()
-
 	file := g.editor.File()
-	if file == nil {
-		return config.Theme.Editor.CodeBarStyle.Render(strings.Repeat(" ", max(0, width)))
-	}
 
-	var infoLine string
+	infoLine := fmt.Sprintf("%s | ", config.Theme.Name)
 
-	if s := file.Selection(); s != nil {
-		infoLine += fmt.Sprintf("[%d:%d-%d:%d] ", s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1)
-	} else {
-		cursorRow, cursorCol := file.Cursor()
-		infoLine += fmt.Sprintf("[%d:%d] ", cursorRow+1, cursorCol+1)
-	}
-
-	if clients := g.lspClient.SupportedClients(file.Name()); len(clients) > 0 {
-		var clientNames []string
-		for _, client := range clients {
-			clientNames = append(clientNames, client.Name())
+	if file != nil {
+		if s := file.Selection(); s != nil {
+			infoLine += fmt.Sprintf("%d [%d:%d-%d:%d] | ", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1)
+		} else {
+			cursorRow, cursorCol := file.Cursor()
+			infoLine += fmt.Sprintf("[%d:%d] | ", cursorRow+1, cursorCol+1)
 		}
-		infoLine += fmt.Sprintf("lsp:%s ", strings.Join(clientNames, ","))
-	}
 
-	if language := file.Language(); language != nil {
-		infoLine += fmt.Sprintf("lang:%s ", language.Name)
-		if language.Config.Icon > 0 {
-			infoLine += fmt.Sprintf("%c ", language.Config.Icon)
+		if servers := g.lsClient.SupportedServers(file.Name()); len(servers) > 0 {
+			var clientNames []string
+			for _, server := range servers {
+				clientNames = append(clientNames, server.Name())
+			}
+			infoLine += fmt.Sprintf("%s | ", strings.Join(clientNames, ","))
 		}
-		if language.Grammar != nil {
-			infoLine += fmt.Sprintf("ts:%s ", language.Config.Grammar.Name)
-		}
-	}
 
-	infoLine += fmt.Sprintf("theme:%s %s %s", config.Theme.Name, file.LineEnding(), file.Encoding())
-
-	fileName := file.Name()
-	if workspace := g.editor.Workspace(); workspace != "" {
-		workspaceName := filepath.Base(workspace)
-		maxFileNameWidth := max(0, width-lipgloss.Width(workspaceName)-1-1-lipgloss.Width(infoLine))
-		fileName = file.RelativeName(workspace)
-
-		if lipgloss.Width(fileName) > maxFileNameWidth {
-			baseName := filepath.Base(fileName)
-			dirName := filepath.Dir(fileName)
-			for {
-				dirName = filepath.Dir(dirName)
-				if dirName == "." {
-					dirName = ""
-					break
-				}
-				if lipgloss.Width(dirName)+lipgloss.Width(baseName)+4 < maxFileNameWidth {
-					break
-				}
+		if language := file.Language(); language != nil {
+			name := language.Name
+			if language.Config.Icon > 0 {
+				name = fmt.Sprintf("%c %s", language.Config.Icon, name)
 			}
 
-			if dirName == "" {
-				fileName = fmt.Sprintf(".../%s", baseName)
-			} else {
-				fileName = fmt.Sprintf("%s/.../%s", dirName, baseName)
+			if language.Config.Grammar != nil {
+				name = fmt.Sprintf("%s (%s)", name, language.Config.Grammar.Name)
 			}
+
+			infoLine += fmt.Sprintf("%s | ", name)
 		}
-		fileName = fmt.Sprintf("%s/%s", workspaceName, fileName)
+
+		infoLine += fmt.Sprintf("%s | %s", file.LineEnding(), file.Encoding())
+	}
+	infoLine = strings.TrimSuffix(infoLine, " | ")
+
+	maxWorkspaceNameWidth := max(0, width-1-lipgloss.Width(infoLine))
+	workspaceName := g.editor.Workspace()
+	if workspaceName != "" {
+		if file != nil {
+			workspaceName = filepath.Join(filepath.Base(workspaceName), file.RelativeName(workspaceName))
+		}
+	} else if file != nil {
+		workspaceName = file.Name()
 	}
 
-	codeBar := fileName + strings.Repeat(" ", max(1, width-lipgloss.Width(fileName)-lipgloss.Width(infoLine))) + infoLine
+	if maxWorkspaceNameWidth > 0 && lipgloss.Width(workspaceName) > maxWorkspaceNameWidth {
+		dirName := filepath.Dir(workspaceName)
+		baseName := filepath.Base(workspaceName)
+		for {
+			dirName = filepath.Dir(dirName)
+			if dirName == "." || dirName == "/" {
+				dirName = ""
+				break
+			}
+			if lipgloss.Width(joinPaths(dirName, baseName)) <= maxWorkspaceNameWidth {
+				break
+			}
+		}
+		workspaceName = joinPaths(dirName, baseName)
+	}
+
+	codeBar := workspaceName + strings.Repeat(" ", max(1, width-lipgloss.Width(workspaceName)-lipgloss.Width(infoLine))) + infoLine
 
 	return config.Theme.Editor.CodeBarStyle.Width(g.width).Render(codeBar)
+}
+
+func joinPaths(dirName string, baseName string) string {
+	if dirName == "" {
+		return baseName
+	}
+	return fmt.Sprintf("%s/.../%s", dirName, baseName)
 }

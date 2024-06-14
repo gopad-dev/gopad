@@ -15,7 +15,7 @@
 
 (call_expression
   function: (selector_expression
-    field: (field_identifier) @function.method))
+              field: (field_identifier) @function.method))
 
 ; Types
 
@@ -79,7 +79,7 @@
   "|="
   "||"
   "~"
-] @operator
+  ] @operator
 
 ; Keywords
 
@@ -109,7 +109,7 @@
   "switch"
   "type"
   "var"
-] @keyword
+  ] @keyword
 
 ; Delimiters
 
@@ -135,7 +135,7 @@
   (interpreted_string_literal)
   (raw_string_literal)
   (rune_literal)
-] @string
+  ] @string
 
 (escape_sequence) @constant.character.escape
 [
@@ -155,6 +155,10 @@
 [
   (nil)
   (iota)
-] @constant.builtin
+  ] @constant.builtin
 
 (comment) @comment
+
+((comment) @keyword.directive
+  (#match? @keyword.directive "^//go:")
+  (#offset! @keyword.directive 0 2 0 0))

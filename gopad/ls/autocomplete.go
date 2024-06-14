@@ -1,4 +1,4 @@
-package lsp
+package ls
 
 import (
 	tea "github.com/charmbracelet/bubbletea"

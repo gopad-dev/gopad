@@ -15,7 +15,7 @@ import (
 	"go.gopad.dev/gopad/gopad"
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/xio"
 )
 
@@ -79,14 +79,14 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Panicln("failed to load languages:", err)
 			}
 
-			lspClient := lsp.New(version, config.LanguageServers, lspLogFile)
-			e, err := gopad.New(lspClient, version, getWorkspace(workspace, args), args)
+			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
+			e, err := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
 			if err != nil {
 				log.Panicln("failed to start gopad:", err)
 			}
 
-			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithFilter(lspClient.Filter))
-			lspClient.SetProgram(p)
+			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithFilter(lsClient.Filter))
+			lsClient.SetProgram(p)
 			log.Println("running gopad")
 			if _, err = p.Run(); err != nil {
 				log.Panicln("error while running gopad:", err)

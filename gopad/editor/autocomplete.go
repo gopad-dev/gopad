@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 )
 
 func NewAutocompleter() *Autocompleter {
@@ -13,7 +13,7 @@ func NewAutocompleter() *Autocompleter {
 }
 
 type Autocompleter struct {
-	completions []lsp.CompletionItem
+	completions []ls.CompletionItem
 	completion  int
 	offset      int
 
@@ -24,7 +24,7 @@ func (s *Autocompleter) Visible() bool {
 	return s.show
 }
 
-func (s *Autocompleter) SetCompletions(completions []lsp.CompletionItem) {
+func (s *Autocompleter) SetCompletions(completions []ls.CompletionItem) {
 	s.show = true
 	s.completions = completions
 	if len(s.completions) > 0 && len(s.completions)-1 < s.completion {
@@ -50,9 +50,9 @@ func (s *Autocompleter) Previous() {
 	}
 }
 
-func (s *Autocompleter) Selected() lsp.CompletionItem {
+func (s *Autocompleter) Selected() ls.CompletionItem {
 	if len(s.completions) == 0 {
-		return lsp.CompletionItem{}
+		return ls.CompletionItem{}
 	}
 
 	return s.completions[s.completion]

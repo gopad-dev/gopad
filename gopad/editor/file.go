@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/xrunes"
@@ -45,7 +46,7 @@ func NewFileWithBuffer(b *buffer.Buffer, mode FileMode) *File {
 			cursor: config.NewCursor(),
 		},
 		language:           GetLanguageByFilename(b.Name()),
-		diagnosticVersions: map[lsp.DiagnosticType]int32{},
+		diagnosticVersions: map[ls.DiagnosticType]int32{},
 		autocomplete:       NewAutocompleter(),
 	}
 }
@@ -84,9 +85,9 @@ type File struct {
 	language              *Language
 	tree                  *Tree
 	autocomplete          *Autocompleter
-	diagnosticVersions    map[lsp.DiagnosticType]int32
-	diagnostics           []lsp.Diagnostic
-	inlayHints            []lsp.InlayHint
+	diagnosticVersions    map[ls.DiagnosticType]int32
+	diagnostics           []ls.Diagnostic
+	inlayHints            []ls.InlayHint
 	matchesVersion        int32
 	matches               []Match
 	locals                []Local
@@ -178,7 +179,7 @@ func (f *File) recordChange(change Change) tea.Cmd {
 
 	f.changes = append(f.changes, change)
 
-	cmds = append(cmds, tea.Sequence(lsp.FileChanged(f.Name(), f.Version(), change.Text), lsp.GetInlayHint(f.Name(), f.Range())))
+	cmds = append(cmds, tea.Sequence(ls.FileChanged(f.Name(), f.Version(), change.Text), ls.GetInlayHint(f.Name(), f.Range())))
 
 	return tea.Batch(cmds...)
 }
@@ -577,6 +578,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 
 	if debug {
 		matches := f.MatchesForLineCol(cursorRow, realCursorCol)
+		slices.Reverse(matches)
 		var currentMatches []string
 		for _, match := range matches {
 			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: %d-%d) ", match.Type, match.Source, match.Range.Start.Col, match.Range.End.Col))

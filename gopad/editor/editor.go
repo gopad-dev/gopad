@@ -18,7 +18,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/lsp"
+	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -58,7 +58,7 @@ func NewEditor(workspace string, args []string) (*Editor, error) {
 		}
 		fileTree.Show()
 		editor.fileTree = fileTree
-		cmds = append(cmds, lsp.WorkspaceOpened(workspace))
+		cmds = append(cmds, ls.WorkspaceOpened(workspace))
 	}
 
 	for _, arg := range args {
@@ -159,15 +159,15 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 
 	cmds := []tea.Cmd{
 		tea.Sequence(
-			lsp.FileCreated(file.Name(), file.buffer.Bytes()),
-			lsp.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
+			ls.FileCreated(file.Name(), file.buffer.Bytes()),
+			ls.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
 		),
 	}
 
 	if err = file.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
-	cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
+	cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -186,13 +186,13 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	e.files = append(e.files, file)
 
 	cmds := []tea.Cmd{
-		lsp.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
+		ls.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
 	}
 
 	if err = file.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
-	cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
+	cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -206,7 +206,7 @@ func (e *Editor) SaveFile(name string) (tea.Cmd, error) {
 		return nil, err
 	}
 
-	return lsp.FileSaved(file.Name(), file.buffer.Bytes()), nil
+	return ls.FileSaved(file.Name(), file.buffer.Bytes()), nil
 }
 
 func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
@@ -222,7 +222,7 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 		return nil, err
 	}
 
-	return lsp.FileRenamed(file.Name(), newName), nil
+	return ls.FileRenamed(file.Name(), newName), nil
 }
 
 func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
@@ -242,7 +242,7 @@ func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
 		e.fileTree.Focus()
 	}
 
-	return lsp.FileClosed(file.Name()), nil
+	return ls.FileClosed(file.Name()), nil
 }
 
 func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
@@ -266,7 +266,7 @@ func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
 		e.fileTree.Focus()
 	}
 
-	return lsp.FileDeleted(file.Name()), nil
+	return ls.FileDeleted(file.Name()), nil
 }
 
 func (e *Editor) File() *File {
@@ -320,14 +320,14 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	var overwriteCursorBlink bool
 
 	switch msg := msg.(type) {
-	case lsp.UpdateFileDiagnosticMsg:
+	case ls.UpdateFileDiagnosticMsg:
 		file := e.FileByName(msg.Name)
 		if file == nil {
 			return e, tea.Batch(cmds...)
 		}
 		file.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
 		return e, tea.Batch(cmds...)
-	case lsp.UpdateAutocompletionMsg:
+	case ls.UpdateAutocompletionMsg:
 		log.Println("update autocompletions", msg.Name, msg.Completions)
 		file := e.FileByName(msg.Name)
 		if file == nil {
@@ -335,17 +335,17 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		}
 		file.autocomplete.SetCompletions(msg.Completions)
 		return e, tea.Batch(cmds...)
-	case lsp.UpdateInlayHintMsg:
+	case ls.UpdateInlayHintMsg:
 		file := e.FileByName(msg.Name)
 		if file == nil {
 			return e, tea.Batch(cmds...)
 		}
 		file.SetInlayHint(msg.Hints)
 		return e, tea.Batch(cmds...)
-	case lsp.RefreshInlayHintMsg:
+	case ls.RefreshInlayHintMsg:
 		// refresh inlay hints for all open files
 		for _, file := range e.files {
-			cmds = append(cmds, lsp.GetInlayHint(file.Name(), file.Range()))
+			cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
 		}
 		return e, tea.Batch(cmds...)
 	case openDirMsg:
@@ -364,10 +364,10 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 		var wCmds []tea.Cmd
 		if e.workspace != "" {
-			wCmds = append(wCmds, lsp.WorkspaceClosed(e.workspace))
+			wCmds = append(wCmds, ls.WorkspaceClosed(e.workspace))
 		}
 		e.workspace = msg.Name
-		wCmds = append(wCmds, lsp.WorkspaceOpened(msg.Name))
+		wCmds = append(wCmds, ls.WorkspaceOpened(msg.Name))
 		return e, tea.Batch(append(cmds, tea.Sequence(wCmds...))...)
 	case openFileMsg:
 		cmd, err := e.OpenFile(msg.Name)
@@ -552,7 +552,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	case setLanguageMsg:
 		file.SetLanguage(msg.Language)
 
-		file.ClearDiagnosticsByType(lsp.DiagnosticTypeTreeSitter)
+		file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
 
 		if err := file.InitTree(); err != nil {
 			cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree: %s", err.Error())))
@@ -577,7 +577,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete):
 				row, col := file.Cursor()
-				cmds = append(cmds, lsp.GetAutocompletion(file.Name(), row, col))
+				cmds = append(cmds, ls.GetAutocompletion(file.Name(), row, col))
 				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Cancel) && file.autocomplete.Visible():
 				file.autocomplete.ClearCompletions()
@@ -812,7 +812,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				overwriteCursorBlink = true
 			case key.Matches(msg, config.Keys.Editor.Debug):
 				log.Println("DEBUG")
-				cmds = append(cmds, lsp.GetInlayHint(file.Name(), buffer.Range{
+				cmds = append(cmds, ls.GetInlayHint(file.Name(), buffer.Range{
 					Start: buffer.Position{
 						Row: 0,
 						Col: 0,
@@ -831,7 +831,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, file.InsertRunes(msg.Runes))
 				if file.autocomplete.Visible() {
 					row, col := file.Cursor()
-					cmds = append(cmds, lsp.GetAutocompletion(file.Name(), row, col))
+					cmds = append(cmds, ls.GetAutocompletion(file.Name(), row, col))
 				}
 
 				// handle auto pairs
