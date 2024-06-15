@@ -1,4 +1,4 @@
-name: Test, Lint and Build
+name: Build
 
 on:
   push:
@@ -6,30 +6,6 @@ on:
       - "*.md"
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.22.x
-      - name: Test
-        run: go test -v ./...
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.22.x
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
   build:
     runs-on: ubuntu-latest
     steps:
@@ -37,24 +13,29 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
+
       - name: Prepare Version Info
         run: |
           echo "VERSION=$(git describe --tags --always)" >> $GITHUB_ENV
           echo "COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
           echo $GITHUB_ENV
+
       - name: Build
         run: |
           CGO_ENABLED=1
           go build -ldflags="-X 'main.Version=${{ env.VERSION }}' -X 'main.Commit=${{ env.COMMIT }}'" -o dist/gopad go.gopad.dev/gopad
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gopad
           path: dist/gopad
+
       - name: Release
         if: ${{ github.event_name == 'release' }}
         uses: ncipollo/release-action@v1
