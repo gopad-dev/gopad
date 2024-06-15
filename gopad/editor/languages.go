@@ -16,7 +16,6 @@ import (
 	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/cmd/grammar"
-
 	"go.gopad.dev/gopad/gopad/config"
 )
 
@@ -132,8 +131,10 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 			if err != nil {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
+			if grammar != nil {
+				lang.Grammar = grammar
+			}
 
-			lang.Grammar = grammar
 		}
 
 		languages = append(languages, lang)
@@ -155,9 +156,17 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 
 	log.Printf("Loading tree-sitter grammar %q path=%q symbol=%q\n", name, libPath, symbolName)
 
+	_, err := os.Stat(libPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error checking lib %q: %w", libPath, err)
+	}
+
 	tsLang, err := sitter.LoadLanguage(symbolName, libPath)
 	if err != nil {
-		return nil, fmt.Errorf("error loading tree-sitter language %q path: %q: %w", name, libPath, err)
+		return nil, fmt.Errorf("error loading lib %q: %w", libPath, err)
 	}
 
 	queriesConfigDir := cfg.QueriesDir

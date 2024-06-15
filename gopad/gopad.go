@@ -194,7 +194,11 @@ func (g Gopad) CodeBar() string {
 			}
 
 			if language.Config.Grammar != nil {
-				name = fmt.Sprintf("%s (%s)", name, language.Config.Grammar.Name)
+				grammarName := language.Config.Grammar.Name
+				if language.Grammar == nil {
+					grammarName += " (not loaded)"
+				}
+				name = fmt.Sprintf("%s (ts: %s)", name, grammarName)
 			}
 
 			infoLine += fmt.Sprintf("%s | ", name)
