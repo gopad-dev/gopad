@@ -1,5 +1,5 @@
 (text) @string
-(number) @number
-(float) @float
-(boolean) @boolean
+(number) @constant.numeric.integer
+(float) @constant.numeric.float
+(boolean) @constant.builtin.boolean
 "|" @punctuation.delimiter

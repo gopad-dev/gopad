@@ -60,6 +60,24 @@ type Grammar struct {
 	ParseTimeout    time.Duration
 }
 
+func (g *Grammar) HighlightsQuery() *sitter.Query {
+	return g.highlightsQuery
+}
+
+func (g *Grammar) InjectionsQuery() *InjectionQuery {
+	if g.injectionsQuery == nil {
+		return nil
+	}
+	indexes := GetCaptureIndexes(g.injectionsQuery, []string{
+		"injection.content",
+	})
+
+	return &InjectionQuery{
+		Query:                     g.injectionsQuery,
+		InjectionContentCaptureID: *indexes[0],
+	}
+}
+
 func (g *Grammar) OutlineQuery() OutlineConfig {
 	indexes := GetCaptureIndexes(g.outlineQuery, []string{
 		"item",
@@ -75,6 +93,11 @@ func (g *Grammar) OutlineQuery() OutlineConfig {
 		ContextCaptureID:      indexes[2],
 		ExtraContextCaptureID: indexes[3],
 	}
+}
+
+type InjectionQuery struct {
+	Query                     *sitter.Query
+	InjectionContentCaptureID uint32
 }
 
 type OutlineConfig struct {

@@ -179,7 +179,10 @@ func (f *File) recordChange(change Change) tea.Cmd {
 
 	f.changes = append(f.changes, change)
 
-	cmds = append(cmds, tea.Sequence(ls.FileChanged(f.Name(), f.Version(), change.Text), ls.GetInlayHint(f.Name(), f.Range())))
+	cmds = append(cmds, tea.Sequence(
+		ls.FileChanged(f.Name(), f.Version(), change.Text),
+		ls.GetInlayHint(f.Name(), f.Range()),
+	))
 
 	return tea.Batch(cmds...)
 }
@@ -581,7 +584,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		slices.Reverse(matches)
 		var currentMatches []string
 		for _, match := range matches {
-			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: %d-%d) ", match.Type, match.Source, match.Range.Start.Col, match.Range.End.Col))
+			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]) ", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 

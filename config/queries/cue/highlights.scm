@@ -134,15 +134,15 @@
   (escape_unicode)
 ] @string.escape
 
-(number) @number
+(number) @constant.numeric
 
-(float) @float
+(float) @constant.numeric.float
 
 (si_unit
   (float)
   (_) @symbol)
 
-(boolean) @boolean
+(boolean) @constant.builtin.boolean
 
 [
   (null)

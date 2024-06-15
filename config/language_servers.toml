@@ -1,7 +1,7 @@
 # Language Server Protocol configuration
 # For a list of available language servers, see: https://langserver.org/#implementations-server
 
-use_servers = { only = ['gopls'], except = [] }
+use_servers = { only = ['lol'], except = [] }
 
 [language_servers]
 

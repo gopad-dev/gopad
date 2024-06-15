@@ -111,16 +111,17 @@
 (regex) @string.special.regex
 (escape_sequence) @escape
 
-[
-  (integer)
-  (float)
-] @number
+
+(integer) @constant.numeric.integer
+
+(float) @constant.numeric.float
 
 [
-  (nil)
   (true)
   (false)
-]@constant.builtin
+] @constant.builtin.boolean
+
+(nil) @constant.builtin
 
 (interpolation
   "#{" @punctuation.special

@@ -147,7 +147,7 @@
 [
   (false)
   (true)
-] @boolean
+] @constant.builtin.boolean
 
 ;; Tables
 
@@ -188,7 +188,7 @@
 
 (hash_bang_line) @comment
 
-(number) @number
+(number) @constant.numeric
 
 (string) @string
 

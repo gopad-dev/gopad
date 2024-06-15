@@ -19,7 +19,7 @@
   (number)
   (number_with_decimal)
   (hex_number)
-  ] @number
+  ] @constant.numeric
 
 (checksum
   "go.mod" @string)

@@ -81,7 +81,7 @@
   (link_text)
   (link_title)
   (image_description)
-  ] @markup.link.label
+  ] @markup.link.text
   (#set! priority 110))
 
 ; Replace common HTML entities.

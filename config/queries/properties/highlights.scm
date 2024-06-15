@@ -6,8 +6,8 @@
 
 (value (escape) @string.escape)
 
-((index) @number
-  (#match? @number "^[0-9]+$"))
+((index) @constant.numeric
+  (#match? @constant.numeric "^[0-9]+$"))
 
 ((substitution (key) @constant)
   (#match? @constant "^[A-Z0-9_]+"))

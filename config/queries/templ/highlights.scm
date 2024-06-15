@@ -107,15 +107,20 @@
 
 (escape_sequence) @escape
 
+
+(int_literal) @constant.numeric.integer
+
 [
-  (int_literal)
   (float_literal)
   (imaginary_literal)
-] @number
+] @constant.numeric.float
 
 [
   (true)
   (false)
+] @constant.builtin.boolean
+
+[
   (nil)
   (iota)
 ] @constant.builtin

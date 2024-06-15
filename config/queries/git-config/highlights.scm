@@ -8,8 +8,11 @@
 
 (section_name) @tag
 (variable (name) @property)
-[(true) (false)] @constant.builtin
-(integer) @number
+[
+ (true)
+ (false)
+ ] @constant.builtin.boolean
+(integer) @constant.numeric.integer
 
 ((string) @string.special.path
   (#match? @string.special.path "^(~|./|/)"))

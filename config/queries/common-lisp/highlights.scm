@@ -77,7 +77,7 @@
 [
   "#C"
   "#c"
-  ] @number
+  ] @constant.numeric
 
 [
   (kwd_lit)
@@ -91,10 +91,10 @@
 
 (str_lit) @string
 
-(num_lit) @number
+(num_lit) @constant.numeric
 
-((sym_lit) @boolean
-  (#any-of? @boolean "t" "T"))
+((sym_lit) @constant.builtin.boolean
+  (#any-of? @constant.builtin.boolean "t" "T"))
 
 (nil_lit) @constant.builtin
 
@@ -315,6 +315,6 @@
   (array_dimension)
   "#0A"
   "#0a"
-  ] @number
+  ] @constant.numeric
 
 (char_lit) @character

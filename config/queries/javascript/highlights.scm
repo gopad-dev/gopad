@@ -75,6 +75,9 @@
 [
   (true)
   (false)
+] @constant.builtin.boolean
+
+[
   (null)
   (undefined)
 ] @constant.builtin
@@ -87,7 +90,7 @@
 ] @string
 
 (regex) @string.special
-(number) @number
+(number) @constant.numeric
 
 ; Tokens
 ;-------

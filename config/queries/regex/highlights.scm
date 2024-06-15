@@ -35,7 +35,7 @@
 
 (count_quantifier
   [
-    (decimal_digits) @number
+    (decimal_digits) @constant.numeric.float
     "," @punctuation.delimiter
   ])
 

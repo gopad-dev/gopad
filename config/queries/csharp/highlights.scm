@@ -28,7 +28,7 @@
 [
   (real_literal)
   (integer_literal)
-] @number
+] @constant.numeric
 
 [
   (character_literal)
@@ -42,10 +42,9 @@
   "$@\""
  ] @string
 
-[
-  (boolean_literal)
-  (null_literal)
-] @constant.builtin
+(boolean_literal) @constant.builtin.boolean
+
+(null_literal) @constant.builtin
 
 ;; Comments
 (comment) @comment

@@ -22,7 +22,7 @@
 
 "$" @punctuation.special
 
-(boolean) @boolean
+(boolean) @constant.builtin.boolean
 
 (string) @string
 
@@ -38,7 +38,7 @@
   (legacy_hex)
   (angle)
   (hex)
-  ] @number
+  ] @constant.numeric
 
 "deg" @type
 

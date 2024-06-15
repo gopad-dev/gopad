@@ -64,10 +64,10 @@
   (heredoc_body)
   (nowdoc_body)
 ] @string
-(boolean) @constant.builtin
+(boolean) @constant.builtin.boolean
 (null) @constant.builtin
-(integer) @number
-(float) @number
+(integer) @constant.numeric.integer
+(float) @constant.numeric.float
 (comment) @comment
 
 "$" @operator

@@ -35,15 +35,15 @@
 ; Literals
 
 [
-  (none)
   (true)
   (false)
-] @constant.builtin
+] @constant.builtin.boolean
 
-[
-  (integer)
-  (float)
-] @number
+(none)  @constant.builtin
+
+(integer) @constant.numeric.integer
+
+(float) @constant.numeric.float
 
 (comment) @comment
 (string) @string

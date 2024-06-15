@@ -2,7 +2,7 @@
 
 (identifier) @constant
 
-(number) @number
+(number) @constant.numeric
 
 (null) @constant.builtin
 

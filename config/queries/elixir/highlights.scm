@@ -52,15 +52,14 @@
 
 ; Literals
 
-[
-  (boolean)
-  (nil)
-] @constant
 
-[
-  (integer)
-  (float)
-] @number
+(boolean) @constant.builtin.boolean
+
+(nil) @constant.builtin
+
+(integer) @constant.numeric.integer
+
+(float) @constant.numeric.float
 
 (alias) @module
 

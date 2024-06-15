@@ -14,6 +14,62 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
+type Tree struct {
+	Tree     *sitter.Tree
+	Language Language
+	SubTrees map[string]*Tree
+	Ranges   []sitter.Range
+}
+
+func (t *Tree) Copy() *Tree {
+	subTrees := make(map[string]*Tree, len(t.SubTrees))
+	for key, subTree := range t.SubTrees {
+		subTrees[key] = subTree.Copy()
+	}
+
+	return &Tree{
+		Tree:     t.Tree.Copy(),
+		Language: t.Language,
+		SubTrees: subTrees,
+	}
+}
+
+func (t *Tree) String() string {
+	return t.string(0)
+}
+
+func (t *Tree) string(indent int) string {
+	s := strings.Repeat(" ", indent) + fmt.Sprintf("Tree: %s\n", t.Language.Name)
+	for _, subTree := range t.SubTrees {
+		s += subTree.string(indent+1) + "\n"
+	}
+	return s
+}
+
+func (t *Tree) Print() string {
+	s := fmt.Sprintf("Tree: %s\n", t.Language.Name)
+	s += t.Tree.Print()
+
+	for _, subTree := range t.SubTrees {
+		s += "\n\n" + subTree.Print()
+	}
+
+	return s
+}
+
+func (t *Tree) FindTree(p buffer.Position) *Tree {
+	if len(t.SubTrees) == 0 {
+		return t
+	}
+
+	for _, subTree := range t.SubTrees {
+		if subTree.Tree.RootNode().StartPoint().Row <= uint32(p.Row) && subTree.Tree.RootNode().EndPoint().Row >= uint32(p.Row) {
+			return subTree.FindTree(p)
+		}
+	}
+	return t
+}
+
 func (f *File) InitTree() error {
 	if f.language == nil || f.language.Grammar == nil {
 		return nil
@@ -36,7 +92,7 @@ func (f *File) updateTree() error {
 	ctx, cancel := context.WithTimeout(context.Background(), f.language.Grammar.ParseTimeout)
 	defer cancel()
 
-	tree, err := parseTree(ctx, f.buffer.Bytes(), f.tree, *f.language, 0, 0)
+	tree, err := parseTree(ctx, f.buffer, f.tree, *f.language, nil)
 	if err != nil {
 		return err
 	}
@@ -61,21 +117,24 @@ func (f *File) updateTree() error {
 	return nil
 }
 
-func parseTree(ctx context.Context, content []byte, oldTree *Tree, language Language, rowOffset int, colOffset int) (*Tree, error) {
+func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language Language, ranges []sitter.Range) (*Tree, error) {
 	parser := sitter.NewParser()
 	parser.SetLanguage(language.Grammar.Language)
+	if len(ranges) > 0 {
+		parser.SetIncludedRanges(ranges)
+	}
 
 	var oldSitterTree *sitter.Tree
 	if oldTree != nil {
 		oldSitterTree = oldTree.Tree
 	}
 
-	tree, err := parser.ParseCtx(ctx, oldSitterTree, content)
+	tree, err := parser.ParseCtx(ctx, oldSitterTree, buff.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("error parsing tree: %w", err)
 	}
 
-	query := language.Grammar.injectionsQuery
+	query := language.Grammar.InjectionsQuery()
 	if query == nil {
 		return &Tree{
 			Tree:     tree,
@@ -84,10 +143,10 @@ func parseTree(ctx context.Context, content []byte, oldTree *Tree, language Lang
 	}
 
 	queryCursor := sitter.NewQueryCursor()
-	queryCursor.Exec(query, tree.RootNode())
+	queryCursor.Exec(query.Query, tree.RootNode())
 
-	var subTrees []*Tree
-	var subTreeIndex int
+	// first we find all the ranges of the sub languages in the tree
+	languageRanges := make(map[*Language][]sitter.Range)
 	for {
 		match, index, ok := queryCursor.NextCapture()
 		if !ok {
@@ -95,36 +154,39 @@ func parseTree(ctx context.Context, content []byte, oldTree *Tree, language Lang
 		}
 
 		capture := match.Captures[index]
-
-		node := capture.Node
-		if query.CaptureNameForID(capture.Index) == "injection.content" {
-			subLanguage := getLanguageByMatch(&language, match)
-			if subLanguage == nil || subLanguage.Config.Grammar == nil {
-				continue
-			}
-
-			newRowOffset := int(node.StartPoint().Row) + rowOffset
-			newColOffset := int(node.StartPoint().Column) + colOffset
-
-			var oldSubTree *Tree
-			// TODO: figure out how to match old sub trees with new ones
-			if oldTree != nil && subTreeIndex < len(oldTree.SubTrees) {
-				subTree := oldTree.SubTrees[subTreeIndex]
-				if subTree.Language.Name == subLanguage.Name {
-					oldSubTree = subTree
-				}
-			}
-
-			subTree, err := parseTree(ctx, content[node.StartByte():node.EndByte()], oldSubTree, *subLanguage, newRowOffset, newColOffset)
-			if err != nil {
-				return nil, err
-			}
-			subTree.OffsetRow = newRowOffset
-			subTree.OffsetCol = newColOffset
-
-			subTrees = append(subTrees, subTree)
-			subTreeIndex++
+		if capture.Index != query.InjectionContentCaptureID {
+			continue
 		}
+
+		subLanguage := getLanguageByMatch(&language, match)
+		if subLanguage == nil || subLanguage.Config.Grammar == nil {
+			continue
+		}
+
+		start := capture.StartPoint()
+		end := capture.EndPoint()
+		languageRanges[subLanguage] = append(languageRanges[subLanguage], sitter.Range{
+			StartPoint: capture.StartPoint(),
+			EndPoint:   capture.EndPoint(),
+			StartByte:  uint32(buff.ByteIndex(int(start.Row), int(start.Column))),
+			EndByte:    uint32(buff.ByteIndex(int(end.Row), int(end.Column))),
+		})
+	}
+
+	// then we parse the sub trees recursively using the ranges we found before
+	subTrees := make(map[string]*Tree, len(ranges))
+	for subLanguage, subRanges := range languageRanges {
+		var oldSubTree *Tree
+		if oldTree != nil {
+			oldSubTree = oldTree.SubTrees[subLanguage.Name]
+		}
+
+		subTree, err := parseTree(ctx, buff, oldSubTree, *subLanguage, subRanges)
+		if err != nil {
+			return nil, err
+		}
+
+		subTrees[subLanguage.Name] = subTree
 	}
 
 	return &Tree{
@@ -170,86 +232,6 @@ func editTree(tree *Tree, edit sitter.EditInput) {
 	}
 }
 
-type Tree struct {
-	Tree      *sitter.Tree
-	Language  Language
-	SubTrees  []*Tree
-	OffsetRow int
-	OffsetCol int
-}
-
-func (t *Tree) Copy() *Tree {
-	var subTrees []*Tree
-	for _, subTree := range t.SubTrees {
-		subTrees = append(subTrees, subTree.Copy())
-	}
-
-	return &Tree{
-		Tree:      t.Tree.Copy(),
-		Language:  t.Language,
-		SubTrees:  subTrees,
-		OffsetRow: t.OffsetRow,
-		OffsetCol: t.OffsetCol,
-	}
-}
-
-func (t *Tree) String() string {
-	return t.string(0)
-}
-
-func (t *Tree) string(indent int) string {
-	s := strings.Repeat(" ", indent) + fmt.Sprintf("Tree: %s: %d|%d \n", t.Language.Name, t.OffsetRow, t.OffsetCol)
-	for _, subTree := range t.SubTrees {
-		s += subTree.string(indent+1) + "\n"
-	}
-	return s
-}
-
-func (t *Tree) Print() string {
-	s := fmt.Sprintf("Tree: %s: %d|%d\n", t.Language.Name, t.OffsetRow, t.OffsetCol)
-	s += t.Tree.Print()
-
-	for _, subTree := range t.SubTrees {
-		s += "\n\n" + subTree.Print()
-	}
-
-	return s
-}
-
-func (t *Tree) Range() buffer.Range {
-	start := t.Tree.RootNode().StartPoint()
-	end := t.Tree.RootNode().EndPoint()
-
-	endCol := int(end.Column)
-	if end.Row == start.Row {
-		endCol += t.OffsetCol
-	}
-	return buffer.Range{
-		Start: buffer.Position{
-			Row: int(start.Row) + t.OffsetRow,
-			Col: int(start.Column) + t.OffsetCol,
-		},
-		End: buffer.Position{
-			Row: int(end.Row) + t.OffsetRow,
-			Col: endCol,
-		},
-	}
-}
-
-func (t *Tree) FindTree(p buffer.Position) *Tree {
-	if len(t.SubTrees) == 0 {
-		return t
-	}
-
-	for _, subTree := range t.SubTrees {
-		if subTree.Range().Contains(p) {
-			return subTree.FindTree(p)
-		}
-	}
-
-	return t
-}
-
 func (f *File) ValidateTree() {
 	if f.tree == nil || f.tree.Tree == nil {
 		return
@@ -271,27 +253,18 @@ func validateTree(tree *Tree) []ls.Diagnostic {
 		}
 
 		if node.IsError() {
-			startRow := int(node.StartPoint().Row) + tree.OffsetRow
-			startCol := int(node.StartPoint().Column) + tree.OffsetCol
-
-			endRow := int(node.EndPoint().Row) + tree.OffsetRow
-			endCol := int(node.EndPoint().Column)
-			if endRow == startRow {
-				endCol += tree.OffsetCol
-			}
-
 			diagnostics = append(diagnostics, ls.Diagnostic{
 				Type:   ls.DiagnosticTypeTreeSitter,
 				Name:   tree.Language.Name,
 				Source: "syntax",
 				Range: buffer.Range{
 					Start: buffer.Position{
-						Row: startRow,
-						Col: startCol,
+						Row: int(node.StartPoint().Row),
+						Col: int(node.StartPoint().Column),
 					},
 					End: buffer.Position{
-						Row: endRow,
-						Col: endCol,
+						Row: int(node.EndPoint().Row),
+						Col: int(node.EndPoint().Column),
 					},
 				},
 				Severity: ls.DiagnosticSeverityError,
@@ -322,15 +295,15 @@ func (f *File) HighlightTree() {
 	version := f.Version()
 
 	matches := highlightTree(f.tree.Copy())
-	//slices.SortFunc(matches, func(a, b Match) int {
+	// slices.SortFunc(matches, func(a, b Match) int {
 	//	return b.Priority - a.Priority
-	//})
+	// })
 
 	f.SetMatches(version, matches)
 }
 
 func highlightTree(tree *Tree) []Match {
-	query := tree.Language.Grammar.highlightsQuery
+	query := tree.Language.Grammar.HighlightsQuery()
 	queryCursor := sitter.NewQueryCursor()
 	queryCursor.Exec(query, tree.Tree.RootNode())
 
@@ -340,17 +313,7 @@ func highlightTree(tree *Tree) []Match {
 		if !ok {
 			break
 		}
-
 		capture := match.Captures[index]
-
-		realRow := int(capture.StartPoint().Row) + tree.OffsetRow
-		realCol := int(capture.StartPoint().Column)
-		realEndRow := int(capture.EndPoint().Row) + tree.OffsetRow
-		realEndCol := int(capture.EndPoint().Column)
-		if realRow == tree.OffsetRow {
-			realCol += tree.OffsetCol
-			realEndCol += tree.OffsetCol
-		}
 
 		priority := 100
 		if priorityStr, ok := match.Properties["priority"]; ok {
@@ -361,8 +324,8 @@ func highlightTree(tree *Tree) []Match {
 
 		matches = append(matches, Match{
 			Range: buffer.Range{
-				Start: buffer.Position{Row: realRow, Col: realCol},
-				End:   buffer.Position{Row: realEndRow, Col: realEndCol - 1}, // -1 to exclude the last character idk why this is like this tbh
+				Start: buffer.Position{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
+				End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
 			},
 			Type:     query.CaptureNameForID(capture.Index),
 			Priority: priority,

@@ -37,7 +37,7 @@
   (attr_set)
   ] @operator
 
-(boolean_value) @boolean
+(boolean_value) @constant.builtin.boolean
 
 (string_value) @string
 

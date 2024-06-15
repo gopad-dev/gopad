@@ -61,9 +61,9 @@
 ; Constants
 ;----------
 
-(boolean) @constant
+(boolean) @constant.builtin.boolean
 
-[(number) (signed_number)] @number
+[(number) (signed_number)] @constant.numeric
 
 [(string) (character)] @string
 

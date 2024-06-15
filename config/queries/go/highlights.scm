@@ -132,30 +132,31 @@
 ; Literals
 
 [
-  (interpreted_string_literal)
-  (raw_string_literal)
-  (rune_literal)
-  ] @string
+ (interpreted_string_literal)
+ (raw_string_literal)
+ (rune_literal)
+ ] @string
+
+(rune_literal) @constant.character
 
 (escape_sequence) @constant.character.escape
-[
-  (int_literal)
-  ] @constant.numeric.integer
+
+(int_literal) @constant.numeric.integer
 
 [
-  (float_literal)
-  (imaginary_literal)
-  ] @constant.numeric.float
+ (float_literal)
+ (imaginary_literal)
+ ] @constant.numeric.float
 
 [
-  (true)
-  (false)
-  ] @constant.builtin.boolean
+ (true)
+ (false)
+ ] @constant.builtin.boolean
 
 [
-  (nil)
-  (iota)
-  ] @constant.builtin
+ (nil)
+ (iota)
+ ] @constant.builtin
 
 (comment) @comment
 

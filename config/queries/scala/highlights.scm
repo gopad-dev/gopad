@@ -123,9 +123,9 @@
 
 ; literals
 
-(boolean_literal) @boolean
-(integer_literal) @number
-(floating_point_literal) @float
+(boolean_literal) @constant.builtin.boolean
+(integer_literal) @constant.numeric.integer
+(floating_point_literal) @constant.numeric.float
 
 [
   (symbol_literal)

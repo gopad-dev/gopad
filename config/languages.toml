@@ -62,6 +62,17 @@ block_comment_tokens = [{ start = '/*', end = '*/' }]
 auto_pairs = []
 grammar = { name = 'go-template', symbol_name = 'gotmpl', install = { git = 'https://github.com/ngalaiko/tree-sitter-go-template', rev = '9d3f6e526dd074b9edae9070b7bb778f00e87a5b', ref = 'master', ref_type = 'commit' } }
 
+[languages.templ]
+icon = 0xe627
+alt_names = []
+mime_types = []
+file_types = ['.templ']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'templ', symbol_name = 'templ', install = { git = 'https://github.com/vrischmann/tree-sitter-templ', rev = 'cf84ea53e2e2531f23009d676ac206090c1e2392', ref = 'master', ref_type = 'commit' } }
+
 [languages.printf]
 icon = 0
 alt_names = []
@@ -82,7 +93,7 @@ files = []
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = "'", close = "'" }]
-grammar = { name = 'toml', symbol_name = 'toml', install = { git = 'https://github.com/ikatyang/tree-sitter-toml', rev = '8bd2056818b21860e3d756b5a58c4f6e05fb744e', ref = 'master', ref_type = 'commit' } }
+grammar = { name = 'toml', symbol_name = 'toml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-toml', rev = '16a30c83ce427385b8d14939c45c137fcfca6c42', ref = 'master', ref_type = 'commit' } }
 
 [languages.query]
 icon = 0xe21c
@@ -139,11 +150,22 @@ block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
 grammar = { name = 'json', symbol_name = 'json', install = { git = 'https://github.com/tree-sitter/tree-sitter-json', rev = '94f5c527b2965465956c2000ed6134dd24daf2a7', ref = 'master', ref_type = 'commit' } }
 
+[languages.jsonc]
+icon = 0xe60b
+alt_names = []
+mime_types = []
+file_types = ['.jsonc']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'jsonc', symbol_name = 'jsonc', install = { git = 'https://gitlab.com/WhyNotHugo/tree-sitter-jsonc', rev = '02b01653c8a1c198ae7287d566efa86a135b30d5', ref = 'main', ref_type = 'commit' } }
+
 [languages.json5]
 icon = 0xe60b
 alt_names = []
 mime_types = []
-file_types = ['.json5', '.jsonc']
+file_types = ['.json5']
 files = []
 line_comment_tokens = ['//']
 block_comment_tokens = []
@@ -203,7 +225,7 @@ files = ['git-rebase-todo']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'git-rebase', symbol_name = 'git_rebase', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-rebase', rev = '127f5b56c1ad3e8a449a7d6e0c7412ead7f7724c', ref = 'main', ref_type = 'commit' } }
+grammar = { name = 'git-rebase', symbol_name = 'git_rebase', install = { git = 'https://github.com/the-mikedavis/tree-sitter-git-rebase', rev = 'd8a4207ebbc47bd78bacdf48f883db58283f9fd8', ref = 'main', ref_type = 'commit' } }
 
 [languages.gitattributes]
 icon = 0xf05e
@@ -225,4 +247,202 @@ files = ['**/hypr/*.conf']
 line_comment_tokens = ['#']
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'hyprlang', symbol_name = 'hyprlang', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-hyprlang', rev = 'e5da7d0aa44403153e0394d87d9edea4e5bd6609', ref = 'master', ref_type = 'commit' } }
+grammar = { name = 'hyprlang', symbol_name = 'hyprlang', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-hyprlang', rev = '088bcd4052de1b9b5d051dffc3d76e658f295a50', ref = 'master', ref_type = 'commit' } }
+
+[languages.bash]
+icon = 0xf1183
+alt_names = ['sh']
+mime_types = []
+file_types = ['.sh']
+files = ['.bashrc', '.bash_profile', '.bash_aliases', '.bash_history', '.bash_logout', '.bash_login']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'bash', symbol_name = 'bash', install = { git = 'https://github.com/tree-sitter/tree-sitter-bash', rev = '2fbd860f802802ca76a6661ce025b3a3bca2d3ed', ref = 'master', ref_type = 'commit' } }
+
+[languages.css]
+icon = 0xe749
+alt_names = ['Cascading Style Sheets']
+mime_types = ['text/css']
+file_types = ['.css']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'css', symbol_name = 'css', install = { git = 'https://github.com/tree-sitter/tree-sitter-css', rev = 'f6be52c3d1cdb1c5e4dd7d8bce0a57497f55d6af', ref = 'master', ref_type = 'commit' } }
+
+[languages.scss]
+icon = 0xe749
+alt_names = ['Sass']
+mime_types = ['text/x-scss']
+file_types = ['.scss']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'scss', symbol_name = 'scss', install = { git = 'https://github.com/serenadeai/tree-sitter-scss', rev = 'c478c6868648eff49eb04a4df90d703dc45b312a', ref = 'master', ref_type = 'commit' } }
+
+[languages.dockerfile]
+icon = 0xf0868
+alt_names = []
+mime_types = []
+file_types = ['.dockerfile']
+files = ['Dockerfile']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'dockerfile', symbol_name = 'dockerfile', install = { git = 'https://github.com/camdencheek/tree-sitter-dockerfile', rev = '087daa20438a6cc01fa5e6fe6906d77c869d19fe', ref = 'main', ref_type = 'commit' } }
+
+[languages.html]
+icon = 0xf031d
+alt_names = []
+mime_types = []
+file_types = ['.html', '.htm', '.xhtml']
+files = []
+line_comment_tokens = []
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'html', symbol_name = 'html', install = { git = 'https://github.com/tree-sitter/tree-sitter-html', rev = 'e4d834eb4918df01dcad5c27d1b15d56e3bd94cd', ref = 'master', ref_type = 'commit' } }
+
+[languages.http]
+icon = 0xe749
+alt_names = []
+mime_types = []
+file_types = ['.http']
+files = []
+line_comment_tokens = []
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'http', symbol_name = 'http', install = { git = 'https://github.com/rest-nvim/tree-sitter-http', rev = '8d22f33faa5aa95c6526606fb656ada342e59e40', ref = 'main', ref_type = 'commit' } }
+
+[languages.java]
+icon = 0xf0b37
+alt_names = []
+mime_types = []
+file_types = ['.java']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'java', symbol_name = 'java', install = { git = 'https://github.com/tree-sitter/tree-sitter-java', rev = '953abfc8bb3eb2f578e1f461edba4a9885f974b8', ref = 'master', ref_type = 'commit' } }
+
+[languages.kotlin]
+icon = 0xf1219
+alt_names = []
+mime_types = []
+file_types = ['.kt']
+files = []
+line_comment_tokens = ['//']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'kotlin', symbol_name = 'kotlin', install = { git = 'https://github.com/fwcd/tree-sitter-kotlin', rev = 'c9cb8504b81684375e7beb8907517dbd6947a1be', ref = 'main', ref_type = 'commit' } }
+
+[languages.nix]
+icon = 0xf1105
+alt_names = []
+mime_types = []
+file_types = ['.nix']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'nix', symbol_name = 'nix', install = { git = 'https://github.com/nix-community/tree-sitter-nix', rev = 'b3cda619248e7dd0f216088bd152f59ce0bbe488', ref = 'master', ref_type = 'commit' } }
+
+[languages.passwd]
+icon = 0xf4fc
+alt_names = []
+mime_types = []
+file_types = ['.passwd']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'passwd', symbol_name = 'passwd', install = { git = 'https://github.com/ath3/tree-sitter-passwd', rev = '20239395eacdc2e0923a7e5683ad3605aee7b716', ref = 'main', ref_type = 'commit' } }
+
+[languages.properties]
+icon = 0xeb65
+alt_names = []
+mime_types = []
+file_types = ['.properties']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'properties', symbol_name = 'properties', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-properties', rev = '9d09f5f200c356c50c4103d36441309fd61b48d1', ref = 'master', ref_type = 'commit' } }
+
+[languages.regex]
+icon = 0xf0451
+alt_names = []
+mime_types = []
+file_types = ['.regex']
+files = []
+line_comment_tokens = []
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'regex', symbol_name = 'regex', install = { git = 'https://github.com/tree-sitter/tree-sitter-regex', rev = '47007f195752d8e57bda80b0b6cdb2d173a9f7d7', ref = 'master', ref_type = 'commit' } }
+
+[languages.sql]
+icon = 0xf01bc
+alt_names = ['Structured Query Language']
+mime_types = []
+file_types = ['.sql']
+files = []
+line_comment_tokens = ['--']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'sql', symbol_name = 'sql', install = { git = 'https://github.com/DerekStride/tree-sitter-sql', rev = '89fd00d0aff3bc9985ac37caf362ec4fd9b2ba1d', ref = 'gh-pages', ref_type = 'commit' } }
+
+[languages.sqlite]
+icon = 0xf01bc
+alt_names = []
+mime_types = []
+file_types = []
+files = []
+line_comment_tokens = ['--']
+block_comment_tokens = [{ start = '/*', end = '*/' }]
+auto_pairs = []
+grammar = { name = 'sqlite', symbol_name = 'sqlite', install = { git = 'https://github.com/johndoe-o/tree-sitter-sqlite', rev = 'f9e7a2b3144bab5aca777606415a06f44f8d8aa2', ref = 'main', ref_type = 'commit' } }
+
+[languages.ssh-config]
+icon = 0xf08c0
+alt_names = []
+mime_types = []
+file_types = []
+files = ['ssh_config']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'ssh-config', symbol_name = 'ssh_config', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-ssh-config', rev = '77450e8bce8853921512348f83c73c168c71fdfb', ref = 'master', ref_type = 'commit' } }
+
+[languages.xml]
+icon = 0xf05c0
+alt_names = ['Extensible Markup Language']
+mime_types = []
+file_types = ['.xml']
+files = []
+line_comment_tokens = []
+block_comment_tokens = [{ start = '<!--', end = '-->' }]
+auto_pairs = []
+grammar = { name = 'xml', symbol_name = 'xml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-xml', rev = '648183d86f6f8ffb240ea11b4c6873f6f45d8b67', ref = 'master', ref_type = 'commit' , sub_dir = 'xml' } }
+
+[languages.python]
+icon = 0xf0320
+alt_names = ['py']
+mime_types = []
+file_types = ['.py']
+files = []
+line_comment_tokens = ['#']
+block_comment_tokens = [{ start = '"""', end = '"""' }, { start = "'''", end = "'''" }]
+auto_pairs = []
+grammar = { name = 'python', symbol_name = 'python', install = { git = 'https://github.com/tree-sitter/tree-sitter-python', rev = '71778c2a472ed00a64abf4219544edbf8e4b86d7', ref = 'master', ref_type = 'commit' } }
+
+[languages.requirements]
+icon = 0xf0320
+alt_names = ['requirements.txt']
+mime_types = []
+file_types = []
+files = ['requirements.txt']
+line_comment_tokens = ['#']
+block_comment_tokens = []
+auto_pairs = []
+grammar = { name = 'requirements', symbol_name = 'requirements', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-requirements', rev = '5ad9b7581b3334f6ad492847d007f2fac6e6e5f2', ref = 'master', ref_type = 'commit' } }

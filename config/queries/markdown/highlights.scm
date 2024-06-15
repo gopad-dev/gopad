@@ -67,7 +67,7 @@
 [
   (link_title)
   (link_label)
-  ] @markup.link.label
+  ] @markup.link.text
 
 ((link_label)
   .

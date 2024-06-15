@@ -46,8 +46,8 @@
 "_" @constant
 
 ((parameters
-   (identifier) @number)
-  (#match? @number "^[-+]?[0-9]+(.[0-9]+)?$"))
+   (identifier) @constant.numeric)
+  (#match? @constant.numeric "^[-+]?[0-9]+(.[0-9]+)?$"))
 
 ((program
    .

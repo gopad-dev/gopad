@@ -80,9 +80,11 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "variable.other.member" = { foreground = '9' }
 
 "markup.heading" = { foreground = '6' }
-"markup.raw" = { foreground = '7' }
+"markup.raw" = { foreground = '10' }
+# reset highlight for block code to allow injection of language specific styles
+"markup.raw.block" = { }
 "markup.list" = { foreground = '13' }
-"markup.quote" = { foreground = '11' }
+"markup.quote" = { foreground = '10' }
 "markup.link.url" = { foreground = '14', underline = true }
 "markup.link.text" = { foreground = '13' }
 "markup.bold" = { bold = true }

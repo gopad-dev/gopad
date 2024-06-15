@@ -10,7 +10,7 @@
   (number)
   (bytes)
   (time)
-  ] @number
+  ] @constant.numeric
 
 [
   (kex)

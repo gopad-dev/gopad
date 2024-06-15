@@ -41,14 +41,14 @@
 (http_version) @constant
 
 ; Response
-(status_code) @number
+(status_code) @constant.numeric
 (status_text) @string
 
 (string) @string
 
-(number) @number
+(number) @constant.numeric
 
-(boolean) @boolean
+(boolean) @constant.builtin.boolean
 
 ; Punctuation
 [

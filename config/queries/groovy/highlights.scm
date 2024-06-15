@@ -29,9 +29,10 @@
 [
   "true"
   "false"
-] @boolean
+] @constant.builtin.boolean
 
-(null) @constant
+
+(null) @constant.builtin
 "this" @variable.builtin
 
 [
@@ -71,7 +72,7 @@
 (",") @punctuation.delimiter
 (".") @punctuation.delimiter
 
-(number_literal) @number
+(number_literal) @constant.numeric
 (identifier) @variable
 ((identifier) @variable.parameter
   (#is? @variable.parameter "local.parameter"))
