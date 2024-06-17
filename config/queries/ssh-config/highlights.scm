@@ -76,4 +76,4 @@
 
 [ "=" "!" "+" "-" "^" ] @operator
 
-[ "*" "?" ] @character.special
+[ "*" "?" ] @constant.character.special

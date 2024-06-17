@@ -75,13 +75,13 @@ information = { underline = true }
 hint = { underline = true }
 
 # Code style configuration
-[code]
+[styles.code]
 "tag" = { foreground = '9' }
 "attribute" = { foreground = '3' }
 "property" = { foreground = '9' }
 "label" = { foreground = '11' }
 
-"comment" = { foreground = '8' }
+"comment" = { foreground = '8', italic = true }
 "comment.error" = { foreground = '1', bold = true }
 "comment.warning" = { foreground = '3', bold = true }
 "comment.note" = { foreground = '2', bold = true }
@@ -91,35 +91,36 @@ hint = { underline = true }
 "constant.numeric" = { foreground = '3' }
 "constant.builtin" = { foreground = '9' }
 "constant.builtin.boolean" = { foreground = '3' }
-"constant.character.escape" = { foreground = '10' }
+"constant.character.escape" = { foreground = '14' }
+"constant.other.placeholder" = { foreground = '14' }
 
 "function" = { foreground = '14' }
 "function.builtin" = { foreground = '14' }
 "function.macro" = { foreground = '14' }
 "constructor" = { foreground = '14' }
 "keyword" = { foreground = '13' }
+"keyword.directive" = { foreground = '13', italic = true }
 "section" = { foreground = '13' }
 
 #"punctuation.delimiter" = { foreground = '11' }
 "punctuation.special" = { foreground = '13' }
 #"punctuation.bracket" = { foreground = '11' }
 
-"operator" = { }
-"keyword.operator" = { }
+"operator" = { foreground = '15' }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
 "string.escape" = { foreground = '14' }
 "string.special" = { foreground = '3' }
+"string.special.path" = { foreground = '10', bold = true }
 "string.special.url" = { foreground = '4' }
-"number" = { foreground = '3' }
-"boolean" = { foreground = '3' }
 "type" = { foreground = '11' }
 
+"variable" = { foreground = '15' }
 "variable.builtin" = { foreground = '14' }
-"variable.parameter" = { foreground = '9' }
-"variable.other.member" = { foreground = '9' }
+"variable.parameter" = { foreground = '3' }
 
 "markup.heading" = { foreground = '6' }
+"markup.heading.marker" = { foreground = '13' }
 "markup.raw" = { foreground = '10' }
 # reset highlight for block code to allow injection of language specific styles
 "markup.raw.block" = { }

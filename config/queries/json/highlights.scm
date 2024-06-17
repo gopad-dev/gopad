@@ -1,5 +1,5 @@
 (pair
-  key: (_) @string.special.key)
+  key: (_) @property)
 
 (string) @string
 

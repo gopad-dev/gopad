@@ -20,7 +20,6 @@ type RawThemeConfig struct {
 	Colors ColorsConfig `toml:"colors"`
 	Icons  IconsConfig  `toml:"icons"`
 	Styles StylesConfig `toml:"styles"`
-	Code   CodeStyles   `toml:"code"`
 }
 
 func (c RawThemeConfig) Title() string {
@@ -91,7 +90,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				ItemStyle:         lipgloss.NewStyle(),
 				SelectedItemStyle: lipgloss.NewStyle().Reverse(true),
 			},
-			CodeStyles: c.Code.Styles(),
+			CodeStyles: c.Styles.Code.Styles(),
 		},
 		Overlay: OverlayStyles{
 			Styles: overlay.Styles{
@@ -208,6 +207,7 @@ func (c CodeStyles) Styles() map[string]lipgloss.Style {
 
 type StylesConfig struct {
 	Diagnostics DiagnosticsStylesConfig `toml:"diagnostics"`
+	Code        CodeStyles              `toml:"code"`
 }
 
 type DiagnosticsStylesConfig struct {

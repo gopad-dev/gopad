@@ -1,6 +1,6 @@
 (string) @string
 
-(escape_sequence) @string.escape
+(escape_sequence) @constant.character.escape
 
 (capture
   (identifier) @type)

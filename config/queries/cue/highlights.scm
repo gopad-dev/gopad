@@ -132,7 +132,7 @@
 [
   (escape_char)
   (escape_unicode)
-] @string.escape
+] @constant.character.escape
 
 (number) @constant.numeric
 

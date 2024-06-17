@@ -13,7 +13,7 @@
 [
   (backslash_escape)
   (hard_line_break)
-  ] @string.escape
+  ] @constant.character.escape
 
 ; Conceal codeblock and text style markers
 ([
@@ -85,26 +85,26 @@
   (#set! priority 110))
 
 ; Replace common HTML entities.
-((entity_reference) @character.special
-  (#eq? @character.special "&nbsp;")
+((entity_reference) @constant.character.special
+  (#eq? @constant.character.special "&nbsp;")
   (#set! conceal ""))
 
-((entity_reference) @character.special
-  (#eq? @character.special "&lt;")
+((entity_reference) @constant.character.special
+  (#eq? @constant.character.special "&lt;")
   (#set! conceal "<"))
 
-((entity_reference) @character.special
-  (#eq? @character.special "&gt;")
+((entity_reference) @constant.character.special
+  (#eq? @constant.character.special "&gt;")
   (#set! conceal ">"))
 
-((entity_reference) @character.special
-  (#eq? @character.special "&amp;")
+((entity_reference) @constant.character.special
+  (#eq? @constant.character.special "&amp;")
   (#set! conceal "&"))
 
-((entity_reference) @character.special
-  (#eq? @character.special "&quot;")
+((entity_reference) @constant.character.special
+  (#eq? @constant.character.special "&quot;")
   (#set! conceal "\""))
 
-((entity_reference) @character.special
-  (#any-of? @character.special "&ensp;" "&emsp;")
+((entity_reference) @constant.character.special
+  (#any-of? @constant.character.special "&ensp;" "&emsp;")
   (#set! conceal " "))

@@ -27,33 +27,25 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 		Example:               "",
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Name() == "gopad" {
-				debug, _ := cmd.Flags().GetString("debug")
-				if debug != "" {
-					if debug != "-" {
-						var err error
-						logFile, err := tea.LogToFile(debug, "gopad")
-						if err != nil {
-							log.Panicln("failed to open debug log file:", err)
-						}
-						defer logFile.Close()
-					}
-					log.Println("debug mode enabled")
-				} else {
-					log.SetOutput(io.Discard)
-				}
-			}
-
-			configDir, _ := cmd.Flags().GetString("config-dir")
-			initConfig(configDir, defaultConfigs)
-
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, _ := cmd.Flags().GetString("config-dir")
 			workspace, _ := cmd.Flags().GetString("workspace")
+			debug, _ := cmd.Flags().GetString("debug")
 			debugLSP, _ := cmd.Flags().GetString("debug-lsp")
 			pprof, _ := cmd.Flags().GetString("pprof")
+
+			if debug != "" {
+				if debug != "-" {
+					logFile, err := tea.LogToFile(debug, "gopad")
+					if err != nil {
+						log.Panicln("failed to open debug log file:", err)
+					}
+					defer logFile.Close()
+				}
+				log.Println("debug mode enabled")
+			} else {
+				log.SetOutput(io.Discard)
+			}
 
 			var lspLogFile io.WriteCloser
 			if debugLSP != "" {
@@ -76,12 +68,15 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				}()
 			}
 
+			loadConfig(configDir, defaultConfigs)
+
 			if err := editor.LoadLanguages(defaultConfigs); err != nil {
 				log.Panicln("failed to load languages:", err)
 			}
 
 			editorWorkspace := getWorkspace(workspace, args)
-			log.Printf("workspace: %q\n", editorWorkspace)
+			log.Printf("workspace: %q\n", workspace)
+			log.Printf("editorWorkspace: %q\n", editorWorkspace)
 
 			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
 			e, err := gopad.New(lsClient, version, editorWorkspace, args)
@@ -111,15 +106,15 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 
 func getWorkspace(workspace string, args []string) string {
 	if workspace == "" {
-		if len(args) > 0 {
-			for _, arg := range args {
-				stat, err := os.Stat(arg)
-				if err == nil && stat.IsDir() {
-					workspace = arg
-					break
-				}
+		for _, arg := range args {
+			stat, err := os.Stat(arg)
+			if err == nil && stat.IsDir() {
+				workspace = arg
+				break
 			}
-		} else {
+		}
+
+		if workspace == "" {
 			return ""
 		}
 	}

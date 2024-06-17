@@ -23,7 +23,7 @@ func main() {
 	rootCmd := cmd.NewRootCmd(Version, defaultConfigs)
 	cmd.NewVersionCmd(rootCmd, Version, Commit)
 	cmd.NewConfigCmd(rootCmd, defaultConfigs)
-	cmd.NewGrammarCmd(rootCmd)
+	cmd.NewGrammarCmd(rootCmd, defaultConfigs)
 	cmd.NewCompletionCmd(rootCmd)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

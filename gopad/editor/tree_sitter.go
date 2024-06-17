@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	sitter "go.gopad.dev/go-tree-sitter"
 
@@ -89,7 +90,7 @@ func (f *File) UpdateTree(edit sitter.EditInput) error {
 }
 
 func (f *File) updateTree() error {
-	ctx, cancel := context.WithTimeout(context.Background(), f.language.Grammar.ParseTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	tree, err := parseTree(ctx, f.buffer, f.tree, *f.language, nil)
@@ -134,7 +135,7 @@ func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language
 		return nil, fmt.Errorf("error parsing tree: %w", err)
 	}
 
-	query := language.Grammar.InjectionsQuery()
+	query := language.Grammar.InjectionsQuery
 	if query == nil {
 		return &Tree{
 			Tree:     tree,
@@ -289,7 +290,7 @@ type Match struct {
 }
 
 func (f *File) HighlightTree() {
-	if f.tree == nil || f.tree.Tree == nil {
+	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil || f.tree.Language.Grammar.HighlightsQuery == nil {
 		return
 	}
 	version := f.Version()
@@ -303,7 +304,7 @@ func (f *File) HighlightTree() {
 }
 
 func highlightTree(tree *Tree) []Match {
-	query := tree.Language.Grammar.HighlightsQuery()
+	query := tree.Language.Grammar.HighlightsQuery
 	queryCursor := sitter.NewQueryCursor()
 	queryCursor.Exec(query, tree.Tree.RootNode())
 
@@ -351,14 +352,6 @@ type OutlineItemChar struct {
 	Pos  *buffer.Position
 }
 
-func (f *File) OutlineTree() []OutlineItem {
-	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil || f.tree.Language.Grammar.outlineQuery == nil {
-		return nil
-	}
-
-	return f.outlineTree(f.tree)
-}
-
 type outlineBufferRange struct {
 	r      byteRange
 	isName bool
@@ -369,10 +362,14 @@ type byteRange struct {
 	end   int
 }
 
-func (f *File) outlineTree(tree *Tree) []OutlineItem {
-	queryConfig := tree.Language.Grammar.OutlineQuery()
+func (f *File) OutlineTree() []OutlineItem {
+	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil || f.tree.Language.Grammar.OutlineQuery == nil {
+		return nil
+	}
+
+	queryConfig := f.tree.Language.Grammar.OutlineQuery
 	queryCursor := sitter.NewQueryCursor()
-	queryCursor.Exec(queryConfig.Query, tree.Tree.RootNode())
+	queryCursor.Exec(queryConfig.Query, f.tree.Tree.RootNode())
 
 	var items []OutlineItem
 	for {
@@ -496,4 +493,8 @@ func (f *File) outlineTree(tree *Tree) []OutlineItem {
 type Local struct {
 	Name       string
 	Properties map[string]string
+}
+
+func (f *File) localsTree() []Local {
+	return nil
 }

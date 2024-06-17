@@ -11,7 +11,7 @@
     "]"
     ] @punctuation.bracket)
 
-(wildcard) @character.special
+(wildcard) @constant.character.special
 
 (range_negation) @operator
 
@@ -23,7 +23,7 @@
 [
   (ansi_c_escape)
   (escaped_char)
-  ] @string.escape
+  ] @constant.character.escape
 
 (attribute
   (attr_name) @variable.parameter)

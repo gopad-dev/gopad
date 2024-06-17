@@ -7,7 +7,7 @@
   "+incompatible"
   ] @keyword
 
-(module_path) @string.special.url
+(module_path) @string.special.path
 
 (module_version) @string.special
 

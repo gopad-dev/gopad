@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
-	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"go.gopad.dev/go-tree-sitter"
@@ -31,7 +29,6 @@ var (
 		"folds.scm",
 		"outline.scm",
 	}
-	parseTimeout = 10 * time.Second
 )
 
 type Language struct {
@@ -50,61 +47,27 @@ func (l *Language) Description() string {
 
 type Grammar struct {
 	Language        *sitter.Language
-	highlightsQuery *sitter.Query
-	injectionsQuery *sitter.Query
-	localsQuery     *sitter.Query
-	indentsQuery    *sitter.Query
-	foldsQuery      *sitter.Query
-	outlineQuery    *sitter.Query
-	ParseTimeout    time.Duration
+	HighlightsQuery *sitter.Query
+	InjectionsQuery *InjectionsQuery
+	LocalsQuery     *LocalsQuery
+	OutlineQuery    *OutlineQuery
 }
 
-func (g *Grammar) HighlightsQuery() *sitter.Query {
-	return g.highlightsQuery
-}
-
-func (g *Grammar) InjectionsQuery() *InjectionQuery {
-	if g.injectionsQuery == nil {
-		return nil
-	}
-	indexes := GetCaptureIndexes(g.injectionsQuery, []string{
-		"injection.content",
-	})
-
-	return &InjectionQuery{
-		Query:                     g.injectionsQuery,
-		InjectionContentCaptureID: *indexes[0],
-	}
-}
-
-func (g *Grammar) OutlineQuery() OutlineConfig {
-	indexes := GetCaptureIndexes(g.outlineQuery, []string{
-		"item",
-		"name",
-		"context",
-		"extra_context",
-	})
-
-	return OutlineConfig{
-		Query:                 g.outlineQuery,
-		ItemCaptureID:         *indexes[0],
-		NameCaptureID:         *indexes[1],
-		ContextCaptureID:      indexes[2],
-		ExtraContextCaptureID: indexes[3],
-	}
-}
-
-type InjectionQuery struct {
+type InjectionsQuery struct {
 	Query                     *sitter.Query
 	InjectionContentCaptureID uint32
 }
 
-type OutlineConfig struct {
+type OutlineQuery struct {
 	Query                 *sitter.Query
 	ItemCaptureID         uint32
 	NameCaptureID         uint32
 	ContextCaptureID      *uint32
 	ExtraContextCaptureID *uint32
+}
+
+type LocalsQuery struct {
+	Query *sitter.Query
 }
 
 func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
@@ -153,8 +116,6 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 		symbolName = cfg.Name
 	}
 
-	log.Printf("Loading tree-sitter grammar %q path=%q symbol=%q\n", name, libPath, symbolName)
-
 	_, err := os.Stat(libPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -187,11 +148,9 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 
 	var (
 		highlightsQuery *sitter.Query
-		injectionsQuery *sitter.Query
-		localsQuery     *sitter.Query
-		indentsQuery    *sitter.Query
-		foldsQuery      *sitter.Query
-		outlineQuery    *sitter.Query
+		injectionsQuery *InjectionsQuery
+		localsQuery     *LocalsQuery
+		outlineQuery    *OutlineQuery
 	)
 
 	for _, queryFile := range queryFiles {
@@ -215,31 +174,50 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 		case "highlights.scm":
 			highlightsQuery = query
 		case "injections.scm":
-			injectionsQuery = query
+			indexes := GetCaptureIndexes(query, []string{
+				"injection.content",
+			})
+
+			if indexes[0] == nil {
+				return nil, fmt.Errorf("injection.content capture not found in %s", queryFile.Name())
+			}
+
+			injectionsQuery = &InjectionsQuery{
+				Query:                     query,
+				InjectionContentCaptureID: *indexes[0],
+			}
 		case "locals.scm":
-			localsQuery = query
-		case "indents.scm":
-			indentsQuery = query
-		case "folds.scm":
-			foldsQuery = query
+			_ = GetCaptureIndexes(query, []string{})
+
+			localsQuery = &LocalsQuery{
+				Query: query,
+			}
 		case "outline.scm":
-			outlineQuery = query
+			indexes := GetCaptureIndexes(query, []string{
+				"item",
+				"name",
+				"context",
+				"extra_context",
+			})
+
+			outlineQuery = &OutlineQuery{
+				Query:                 query,
+				ItemCaptureID:         *indexes[0],
+				NameCaptureID:         *indexes[1],
+				ContextCaptureID:      indexes[2],
+				ExtraContextCaptureID: indexes[3],
+			}
 		default:
 			continue
 		}
-
-		log.Printf("Loaded query %s/%s\n", name, queryFile.Name())
 	}
 
 	return &Grammar{
 		Language:        tsLang,
-		highlightsQuery: highlightsQuery,
-		injectionsQuery: injectionsQuery,
-		localsQuery:     localsQuery,
-		indentsQuery:    indentsQuery,
-		foldsQuery:      foldsQuery,
-		outlineQuery:    outlineQuery,
-		ParseTimeout:    parseTimeout,
+		HighlightsQuery: highlightsQuery,
+		InjectionsQuery: injectionsQuery,
+		LocalsQuery:     localsQuery,
+		OutlineQuery:    outlineQuery,
 	}, nil
 }
 

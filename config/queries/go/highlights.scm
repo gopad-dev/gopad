@@ -31,6 +31,11 @@
 (function_declaration
   name: (identifier) @function)
 
+(function_declaration
+  (parameter_list
+    (parameter_declaration
+      name: (identifier) @variable.parameter)))
+
 (method_declaration
   name: (field_identifier) @function.method)
 
@@ -132,10 +137,10 @@
 ; Literals
 
 [
- (interpreted_string_literal)
- (raw_string_literal)
- (rune_literal)
- ] @string
+  (interpreted_string_literal)
+  (raw_string_literal)
+  (rune_literal)
+  ] @string
 
 (rune_literal) @constant.character
 
@@ -144,19 +149,19 @@
 (int_literal) @constant.numeric.integer
 
 [
- (float_literal)
- (imaginary_literal)
- ] @constant.numeric.float
+  (float_literal)
+  (imaginary_literal)
+  ] @constant.numeric.float
 
 [
- (true)
- (false)
- ] @constant.builtin.boolean
+  (true)
+  (false)
+  ] @constant.builtin.boolean
 
 [
- (nil)
- (iota)
- ] @constant.builtin
+  (nil)
+  (iota)
+  ] @constant.builtin
 
 (comment) @comment
 

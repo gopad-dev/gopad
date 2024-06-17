@@ -137,20 +137,10 @@ block_comment_tokens = []
 auto_pairs = [{ open = '"', close = '"' }, { open = '{', close = '}' }, { open = '(', close = ')' }, { open = '[', close = ']' }]
 grammar = { name = 'json', symbol_name = 'json', install = { git = 'https://github.com/tree-sitter/tree-sitter-json', rev = '94f5c527b2965465956c2000ed6134dd24daf2a7', ref = 'master', ref_type = 'commit' } }
 
-[languages.jsonc]
-alt_names = []
-mime_types = []
-file_types = ['.jsonc']
-files = []
-line_comment_tokens = ['//']
-block_comment_tokens = [{ start = '/*', end = '*/' }]
-auto_pairs = []
-grammar = { name = 'jsonc', symbol_name = 'jsonc', install = { git = 'https://gitlab.com/WhyNotHugo/tree-sitter-jsonc', rev = '02b01653c8a1c198ae7287d566efa86a135b30d5', ref = 'main', ref_type = 'commit' } }
-
 [languages.json5]
 alt_names = []
 mime_types = []
-file_types = ['.json5']
+file_types = ['.json5', '.jsonc']
 files = []
 line_comment_tokens = ['//']
 block_comment_tokens = []

@@ -209,11 +209,11 @@
 	(boolean_literal)
 ] @constant.builtin.boolean
 
-(character_literal) @character
+(character_literal) @constant.character
 
 (string_literal) @string
 
-(character_escape_seq) @string.escape
+(character_escape_seq) @constant.character.escape
 
 ; There are 3 ways to define a regex
 ;    - "[abc]?".toRegex()

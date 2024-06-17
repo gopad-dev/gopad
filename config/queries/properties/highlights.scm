@@ -4,7 +4,7 @@
 
 (value) @string
 
-(value (escape) @string.escape)
+(value (escape) @constant.character.escape)
 
 ((index) @constant.numeric
   (#match? @constant.numeric "^[0-9]+$"))

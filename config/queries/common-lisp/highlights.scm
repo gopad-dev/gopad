@@ -105,20 +105,20 @@
   (#lua-match? @variable.builtin "^[*].+[*]$"))
 
 ; quote
-"'" @string.escape
+"'" @constant.character.escape
 
-(format_specifier) @string.escape
+(format_specifier) @constant.character.escape
 
-(quoting_lit) @string.escape
+(quoting_lit) @constant.character.escape
 
 ; syntax quote
-"`" @string.escape
+"`" @constant.character.escape
 
-"," @string.escape
+"," @constant.character.escape
 
-",@" @string.escape
+",@" @constant.character.escape
 
-(syn_quoting_lit) @string.escape
+(syn_quoting_lit) @constant.character.escape
 
 (unquoting_lit) @none
 
@@ -317,4 +317,4 @@
   "#0a"
   ] @constant.numeric
 
-(char_lit) @character
+(char_lit) @constant.character

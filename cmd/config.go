@@ -31,7 +31,7 @@ func NewConfigCmd(parent *cobra.Command, defaultConfigs embed.FS) {
 			}
 
 			if err := config.Create(configHome, defaultConfigs); err != nil {
-				log.Panicln("failed to create config:", err)
+				return fmt.Errorf("failed to create config: %w", err)
 			}
 			cmd.Println("created config in", configHome)
 			return nil
@@ -41,7 +41,7 @@ func NewConfigCmd(parent *cobra.Command, defaultConfigs embed.FS) {
 	parent.AddCommand(cmd)
 }
 
-func initConfig(configDir string, defaultConfigs embed.FS) {
+func loadConfig(configDir string, defaultConfigs embed.FS) {
 	if configDir == "" {
 		var err error
 		configDir, err = config.FindHome()

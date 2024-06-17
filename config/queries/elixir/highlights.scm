@@ -6,19 +6,19 @@
 
 ; * doc string
 (unary_operator
-  operator: "@" @comment.doc
+  operator: "@" @comment.documentation
   operand: (call
-    target: (identifier) @comment.doc.__attribute__
+    target: (identifier) @comment.documentation.__attribute__
     (arguments
       [
-        (string) @comment.doc
-        (charlist) @comment.doc
+        (string) @comment.documentation
+        (charlist) @comment.documentation
         (sigil
-          quoted_start: _ @comment.doc
-          quoted_end: _ @comment.doc) @comment.doc
-        (boolean) @comment.doc
+          quoted_start: _ @comment.documentation
+          quoted_end: _ @comment.documentation) @comment.documentation
+        (boolean) @comment.documentation
       ]))
-  (#match? @comment.doc.__attribute__ "^(moduledoc|typedoc|doc)$"))
+  (#match? @comment.documentation.__attribute__ "^(moduledoc|typedoc|doc)$"))
 
 ; * module attribute
 (unary_operator
@@ -73,7 +73,7 @@
 
 (interpolation "#{" @punctuation.special "}" @punctuation.special) @embedded
 
-(escape_sequence) @string.escape
+(escape_sequence) @constant.character.escape
 
 [
   (atom)

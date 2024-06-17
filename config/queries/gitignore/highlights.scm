@@ -17,7 +17,7 @@
 [
   (pattern_char_escaped)
   (bracket_char_escaped)
-  ] @string.escape
+  ] @constant.character.escape
 
 ; bracket expressions
 [

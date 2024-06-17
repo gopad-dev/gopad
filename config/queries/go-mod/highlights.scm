@@ -17,9 +17,9 @@
 
 (comment) @comment @spell
 
-(module_path) @string
+(module_path) @string.special.path
 
-(file_path) @string
+(file_path) @string.special.path
 
 [
   (version)
