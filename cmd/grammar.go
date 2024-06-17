@@ -9,7 +9,7 @@ import (
 func NewGrammarCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
 		Use:     "grammar",
-		Short:   "Used to manage your tree sitter grammar installations",
+		Short:   "Manage Tree-Sitter grammars",
 		Long:    "",
 		Example: "",
 	}

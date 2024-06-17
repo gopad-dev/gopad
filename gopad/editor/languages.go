@@ -134,7 +134,6 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 			if grammar != nil {
 				lang.Grammar = grammar
 			}
-
 		}
 
 		languages = append(languages, lang)

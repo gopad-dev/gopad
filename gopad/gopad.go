@@ -189,9 +189,9 @@ func (g Gopad) CodeBar() string {
 
 		if language := file.Language(); language != nil {
 			name := language.Name
-			if language.Config.Icon > 0 {
-				name = fmt.Sprintf("%c %s", language.Config.Icon, name)
-			}
+			icon := config.Theme.Icons.FileIcon(name)
+
+			name = fmt.Sprintf("%c %s", icon, name)
 
 			if language.Config.Grammar != nil {
 				grammarName := language.Config.Grammar.Name

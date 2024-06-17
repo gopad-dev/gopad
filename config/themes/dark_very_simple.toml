@@ -1,4 +1,4 @@
-name = 'dark-simple'
+name = 'dark-very-simple'
 
 # Color configuration
 [colors]
@@ -17,55 +17,15 @@ cursor_color = '9'
 disabled_cursor_color = '1'
 
 [icons]
-root_dir = 0xef81
-dir = 0xf024b
-open_dir = 0xf0770
-file = 0xea7b
+root_dir = 0x1F4C1
+dir = 0x1F4C1
+open_dir = 0x1F4C2
+file = 0x1F4C4
 
-error = 0xea87
-warning = 0xf071
-information = 0xf05a
-hint = 0xf06e8
-
-[icons.files]
-"go" = 0xe627
-"go-mod" = 0xe627
-"go-sum" = 0xe627
-"go-work" = 0xe627
-"go-template" = 0xe627
-"templ" = 0xe627
-"toml" = 0xe6b2
-"query" = 0xe21c
-"markdown" = 0xf0354
-"comment" = 0xf075
-"json" = 0xe60b
-"jsonc" = 0xe60b
-"json5" = 0xe60b
-"yaml" = 0xf0b20
-"gitignore" = 0xf05e
-"git-commit" = 0xf05e
-"git-config" = 0xf05e
-"git-rebase" = 0xf05e
-"gitattributes" = 0xf05e
-"hyprlang" = 0xf359
-"bash" = 0xf1183
-"css" = 0xe749
-"scss" = 0xe749
-"dockerfile" = 0xf0868
-"html" = 0xf031d
-"http" = 0xe749
-"java" = 0xf0b37
-"kotlin" = 0xf1219
-"nix" = 0xf1105
-"passwd" = 0xf4fc
-"properties" = 0xeb65
-"regex" = 0xf0451
-"sql" = 0xf01bc
-"sqlite" = 0xf01bc
-"sshd-config" = 0xf08c0
-"xml" = 0xf05c0
-"python" = 0xf0320
-"requirements" = 0xf0320
+error = 0x1F5D9
+warning = 0x26A0
+information = 0x1F6C8
+hint = 0x1F4A1
 
 [styles]
 [styles.diagnostics]

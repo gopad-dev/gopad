@@ -253,7 +253,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 		End:    "end",
 		Editor: EditorKeyConfig{
 			OpenFile:   "ctrl+o",
-			OpenFolder: "alt+ctrl+o",
+			OpenFolder: "alt+o",
 			SaveFile:   "ctrl+s",
 			CloseFile:  "ctrl+w",
 			NewFile:    "ctrl+n",
@@ -261,6 +261,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 			DeleteFile: "ctrl+g",
 
 			Search:         "ctrl+f",
+			OpenOutline:    "alt+7",
 			ToggleFileTree: "ctrl+b",
 			FocusFileTree:  "alt+b",
 			NextFile:       "alt+right",
@@ -317,6 +318,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 			DeleteLine:      "alt+backspace",
 
 			ToggleComment: "ctrl+_",
+			Debug:         "f12",
 
 			FileTree: FileTreeKeyConfig{
 				SelectPrev:  "up",

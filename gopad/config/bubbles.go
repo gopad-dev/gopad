@@ -82,7 +82,7 @@ func NewNotifications() notifications.Model {
 	return n
 }
 
-func NewFileTree(name string, openFile func(name string) tea.Cmd, languageIconFunc func(name string) rune) (filetree.Model, error) {
+func NewFileTree(openFile func(name string) tea.Cmd, languageIconFunc func(name string) rune) filetree.Model {
 	ft := filetree.New()
 	ft.Styles = Theme.Editor.FileTree
 	ft.KeyMap = Keys.Editor.FileTree
@@ -97,13 +97,7 @@ func NewFileTree(name string, openFile func(name string) tea.Cmd, languageIconFu
 	}
 	ft.Ignored = Gopad.FileTree.Ignored
 
-	if name != "" {
-		if err := ft.Open(name); err != nil {
-			return filetree.Model{}, err
-		}
-	}
-
-	return ft, nil
+	return ft
 }
 
 func NewSearchBar(onSelect func(result searchbar.Result) tea.Cmd, onBlur tea.Cmd) searchbar.Model {

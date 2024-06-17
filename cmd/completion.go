@@ -81,6 +81,6 @@ func NewCompletionCmd(parent *cobra.Command) {
 		}
 	}
 
-	cmd.PersistentFlags().BoolP("print", "p", false, "Prints the completion script to stdout")
-	cmd.PersistentFlags().StringP("install", "i", "", "Installs the completion script to the specified location")
+	cmd.PersistentFlags().BoolP("print", "p", false, "prints the completion script to stdout")
+	cmd.PersistentFlags().StringP("install", "i", "", "installs the completion script to the specified location")
 }

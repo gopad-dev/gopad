@@ -30,12 +30,13 @@ const (
 	pageSize = 10
 )
 
-var fileIconFunc = func(name string) rune {
-	lang := GetLanguageByFilename(name)
-	if lang != nil && lang.Config.Icon != 0 {
-		return lang.Config.Icon
+var fileIconByFileNameFunc = func(name string) rune {
+	language := GetLanguageByFilename(name)
+	var languageName string
+	if language != nil {
+		languageName = language.Name
 	}
-	return 0
+	return config.Theme.Icons.FileIcon(languageName)
 }
 
 func NewEditor(workspace string, args []string) (*Editor, error) {
@@ -48,16 +49,15 @@ func NewEditor(workspace string, args []string) (*Editor, error) {
 			},
 			FocusFile(""),
 		),
+		fileTree:  config.NewFileTree(OpenFile, fileIconByFileNameFunc),
+		workspace: workspace,
 	}
 
 	if workspace != "" {
-		editor.workspace = workspace
-		fileTree, err := config.NewFileTree(workspace, OpenFile, fileIconFunc)
-		if err != nil {
+		if err := editor.fileTree.Open(workspace); err != nil {
 			return nil, fmt.Errorf("failed to init file tree: %w", err)
 		}
-		fileTree.Show()
-		editor.fileTree = fileTree
+		editor.fileTree.Show()
 		cmds = append(cmds, ls.WorkspaceOpened(workspace))
 	}
 
@@ -930,11 +930,13 @@ func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
 func (e *Editor) FileTabsView(width int) string {
 	var fileNames []string
 	for path, file := range e.files {
-		fileName := clampString(file.FileName(), 16)
-		icon := config.Theme.Icons.File
-		if file.language != nil && file.language.Config.Icon > 0 {
-			icon = file.language.Config.Icon
+		var languageName string
+		if file.language != nil {
+			languageName = file.language.Name
 		}
+		icon := config.Theme.Icons.FileIcon(languageName)
+
+		fileName := clampString(file.FileName(), 16)
 		fileName = fmt.Sprintf("%c %s", icon, fileName)
 		if file.Dirty() {
 			fileName += "*"

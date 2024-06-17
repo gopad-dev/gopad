@@ -18,8 +18,8 @@ import (
 
 func NewUpdateCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:     "update",
-		Short:   "Used to update your tree sitter grammars",
+		Use:     "update [flags]... [languages]...",
+		Short:   "Check for updates of Tree-Sitter grammars",
 		Example: "gopad grammar update go",
 		Args:    cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {

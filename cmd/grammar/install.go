@@ -28,10 +28,11 @@ func LibName(name string) string {
 
 func NewInstallCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:     "install",
-		Short:   "Used to install your tree sitter grammars",
-		Example: "gopad grammar install go",
-		Args:    cobra.ArbitraryArgs,
+		Use:               "install [flags]... [languages]...",
+		Short:             "Install Tree-Sitter grammars",
+		Example:           "gopad grammar install go",
+		Args:              cobra.ArbitraryArgs,
+		ValidArgsFunction: cobra.NoFileCompletions,
 		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			if err := ensureGitInstalled(); err != nil {
 				return err

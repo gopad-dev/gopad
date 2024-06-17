@@ -36,32 +36,59 @@ gopad is a simple terminal-based text editor written in Go. It is inspired mostl
 ## Installation
 
 ```bash
-go install go.gopad.dev/gopad@latest
+git clone https://github.com/gopad-dev/gopad.git
+  
+cd gopad
+
+./install.sh
 ```
+
+(`go install go.gopad.dev/gopad@latest` is currently not working due to `replace` directives in the `go.mod` file.)
 
 ## Usage
 
 ```bash
-gopad (--help) (--debug=debug.log) (--pprof=localhost:6060) (--config-dir=config) (--create-config=config) [file | directory]
+gopad [flags]... [dir | file]...
+gopad [command]
 ```
 
-### Flags
+#### Commands
 
-All flags are optional.
+```bash
+completion  Generate the autocompletion script for the specified shell
+  bash        Generate the autocompletion script for bash
+  fish        Generate the autocompletion script for fish
+  powershell  Generate the autocompletion script for powershell
+  zsh         Generate the autocompletion script for zsh
+config      Create a new config directory with default config files
+grammar     Manage Tree-Sitter grammars
+  install     Install Tree-Sitter grammars
+  list        List configured Tree-Sitter grammars
+  remove      Remove installed Tree-Sitter grammars
+  update      Check for updates of Tree-Sitter grammars
+help        Help about any command
+version     Show version information
+```
 
-- `--help` - Show the help message.
-- `--debug=debug.log` - Enable debug logging to the specified file.
-- `--pprof=localhost:6060` - Enable pprof on the specified address.
-- `--config-dir=config` - Use the specified configuration file. (Default: `./.gopad`, `$XDG_CONFIG_HOME/gopad` or `$HOME/.config/gopad`)
-- `--create-config=config` - Create a default configuration file at the specified location.
+#### Flags
 
-### Environment Variables
-
-- `GOPAD_CONFIG_HOME` - Use the specified directory for configuration files. (Default: `./.gopad`, `$XDG_CONFIG_HOME/gopad` or `$HOME/.config/gopad`)
+```bash
+  -c, --config-dir string   set configuration directory (Default: ./.gopad, $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)
+  -d, --debug string        set debug log file (use - for stdout)
+  -l, --debug-lsp string    set debug lsp log file
+  -h, --help                help for gopad
+  -p, --pprof string        set pprof address:port
+  -w, --workspace string    set workspace directory (Default: first directory argument)
+```
 
 ## Configuration
 
 gopad uses multiple TOML configuration files. See the [default configuration directory](config) for all configuration files.
+To create a new configuration directory with default configuration files, run `gopad config`. 
+
+### Environment Variables
+
+- `GOPAD_CONFIG_HOME` - Use the specified directory for configuration files. (Default: `./.gopad`, `$XDG_CONFIG_HOME/gopad` or `$HOME/.config/gopad`)
 
 ## License
 

@@ -14,8 +14,8 @@ import (
 
 func NewRemoveCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:     "remove",
-		Short:   "Used to remove your tree sitter grammars",
+		Use:     "remove [flags]... [languages]...",
+		Short:   "Remove installed Tree-Sitter grammars",
 		Example: "gopad grammar remove go",
 		Args:    cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -14,8 +14,8 @@ import (
 
 func NewListCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Short:   "Used to list your tree sitter grammars",
+		Use:     "list [flags]... [languages]...",
+		Short:   "List configured Tree-Sitter grammars",
 		Example: "gopad grammar list go",
 		Args:    cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

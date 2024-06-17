@@ -227,4 +227,13 @@ type IconsConfig struct {
 	Warning     rune `toml:"warning"`
 	Information rune `toml:"information"`
 	Hint        rune `toml:"hint"`
+
+	Files map[string]rune `toml:"files"`
+}
+
+func (c IconsConfig) FileIcon(name string) rune {
+	if r, ok := c.Files[name]; ok {
+		return r
+	}
+	return c.File
 }

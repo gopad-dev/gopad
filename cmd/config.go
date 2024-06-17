@@ -12,17 +12,28 @@ import (
 
 func NewConfigCmd(parent *cobra.Command, defaultConfigs embed.FS) {
 	cmd := &cobra.Command{
-		Use:     "config",
-		Short:   "Used to create a default config in the target location",
-		Example: "gopad config ~/.config/gopad",
-		Args:    cobra.ExactArgs(1),
+		Use:               "config [flags]... [dir]",
+		Short:             "Create a new config directory with default config files",
+		Long:              "Create a new config directory with default config files in the specified directory\n(Default: $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)",
+		Example:           "gopad config ~/.config/gopad",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: cobra.FixedCompletions(nil, cobra.ShellCompDirectiveFilterDirs),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath := args[0]
+			var configHome string
+			if len(args) > 0 {
+				configHome = args[0]
+			} else {
+				var err error
+				configHome, err = config.FindHome()
+				if err != nil {
+					return fmt.Errorf("failed to find config home dir: %w", err)
+				}
+			}
 
-			if err := config.Create(configPath, defaultConfigs); err != nil {
+			if err := config.Create(configHome, defaultConfigs); err != nil {
 				log.Panicln("failed to create config:", err)
 			}
-			fmt.Println("created config in", configPath)
+			cmd.Println("created config in", configHome)
 			return nil
 		},
 	}
