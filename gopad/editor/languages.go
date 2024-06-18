@@ -67,7 +67,10 @@ type OutlineQuery struct {
 }
 
 type LocalsQuery struct {
-	Query *sitter.Query
+	Query               *sitter.Query
+	ScopeCaptureID      uint32
+	DefinitionCaptureID uint32
+	ReferenceCaptureID  uint32
 }
 
 func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
@@ -187,10 +190,17 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 				InjectionContentCaptureID: *indexes[0],
 			}
 		case "locals.scm":
-			_ = GetCaptureIndexes(query, []string{})
+			indexes := GetCaptureIndexes(query, []string{
+				"local.scope",
+				"local.definition",
+				"local.reference",
+			})
 
 			localsQuery = &LocalsQuery{
-				Query: query,
+				Query:               query,
+				ScopeCaptureID:      *indexes[0],
+				DefinitionCaptureID: *indexes[1],
+				ReferenceCaptureID:  *indexes[2],
 			}
 		case "outline.scm":
 			indexes := GetCaptureIndexes(query, []string{

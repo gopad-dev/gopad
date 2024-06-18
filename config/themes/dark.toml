@@ -79,7 +79,7 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "tag" = { foreground = '9' }
 "attribute" = { foreground = '3' }
 "property" = { foreground = '9' }
-"label" = { foreground = '11' }
+"label" = { foreground = '13', italic = true }
 
 "comment" = { foreground = '8', italic = true }
 "comment.error" = { foreground = '1', bold = true }
@@ -106,16 +106,16 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "punctuation.special" = { foreground = '13' }
 #"punctuation.bracket" = { foreground = '11' }
 
-"operator" = { foreground = '15' }
+"operator" = { }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
 "string.escape" = { foreground = '14' }
 "string.special" = { foreground = '3' }
 "string.special.path" = { foreground = '10', bold = true }
 "string.special.url" = { foreground = '4' }
-"type" = { foreground = '11' }
+"type" = { foreground = '11', bold = true }
 
-"variable" = { foreground = '15' }
+"variable" = { }
 "variable.builtin" = { foreground = '14' }
 "variable.parameter" = { foreground = '3' }
 

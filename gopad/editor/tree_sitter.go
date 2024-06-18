@@ -17,7 +17,7 @@ import (
 
 type Tree struct {
 	Tree     *sitter.Tree
-	Language Language
+	Language *Language
 	SubTrees map[string]*Tree
 	Ranges   []sitter.Range
 }
@@ -93,7 +93,7 @@ func (f *File) updateTree() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tree, err := parseTree(ctx, f.buffer, f.tree, *f.language, nil)
+	tree, err := parseTree(ctx, f.buffer, f.tree, f.language, nil)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (f *File) updateTree() error {
 	return nil
 }
 
-func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language Language, ranges []sitter.Range) (*Tree, error) {
+func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language *Language, ranges []sitter.Range) (*Tree, error) {
 	parser := sitter.NewParser()
 	parser.SetLanguage(language.Grammar.Language)
 	if len(ranges) > 0 {
@@ -159,7 +159,7 @@ func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language
 			continue
 		}
 
-		subLanguage := getLanguageByMatch(&language, match)
+		subLanguage := getLanguageByMatch(language, match)
 		if subLanguage == nil || subLanguage.Config.Grammar == nil {
 			continue
 		}
@@ -182,7 +182,7 @@ func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language
 			oldSubTree = oldTree.SubTrees[subLanguage.Name]
 		}
 
-		subTree, err := parseTree(ctx, buff, oldSubTree, *subLanguage, subRanges)
+		subTree, err := parseTree(ctx, buff, oldSubTree, subLanguage, subRanges)
 		if err != nil {
 			return nil, err
 		}
@@ -488,13 +488,4 @@ func (f *File) OutlineTree() []OutlineItem {
 	}
 
 	return items
-}
-
-type Local struct {
-	Name       string
-	Properties map[string]string
-}
-
-func (f *File) localsTree() []Local {
-	return nil
 }

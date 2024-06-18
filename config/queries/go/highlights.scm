@@ -39,6 +39,26 @@
 (method_declaration
   name: (field_identifier) @function.method)
 
+(method_declaration
+  (parameter_list
+    (parameter_declaration
+      name: (identifier) @variable.parameter)))
+
+(type_declaration
+  (type_spec
+    (interface_type
+	  (method_elem
+	    name: (field_identifier) @function.method))))
+
+(type_declaration
+  (type_spec
+    (interface_type
+	  (method_elem
+	    (parameter_list
+	      (parameter_declaration
+	        name: (identifier) @variable.parameter))))))
+
+
 ; Labels
 
 (labeled_statement

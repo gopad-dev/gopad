@@ -21,7 +21,7 @@ The following scopes are available for styling:
 - `property` - Object properties
 - `tag` - Tags (e.g. `<body>` in HTML)
     - `builtin` - Built-in tags (e.g. `div`, `span`, etc.)
-- `label`
+- `label` - Labels (e.g. `Label:` to break out of a loop in Go)
 - `operator` - `||`, `+=`, `>`, `&&`, etc.
 - `namespace`
 - `special`
