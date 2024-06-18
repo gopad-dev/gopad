@@ -74,12 +74,8 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Panicln("failed to load languages:", err)
 			}
 
-			editorWorkspace := getWorkspace(workspace, args)
-			log.Printf("workspace: %q\n", workspace)
-			log.Printf("editorWorkspace: %q\n", editorWorkspace)
-
 			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
-			e, err := gopad.New(lsClient, version, editorWorkspace, args)
+			e, err := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
 			if err != nil {
 				log.Panicln("failed to start gopad:", err)
 			}

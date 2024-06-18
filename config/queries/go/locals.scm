@@ -9,7 +9,7 @@
 ; Definitions
 
 (type_parameter_list
-  (parameter_declaration
+  (type_parameter_declaration
     name: (identifier) @local.definition))
 
 (parameter_declaration (identifier) @local.definition)

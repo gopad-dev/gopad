@@ -375,7 +375,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = [{ start = '<!--', end = '-->' }]
 auto_pairs = []
-grammar = { name = 'xml', symbol_name = 'xml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-xml', rev = '648183d86f6f8ffb240ea11b4c6873f6f45d8b67', ref = 'master', ref_type = 'commit' , sub_dir = 'xml' } }
+grammar = { name = 'xml', symbol_name = 'xml', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-xml', rev = '648183d86f6f8ffb240ea11b4c6873f6f45d8b67', ref = 'master', ref_type = 'commit', sub_dir = 'xml' } }
 
 [languages.python]
 alt_names = ['py']

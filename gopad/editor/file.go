@@ -90,7 +90,6 @@ type File struct {
 	inlayHints            []ls.InlayHint
 	matchesVersion        int32
 	matches               []Match
-	locals                []Local
 	changes               []Change
 	showCurrentDiagnostic bool
 }

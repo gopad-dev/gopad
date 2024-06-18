@@ -17,18 +17,18 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-const queriesDir = "queries"
+const (
+	configDir  = "config"
+	queriesDir = "queries"
+
+	queryHighlightsFileName = "highlights.scm"
+	queryInjectionsFileName = "injections.scm"
+	queryLocalsFileName     = "locals.scm"
+	queryOutlineFileName    = "outline.scm"
+)
 
 var (
-	languages      []*Language
-	queryFileNames = []string{
-		"highlights.scm",
-		"injections.scm",
-		"locals.scm",
-		"indents.scm",
-		"folds.scm",
-		"outline.scm",
-	}
+	languages []*Language
 )
 
 type Language struct {
@@ -47,10 +47,19 @@ func (l *Language) Description() string {
 
 type Grammar struct {
 	Language        *sitter.Language
-	HighlightsQuery *sitter.Query
+	HighlightsQuery HighlightsQuery
 	InjectionsQuery *InjectionsQuery
-	LocalsQuery     *LocalsQuery
 	OutlineQuery    *OutlineQuery
+}
+
+type HighlightsQuery struct {
+	Query *sitter.Query
+
+	HighlightsPatternIndex uint32
+
+	ScopeCaptureID      *uint32
+	DefinitionCaptureID *uint32
+	ReferenceCaptureID  *uint32
 }
 
 type InjectionsQuery struct {
@@ -64,13 +73,6 @@ type OutlineQuery struct {
 	NameCaptureID         uint32
 	ContextCaptureID      *uint32
 	ExtraContextCaptureID *uint32
-}
-
-type LocalsQuery struct {
-	Query               *sitter.Query
-	ScopeCaptureID      uint32
-	DefinitionCaptureID uint32
-	ReferenceCaptureID  uint32
 }
 
 func GetCaptureIndexes(query *sitter.Query, captureNames []string) []*uint32 {
@@ -136,89 +138,103 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 	if queriesConfigDir == "" {
 		queriesConfigDir = filepath.Join(config.Path, queriesDir, name)
 	}
-	queryFiles, err := os.ReadDir(queriesConfigDir)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("error reading queries directory: %w", err)
+
+	rawHighlightsQuery, err := readQuery(queriesConfigDir, defaultConfigs, name, queryHighlightsFileName)
+	if err != nil {
+		return nil, fmt.Errorf("error reading highlights query: %w", err)
 	}
 
-	if len(queryFiles) == 0 {
-		queriesConfigDir = filepath.Join("config", queriesDir, name)
-		queryFiles, err = defaultConfigs.ReadDir(queriesConfigDir)
-		if err != nil {
-			return nil, fmt.Errorf("error reading default queries directory: %w", err)
+	rawLocalsQuery, err := readQuery(queriesConfigDir, defaultConfigs, name, queryLocalsFileName)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading locals query: %w", err)
+	}
+
+	var combinedQuery []byte
+	var highlightsQueryOffset int
+	if len(rawLocalsQuery) > 0 {
+		combinedQuery = rawLocalsQuery
+		combinedQuery = append(combinedQuery, '\n')
+		highlightsQueryOffset = len(rawLocalsQuery)
+	}
+	combinedQuery = append(combinedQuery, rawHighlightsQuery...)
+
+	query, err := sitter.NewQuery(combinedQuery, tsLang)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing combined locals and highlights query: %w", err)
+	}
+
+	var highlightsPatternIndex uint32
+	for i := range query.PatternCount() {
+		patternOffset := query.PatternStartByte(i)
+		if int(patternOffset) < highlightsQueryOffset {
+			highlightsPatternIndex++
 		}
 	}
 
-	var (
-		highlightsQuery *sitter.Query
-		injectionsQuery *InjectionsQuery
-		localsQuery     *LocalsQuery
-		outlineQuery    *OutlineQuery
-	)
+	highlightsQuery := HighlightsQuery{
+		Query:                  query,
+		HighlightsPatternIndex: highlightsPatternIndex,
+	}
 
-	for _, queryFile := range queryFiles {
-		if queryFile.IsDir() || !slices.Contains(queryFileNames, queryFile.Name()) {
-			continue
-		}
+	if len(rawLocalsQuery) > 0 {
+		indexes := GetCaptureIndexes(query, []string{
+			"local.scope",
+			"local.definition",
+			"local.reference",
+		})
 
-		var rawQuery []byte
-		rawQuery, err = readQuery(queriesConfigDir, queryFile)
+		highlightsQuery.ScopeCaptureID = indexes[0]
+		highlightsQuery.DefinitionCaptureID = indexes[1]
+		highlightsQuery.ReferenceCaptureID = indexes[2]
+	}
+
+	rawInjectionsQuery, err := readQuery(queriesConfigDir, defaultConfigs, name, queryInjectionsFileName)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading locals query: %w", err)
+	}
+
+	var injectionsQuery *InjectionsQuery
+	if len(rawInjectionsQuery) > 0 {
+		query, err = sitter.NewQuery(rawInjectionsQuery, tsLang)
 		if err != nil {
-			return nil, fmt.Errorf("error reading query file %s: %w", queryFile.Name(), err)
+			return nil, fmt.Errorf("error parsing injections query: %w", err)
 		}
 
-		var query *sitter.Query
-		query, err = sitter.NewQuery(rawQuery, tsLang)
+		indexes := GetCaptureIndexes(query, []string{
+			"injection.content",
+		})
+
+		injectionsQuery = &InjectionsQuery{
+			Query:                     query,
+			InjectionContentCaptureID: *indexes[0],
+		}
+	}
+
+	rawOutlineQuery, err := readQuery(queriesConfigDir, defaultConfigs, name, queryOutlineFileName)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading outline query: %w", err)
+	}
+
+	var outlineQuery *OutlineQuery
+	if len(rawOutlineQuery) > 0 {
+		query, err = sitter.NewQuery(rawOutlineQuery, tsLang)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing query file %s: %w", queryFile.Name(), err)
+			return nil, fmt.Errorf("error parsing outline query: %w", err)
 		}
 
-		switch queryFile.Name() {
-		case "highlights.scm":
-			highlightsQuery = query
-		case "injections.scm":
-			indexes := GetCaptureIndexes(query, []string{
-				"injection.content",
-			})
+		indexes := GetCaptureIndexes(query, []string{
+			"item",
+			"name",
+			"context",
+			"extra_context",
+		})
 
-			if indexes[0] == nil {
-				return nil, fmt.Errorf("injection.content capture not found in %s", queryFile.Name())
-			}
-
-			injectionsQuery = &InjectionsQuery{
-				Query:                     query,
-				InjectionContentCaptureID: *indexes[0],
-			}
-		case "locals.scm":
-			indexes := GetCaptureIndexes(query, []string{
-				"local.scope",
-				"local.definition",
-				"local.reference",
-			})
-
-			localsQuery = &LocalsQuery{
-				Query:               query,
-				ScopeCaptureID:      *indexes[0],
-				DefinitionCaptureID: *indexes[1],
-				ReferenceCaptureID:  *indexes[2],
-			}
-		case "outline.scm":
-			indexes := GetCaptureIndexes(query, []string{
-				"item",
-				"name",
-				"context",
-				"extra_context",
-			})
-
-			outlineQuery = &OutlineQuery{
-				Query:                 query,
-				ItemCaptureID:         *indexes[0],
-				NameCaptureID:         *indexes[1],
-				ContextCaptureID:      indexes[2],
-				ExtraContextCaptureID: indexes[3],
-			}
-		default:
-			continue
+		outlineQuery = &OutlineQuery{
+			Query:                 query,
+			ItemCaptureID:         *indexes[0],
+			NameCaptureID:         *indexes[1],
+			ContextCaptureID:      indexes[2],
+			ExtraContextCaptureID: indexes[3],
 		}
 	}
 
@@ -226,16 +242,24 @@ func loadTreeSitterGrammar(name string, cfg config.GrammarConfig, defaultConfigs
 		Language:        tsLang,
 		HighlightsQuery: highlightsQuery,
 		InjectionsQuery: injectionsQuery,
-		LocalsQuery:     localsQuery,
 		OutlineQuery:    outlineQuery,
 	}, nil
 }
 
-func readQuery(config string, query os.DirEntry) ([]byte, error) {
-	f, err := os.Open(filepath.Join(config, query.Name()))
-	if err != nil {
-		return nil, fmt.Errorf("error opening theme file: %w", err)
+func readQuery(config string, defaultConfigs embed.FS, name string, query string) ([]byte, error) {
+	_, err := os.Stat(filepath.Join(config, query))
+
+	var f fs.File
+	if errors.Is(err, os.ErrNotExist) {
+		f, err = defaultConfigs.Open(filepath.Join(configDir, queriesDir, name, query))
+	} else if err == nil {
+		f, err = os.Open(filepath.Join(config, query))
 	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error opening query %q: %w", query, err)
+	}
+
 	defer f.Close()
 
 	return io.ReadAll(f)
