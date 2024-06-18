@@ -583,7 +583,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		slices.Reverse(matches)
 		var currentMatches []string
 		for _, match := range matches {
-			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]) ", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col))
+			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s) (%s: [%d, %d] - [%d, %d]) ", match.Type, match.ReferenceType, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 

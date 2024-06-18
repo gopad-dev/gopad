@@ -13,6 +13,7 @@
     name: (identifier) @local.definition))
 
 (parameter_declaration (identifier) @local.definition)
+
 (variadic_parameter_declaration (identifier) @local.definition)
 
 (short_var_declaration

@@ -3,9 +3,7 @@ package editor
 import (
 	"context"
 	"fmt"
-	"log"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,15 +14,11 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-type Scope struct {
-}
-
 type Tree struct {
 	Tree     *sitter.Tree
 	Language *Language
 	SubTrees map[string]*Tree
 	Ranges   []sitter.Range
-	Scopes   []Scope
 }
 
 func (t *Tree) Copy() *Tree {
@@ -285,79 +279,6 @@ func validateTree(tree *Tree) []ls.Diagnostic {
 	}
 
 	return diagnostics
-}
-
-type Match struct {
-	Range    buffer.Range
-	Type     string
-	Priority int
-	Source   string
-}
-
-func (f *File) HighlightTree() {
-	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil {
-		return
-	}
-	version := f.Version()
-
-	matches := highlightTree(f.tree.Copy())
-	// slices.SortFunc(matches, func(a, b Match) int {
-	//	return b.Priority - a.Priority
-	// })
-
-	f.SetMatches(version, matches)
-}
-
-func highlightTree(tree *Tree) []Match {
-	query := tree.Language.Grammar.HighlightsQuery
-	queryCursor := sitter.NewQueryCursor()
-	queryCursor.Exec(query.Query, tree.Tree.RootNode())
-
-	var matches []Match
-	for {
-		match, index, ok := queryCursor.NextCapture()
-		if !ok {
-			break
-		}
-		capture := match.Captures[index]
-
-		log.Println("Capture: ", capture.Index, " ", match.PatternIndex, " ", query.Query.CaptureNameForID(capture.Index), query.HighlightsPatternIndex)
-
-		if uint32(match.PatternIndex) < query.HighlightsPatternIndex {
-			if query.ScopeCaptureID != nil && capture.Index == *query.ScopeCaptureID {
-				log.Println("ScopeCaptureID")
-			} else if query.DefinitionCaptureID != nil && capture.Index == *query.DefinitionCaptureID {
-				log.Println("DefinitionCaptureID")
-			} else if query.ReferenceCaptureID != nil && capture.Index == *query.ReferenceCaptureID {
-				log.Println("ReferenceCaptureID")
-			}
-			continue
-		}
-
-		priority := 100
-		if priorityStr, ok := match.Properties["priority"]; ok {
-			if parsedPriority, err := strconv.Atoi(priorityStr); err == nil {
-				priority = parsedPriority
-			}
-		}
-
-		matches = append(matches, Match{
-			Range: buffer.Range{
-				Start: buffer.Position{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
-				End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
-			},
-			Type:     query.Query.CaptureNameForID(capture.Index),
-			Priority: priority,
-			Source:   tree.Language.Name,
-		})
-	}
-
-	for _, subTree := range tree.SubTrees {
-		subMatches := highlightTree(subTree)
-		matches = append(matches, subMatches...)
-	}
-
-	return matches
 }
 
 type OutlineItem struct {
