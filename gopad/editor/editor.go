@@ -609,7 +609,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.ToggleTreeSitterDebug):
 				e.ToggleTreeSitterDebug()
 			case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
-				buff, err := buffer.New("tree.scm", bytes.NewReader([]byte(f.Tree().Print())), "utf-8", buffer.LineEndingLF, false)
+				buff, err := buffer.New(f.FileName()+".tree", bytes.NewReader([]byte(f.Tree().Print())), "utf-8", buffer.LineEndingLF, false)
 				if err != nil {
 					cmds = append(cmds, notifications.Add(fmt.Sprintf("error while opening tree.scm: %s", err.Error())))
 					return e, tea.Batch(cmds...)

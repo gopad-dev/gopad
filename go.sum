@@ -84,8 +84,8 @@ github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavM
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e/go.mod h1:RbqR21r5mrJuqunuUZ/Dhy/avygyECGrLceyNeo4LiM=
 go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2 h1:TJfF4DCI0kn8rOfKkp8r11YRW4I+fr1iMdof9EJ1oaI=
 go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2/go.mod h1:MSXvJXowkplateQlS2yCqIZhHzEkKsJTSORMBdRFSGM=
-go.gopad.dev/go-tree-sitter v0.0.0-20240614175658-13906aaed6af h1:2dLPtYwbdpnWnsAPBNmcKa0qfcI028bJBC5w8FMXUuI=
-go.gopad.dev/go-tree-sitter v0.0.0-20240614175658-13906aaed6af/go.mod h1:BOuWhgzfq9syKxjzjB5VQOiQUVV/Kl3fcn5BSUjEMvE=
+go.gopad.dev/go-tree-sitter v0.0.0-20240619234809-725453cd8bed h1:2mD37uiHphfLgeZ52X3RoY1RBa/sWAbpPOFey5IqcbQ=
+go.gopad.dev/go-tree-sitter v0.0.0-20240619234809-725453cd8bed/go.mod h1:BOuWhgzfq9syKxjzjB5VQOiQUVV/Kl3fcn5BSUjEMvE=
 go.lsp.dev/jsonrpc2 v0.10.0 h1:Pr/YcXJoEOTMc/b6OTmcR1DPJ3mSWl/SWiU1Cct6VmI=
 go.lsp.dev/jsonrpc2 v0.10.0/go.mod h1:fmEzIdXPi/rf6d4uFcayi8HpFP1nBF99ERP1htC72Ac=
 go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 h1:hCzQgh6UcwbKgNSRurYWSqh8MufqRRPODRBblutn4TE=

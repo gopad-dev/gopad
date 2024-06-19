@@ -20,12 +20,12 @@
 
 (call_expression
   function: (identifier) @function.builtin
-  (#match? @function.builtin "^(append|cap|close|complex|copy|delete|imag|len|make|new|panic|print|println|real|recover|min|max)$"))
+  (#any-of? @function.builtin "append" "cap" "close" "complex" "copy" "delete" "imag" "len" "make" "new" "panic" "print" "println" "real" "recover" "min" "max"))
 
 ; Type Conversions
 (call_expression
   function: (identifier) @type.builtin
-  (#match? @type.builtin "^(any|bool|byte|comparable|complex128|complex64|error|float32|float64|int|int16|int32|int64|int8|rune|string|uint|uint16|uint32|uint64|uint8|uintptr)$"))
+  (#any-of? @type.builtin "any" "bool" "byte" "comparable" "complex128" "complex64" "error" "float32" "float64" "int" "int16" "int32" "int64" "int8" "rune" "string" "uint" "uint16" "uint32" "uint64" "uint8" "uintptr"))
 
 (call_expression
   function: (selector_expression
@@ -33,12 +33,17 @@
 
 ; Types
 
+[
+  "chan"
+  "map"
+  ] @type.builtin
+
 (type_parameter_list
   (type_parameter_declaration
     name: (identifier) @type.parameter))
 
 ((type_identifier) @type.builtin
-  (#match? @type.builtin "^(any|bool|byte|comparable|complex128|complex64|error|float32|float64|int|int16|int32|int64|int8|rune|string|uint|uint16|uint32|uint64|uint8|uintptr)$"))
+    (#any-of? @function.builtin "append" "cap" "close" "complex" "copy" "delete" "imag" "len" "make" "new" "panic" "print" "println" "real" "recover" "min" "max"))
 
 (composite_literal
   (literal_value
@@ -131,31 +136,41 @@
 
 [
   "break"
-  "case"
-  "chan"
-  "const"
   "continue"
   "default"
   "defer"
-  "else"
   "fallthrough"
-  "for"
-  "func"
   "go"
   "goto"
-  "if"
-  "import"
-  "interface"
-  "map"
-  "package"
   "range"
-  "return"
   "select"
-  "struct"
-  "switch"
-  "type"
-  "var"
   ] @keyword
+
+"func" @keyword.function
+
+"return" @keyword.return
+
+[
+  "import"
+  "package"
+] @keyword.control.import
+
+[
+  "else"
+  "case"
+  "switch"
+  "if"
+] @keyword.conditional
+
+"for" @keyword.repeat
+
+[
+  "var"
+  "const"
+  "type"
+  "struct"
+  "interface"
+  ] @keyword.storage.type
 
 ; Delimiters
 

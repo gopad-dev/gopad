@@ -24,7 +24,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2
-	go.gopad.dev/go-tree-sitter v0.0.0-20240614175658-13906aaed6af
+	go.gopad.dev/go-tree-sitter v0.0.0-20240619234809-725453cd8bed
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.1-0.20240203004437-3c0d4339e51f
 	golang.org/x/text v0.16.0
