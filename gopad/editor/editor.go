@@ -18,6 +18,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -31,7 +32,7 @@ const (
 )
 
 var fileIconByFileNameFunc = func(name string) rune {
-	language := GetLanguageByFilename(name)
+	language := file.GetLanguageByFilename(name)
 	var languageName string
 	if language != nil {
 		languageName = language.Name
@@ -85,8 +86,8 @@ func NewEditor(workspace string, args []string) (*Editor, error) {
 		cmds = append(cmds, cmd)
 	}
 
-	if file := editor.File(); file != nil {
-		cmds = append(cmds, file.Focus())
+	if f := editor.File(); f != nil {
+		cmds = append(cmds, f.Focus())
 	} else {
 		editor.fileTree.Focus()
 	}
@@ -101,7 +102,7 @@ type Editor struct {
 	fileTree         filetree.Model
 	workspace        string
 	searchBar        searchbar.Model
-	files            []*File
+	files            []*file.File
 	activeFile       int
 	activeFileOffset int
 	focus            bool
@@ -143,7 +144,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 		name = filepath.Join(e.workspace, name)
 		name, _ = filepath.Abs(name)
 	}
-	if slices.ContainsFunc(e.files, func(b *File) bool {
+	if slices.ContainsFunc(e.files, func(b *file.File) bool {
 		return b.Name() == name
 	}) {
 		return nil, nil
@@ -153,60 +154,60 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	file := NewFileWithBuffer(buff, FileModeWrite)
+	f := file.NewFileWithBuffer(buff, file.FileModeWrite)
 
-	e.files = append(e.files, file)
+	e.files = append(e.files, f)
 
 	cmds := []tea.Cmd{
 		tea.Sequence(
-			ls.FileCreated(file.Name(), file.buffer.Bytes()),
-			ls.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
+			ls.FileCreated(f.Name(), f.Buffer().Bytes()),
+			ls.FileOpened(f.Name(), f.Buffer().Version(), f.Buffer().Bytes()),
 		),
 	}
 
-	if err = file.InitTree(); err != nil {
+	if err = f.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
-	cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
+	cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
 
 	return tea.Batch(cmds...), nil
 }
 
 func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
-	if slices.ContainsFunc(e.files, func(b *File) bool {
+	if slices.ContainsFunc(e.files, func(b *file.File) bool {
 		return b.Name() == name
 	}) {
 		return nil, nil
 	}
 
-	file, err := NewFileFromName(name)
+	f, err := file.NewFileFromName(name)
 	if err != nil {
 		return nil, err
 	}
-	e.files = append(e.files, file)
+	e.files = append(e.files, f)
 
 	cmds := []tea.Cmd{
-		ls.FileOpened(file.Name(), file.buffer.Version(), file.buffer.Bytes()),
+		ls.FileOpened(f.Name(), f.Buffer().Version(), f.Buffer().Bytes()),
 	}
 
-	if err = file.InitTree(); err != nil {
+	if err = f.InitTree(); err != nil {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 	}
-	cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
+	cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
 
 	return tea.Batch(cmds...), nil
 }
 
 func (e *Editor) SaveFile(name string) (tea.Cmd, error) {
-	file := e.FileByName(name)
-	if file == nil {
+	f := e.FileByName(name)
+	if f == nil {
 		return nil, nil
 	}
-	if err := file.buffer.Save(); err != nil {
+	if err := f.Buffer().Save(); err != nil {
 		return nil, err
 	}
 
-	return ls.FileSaved(file.Name(), file.buffer.Bytes()), nil
+	return ls.FileSaved(f.Name(), f.Buffer().Bytes()), nil
 }
 
 func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
@@ -214,26 +215,26 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 		newName = filepath.Join(e.workspace, newName)
 		newName, _ = filepath.Abs(newName)
 	}
-	file := e.FileByName(oldName)
-	if file == nil {
+	f := e.FileByName(oldName)
+	if f == nil {
 		return nil, nil
 	}
-	if err := file.buffer.Rename(newName); err != nil {
+	if err := f.Buffer().Rename(newName); err != nil {
 		return nil, err
 	}
 
-	return ls.FileRenamed(file.Name(), newName), nil
+	return ls.FileRenamed(f.Name(), newName), nil
 }
 
 func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.files, func(file *File) bool {
+	index := slices.IndexFunc(e.files, func(file *file.File) bool {
 		return file.Name() == name
 	})
 	if index == -1 {
 		return nil, nil
 	}
 
-	file := e.files[index]
+	f := e.files[index]
 	e.files = slices.Delete(e.files, index, index+1)
 	e.activeFile = min(e.activeFile, len(e.files)-1)
 	if len(e.files) > 0 {
@@ -242,19 +243,19 @@ func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
 		e.fileTree.Focus()
 	}
 
-	return ls.FileClosed(file.Name()), nil
+	return ls.FileClosed(f.Name()), nil
 }
 
 func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.files, func(file *File) bool {
+	index := slices.IndexFunc(e.files, func(file *file.File) bool {
 		return file.Name() == name
 	})
 	if index == -1 {
 		return nil, nil
 	}
 
-	file := e.files[index]
-	if err := file.buffer.Delete(); err != nil {
+	f := e.files[index]
+	if err := f.Buffer().Delete(); err != nil {
 		return nil, err
 	}
 
@@ -266,10 +267,10 @@ func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
 		e.fileTree.Focus()
 	}
 
-	return ls.FileDeleted(file.Name()), nil
+	return ls.FileDeleted(f.Name()), nil
 }
 
-func (e *Editor) File() *File {
+func (e *Editor) File() *file.File {
 	if len(e.files) == 0 {
 		return nil
 	}
@@ -281,26 +282,26 @@ func (e *Editor) SetFile(index int) {
 }
 
 func (e *Editor) SetFileByName(name string) {
-	for i, file := range e.files {
-		if file.Name() == name {
+	for i, f := range e.files {
+		if f.Name() == name {
 			e.activeFile = i
 			return
 		}
 	}
 }
 
-func (e *Editor) FileByName(name string) *File {
-	for _, file := range e.files {
-		if file.Name() == name {
-			return file
+func (e *Editor) FileByName(name string) *file.File {
+	for _, f := range e.files {
+		if f.Name() == name {
+			return f
 		}
 	}
 	return nil
 }
 
 func (e *Editor) HasChanges() bool {
-	for _, file := range e.files {
-		if file.Dirty() {
+	for _, f := range e.files {
+		if f.Dirty() {
 			return true
 		}
 	}
@@ -321,39 +322,38 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case ls.UpdateFileDiagnosticMsg:
-		file := e.FileByName(msg.Name)
-		if file == nil {
+		f := e.FileByName(msg.Name)
+		if f == nil {
 			return e, tea.Batch(cmds...)
 		}
-		file.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
+		f.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
 		return e, tea.Batch(cmds...)
 	case ls.UpdateAutocompletionMsg:
-		log.Println("update autocompletions", msg.Name, msg.Completions)
-		file := e.FileByName(msg.Name)
-		if file == nil {
+		f := e.FileByName(msg.Name)
+		if f == nil {
 			return e, tea.Batch(cmds...)
 		}
-		file.autocomplete.SetCompletions(msg.Completions)
+		f.Autocomplete().SetCompletions(msg.Completions)
 		return e, tea.Batch(cmds...)
 	case ls.UpdateInlayHintMsg:
-		file := e.FileByName(msg.Name)
-		if file == nil {
+		f := e.FileByName(msg.Name)
+		if f == nil {
 			return e, tea.Batch(cmds...)
 		}
-		file.SetInlayHint(msg.Hints)
+		f.SetInlayHint(msg.Hints)
 		return e, tea.Batch(cmds...)
 	case ls.RefreshInlayHintMsg:
 		// refresh inlay hints for all open files
-		for _, file := range e.files {
-			cmds = append(cmds, ls.GetInlayHint(file.Name(), file.Range()))
+		for _, f := range e.files {
+			cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
 		}
 		return e, tea.Batch(cmds...)
 	case openDirMsg:
 		e.fileTree.Show()
 		e.fileTree.Focus()
 
-		if file := e.File(); file != nil {
-			file.Blur()
+		if f := e.File(); f != nil {
+			f.Blur()
 		}
 
 		if err := e.fileTree.Open(msg.Name); err != nil {
@@ -429,24 +429,24 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	case closeAllMsg:
 		var files []string
-		for _, file := range e.files {
-			if file.Dirty() {
-				files = append(files, file.Name())
+		for _, f := range e.files {
+			if f.Dirty() {
+				files = append(files, f.Name())
 			}
 		}
 		if len(files) > 0 {
 			return e, overlay.Open(NewCloseOverlay(files))
 		}
 		fileCmds := make([]tea.Cmd, len(e.files))
-		for _, file := range e.files {
-			fileCmds = append(fileCmds, CloseFile(file.Name()))
+		for _, f := range e.files {
+			fileCmds = append(fileCmds, CloseFile(f.Name()))
 		}
 		cmds = append(cmds, tea.Sequence(fileCmds...))
 		return e, tea.Batch(cmds...)
 	case searchbar.SearchMsg:
-		file := e.File()
-		if file != nil {
-			results := file.buffer.Search(msg.Term)
+		f := e.File()
+		if f != nil {
+			results := f.Buffer().Search(msg.Term)
 			cmds = append(cmds, searchbar.SearchResult(results))
 			return e, tea.Batch(cmds...)
 		}
@@ -454,33 +454,33 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Editor.ToggleFileTree) && e.focus:
-			file := e.File()
+			f := e.File()
 			if e.fileTree.Visible() {
 				e.fileTree.Blur()
 				e.fileTree.Hide()
-				if file != nil {
-					cmds = append(cmds, file.Focus())
+				if f != nil {
+					cmds = append(cmds, f.Focus())
 				}
 			} else {
 				e.fileTree.Focus()
 				e.fileTree.Show()
-				if file != nil {
-					file.Blur()
+				if f != nil {
+					f.Blur()
 				}
 			}
 			return e, tea.Batch(cmds...)
 		case key.Matches(msg, config.Keys.Editor.FocusFileTree) && e.focus:
 			if e.fileTree.Visible() {
-				file := e.File()
+				f := e.File()
 				if e.fileTree.Focused() {
 					e.fileTree.Blur()
-					if file != nil {
-						cmds = append(cmds, file.Focus())
+					if f != nil {
+						cmds = append(cmds, f.Focus())
 					}
 				} else {
 					e.fileTree.Focus()
-					if file != nil {
-						file.Blur()
+					if f != nil {
+						f.Blur()
 					}
 				}
 			}
@@ -507,90 +507,90 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	}
 
-	file := e.File()
-	if file == nil {
+	f := e.File()
+	if f == nil {
 		return e, nil
 	}
-	oldRow, oldCol := file.Cursor()
+	oldRow, oldCol := f.Cursor()
 
 	switch msg := msg.(type) {
 	case pasteMsg:
-		s := file.Selection()
+		s := f.Selection()
 		if s != nil {
 			log.Println("paste msg", msg)
-			file.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, msg)
-			file.ResetMark()
+			f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, msg)
+			f.ResetMark()
 		} else {
-			file.Insert(msg)
+			f.Insert(msg)
 		}
 	case cutMsg:
 		s := buffer.Range(msg)
-		file.DeleteRange(s.Start, s.End)
-		file.ResetMark()
+		f.DeleteRange(s.Start, s.End)
+		f.ResetMark()
 	case deleteMsg:
-		cmd, err := e.DeleteFile(file.Name())
+		cmd, err := e.DeleteFile(f.Name())
 		if err != nil {
-			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while deleting file %s: %s", file.Name(), err.Error())))
+			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while deleting file %s: %s", f.Name(), err.Error())))
 			return e, tea.Batch(cmds...)
 		}
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s deleted", file.Name())))
+		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s deleted", f.Name())))
 	case renameMsg:
-		cmds = append(cmds, overlay.Open(NewRenameOverlay(file.Name())))
+		cmds = append(cmds, overlay.Open(NewRenameOverlay(f.Name())))
 	case renameFileMsg:
-		cmd, err := e.RenameFile(file.Name(), msg.Name)
+		cmd, err := e.RenameFile(f.Name(), msg.Name)
 		if err != nil {
-			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while renamed file %s: %s", file.Name(), err.Error())))
+			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while renamed file %s: %s", f.Name(), err.Error())))
 			return e, tea.Batch(cmds...)
 		}
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s renamed to %s", file.Name(), msg.Name)))
+		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s renamed to %s", f.Name(), msg.Name)))
 	case setLanguageMsg:
-		file.SetLanguage(msg.Language)
+		f.SetLanguage(msg.Language)
 
-		file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
+		f.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
 
-		if err := file.InitTree(); err != nil {
+		if err := f.InitTree(); err != nil {
 			cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree: %s", err.Error())))
 		}
 		return e, tea.Batch(cmds...)
 	case saveMsg:
-		if file.Dirty() {
-			cmds = append(cmds, SaveFile(file.Name()))
+		if f.Dirty() {
+			cmds = append(cmds, SaveFile(f.Name()))
 		}
 	case closeMsg:
-		if file.Dirty() {
-			return e, overlay.Open(NewCloseOverlay([]string{file.Name()}))
+		if f.Dirty() {
+			return e, overlay.Open(NewCloseOverlay([]string{f.Name()}))
 		}
-		cmds = append(cmds, CloseFile(file.Name()))
+		cmds = append(cmds, CloseFile(f.Name()))
 	case selectMsg:
-		file.SetMark(msg.FromRow, msg.FromCol)
-		file.SetCursor(msg.ToRow, msg.ToCol)
+		f.SetMark(msg.FromRow, msg.FromCol)
+		f.SetCursor(msg.ToRow, msg.ToCol)
 	case scrollMsg:
-		file.SetCursor(msg.Row, msg.Col)
+		f.SetCursor(msg.Row, msg.Col)
 	case tea.KeyMsg:
 		if e.focus {
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete):
-				row, col := file.Cursor()
-				cmds = append(cmds, ls.GetAutocompletion(file.Name(), row, col))
+				row, col := f.Cursor()
+				cmds = append(cmds, ls.GetAutocompletion(f.Name(), row, col))
 				return e, tea.Batch(cmds...)
-			case key.Matches(msg, config.Keys.Cancel) && file.autocomplete.Visible():
-				file.autocomplete.ClearCompletions()
-			case key.Matches(msg, config.Keys.Editor.NextCompletion) && file.autocomplete.Visible():
-				file.autocomplete.Next()
-			case key.Matches(msg, config.Keys.Editor.PrevCompletion) && file.autocomplete.Visible():
-				file.autocomplete.Previous()
-			case key.Matches(msg, config.Keys.Editor.ApplyCompletion) && file.autocomplete.Visible():
-				completion := file.autocomplete.Selected()
+			case key.Matches(msg, config.Keys.Cancel) && f.Autocomplete().Visible():
+				f.Autocomplete().ClearCompletions()
+			case key.Matches(msg, config.Keys.Editor.NextCompletion) && f.Autocomplete().Visible():
+				f.Autocomplete().Next()
+			case key.Matches(msg, config.Keys.Editor.PrevCompletion) && f.Autocomplete().Visible():
+				f.Autocomplete().Previous()
+			case key.Matches(msg, config.Keys.Editor.ApplyCompletion) && f.Autocomplete().Visible():
+				completion := f.Autocomplete().Selected()
 				if completion.Text != "" {
-					cmds = append(cmds, file.Insert([]byte(completion.Text)))
+					cmds = append(cmds, f.Insert([]byte(completion.Text)))
 				} else if completion.Edit != nil {
-					cmds = append(cmds, file.Replace(
+					cmds = append(cmds, f.Replace(
 						completion.Edit.Range.Start.Row,
 						completion.Edit.Range.Start.Col,
 						completion.Edit.Range.End.Row,
@@ -598,48 +598,48 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 						[]byte(completion.Edit.NewText)),
 					)
 				} else {
-					cmds = append(cmds, file.Insert([]byte(completion.Label)))
+					cmds = append(cmds, f.Insert([]byte(completion.Label)))
 				}
-				file.autocomplete.ClearCompletions()
+				f.Autocomplete().ClearCompletions()
 
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
-				if err := file.InitTree(); err != nil {
+				if err := f.InitTree(); err != nil {
 					cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
 				}
 			case key.Matches(msg, config.Keys.Editor.ToggleTreeSitterDebug):
 				e.ToggleTreeSitterDebug()
 			case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
-				buff, err := buffer.New("tree.scm", bytes.NewReader([]byte(file.Tree().Print())), "utf-8", buffer.LineEndingLF, false)
+				buff, err := buffer.New("tree.scm", bytes.NewReader([]byte(f.Tree().Print())), "utf-8", buffer.LineEndingLF, false)
 				if err != nil {
 					cmds = append(cmds, notifications.Add(fmt.Sprintf("error while opening tree.scm: %s", err.Error())))
 					return e, tea.Batch(cmds...)
 				}
 
-				debugFile := NewFileWithBuffer(buff, FileModeReadOnly)
+				debugFile := file.NewFileWithBuffer(buff, file.FileModeReadOnly)
 
 				e.files = append(e.files, debugFile)
 				e.activeFile = len(e.files) - 1
 			case key.Matches(msg, config.Keys.Editor.ShowCurrentDiagnostic):
-				file.ShowCurrentDiagnostic()
+				f.ShowCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Editor.OpenOutline):
-				cmds = append(cmds, overlay.Open(NewOutlineOverlay(file)))
+				cmds = append(cmds, overlay.Open(NewOutlineOverlay(f)))
 			case key.Matches(msg, config.Keys.Editor.Search):
 				if !e.searchBar.Focused() {
 					e.searchBar.Show()
-					file.Blur()
+					f.Blur()
 					cmds = append(cmds, e.searchBar.Focus())
 				}
 				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.NextFile):
 				if e.activeFile < len(e.files)-1 {
 					e.activeFile++
-					file.Blur()
+					f.Blur()
 					cmds = append(cmds, e.files[e.activeFile].Focus())
 				}
 			case key.Matches(msg, config.Keys.Editor.PrevFile):
 				if e.activeFile > 0 {
 					e.activeFile--
-					file.Blur()
+					f.Blur()
 					cmds = append(cmds, e.files[e.activeFile].Focus())
 				}
 			case key.Matches(msg, config.Keys.Editor.CloseFile):
@@ -648,90 +648,90 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.DeleteFile):
 				cmds = append(cmds, overlay.Open(NewDeleteOverlay()))
 			case key.Matches(msg, config.Keys.Editor.RenameFile):
-				cmds = append(cmds, overlay.Open(NewRenameOverlay(file.Name())))
+				cmds = append(cmds, overlay.Open(NewRenameOverlay(f.Name())))
 			case key.Matches(msg, config.Keys.Editor.LineUp):
-				file.MoveCursorUp(moveSize)
+				f.MoveCursorUp(moveSize)
 			case key.Matches(msg, config.Keys.Editor.LineDown):
-				file.MoveCursorDown(moveSize)
+				f.MoveCursorDown(moveSize)
 			case key.Matches(msg, config.Keys.Editor.CharacterLeft):
-				file.MoveCursorLeft(moveSize)
+				f.MoveCursorLeft(moveSize)
 			case key.Matches(msg, config.Keys.Editor.CharacterRight):
-				file.MoveCursorRight(moveSize)
+				f.MoveCursorRight(moveSize)
 			case key.Matches(msg, config.Keys.Editor.WordUp):
-				file.MoveCursorWordUp()
+				f.MoveCursorWordUp()
 			case key.Matches(msg, config.Keys.Editor.WordDown):
-				file.MoveCursorWordDown()
+				f.MoveCursorWordDown()
 			case key.Matches(msg, config.Keys.Editor.WordLeft):
-				file.SetCursor(file.NextWordLeft())
+				f.SetCursor(f.NextWordLeft())
 			case key.Matches(msg, config.Keys.Editor.WordRight):
-				file.SetCursor(file.NextWordRight())
+				f.SetCursor(f.NextWordRight())
 			case key.Matches(msg, config.Keys.Editor.PageUp):
-				file.MoveCursorUp(pageSize)
+				f.MoveCursorUp(pageSize)
 			case key.Matches(msg, config.Keys.Editor.PageDown):
-				file.MoveCursorDown(pageSize)
+				f.MoveCursorDown(pageSize)
 			case key.Matches(msg, config.Keys.Editor.LineStart):
-				file.SetCursor(-1, 0)
+				f.SetCursor(-1, 0)
 			case key.Matches(msg, config.Keys.Editor.LineEnd):
-				cursorRow, _ := file.Cursor()
-				file.SetCursor(-1, file.buffer.LineLen(cursorRow))
+				cursorRow, _ := f.Cursor()
+				f.SetCursor(-1, f.Buffer().LineLen(cursorRow))
 			case key.Matches(msg, config.Keys.Editor.FileStart):
-				file.SetCursor(0, -1)
+				f.SetCursor(0, -1)
 			case key.Matches(msg, config.Keys.Editor.FileEnd):
-				file.SetCursor(file.buffer.LinesLen(), -1)
+				f.SetCursor(f.Buffer().LinesLen(), -1)
 
 			case key.Matches(msg, config.Keys.Editor.Copy):
-				selBytes := file.SelectionBytes()
+				selBytes := f.SelectionBytes()
 				if len(selBytes) > 0 {
 					cmds = append(cmds, Copy(selBytes))
 				}
 			case key.Matches(msg, config.Keys.Editor.Paste):
 				cmds = append(cmds, Paste)
 			case key.Matches(msg, config.Keys.Editor.Cut):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, Cut(*s, file.SelectionBytes()))
+					cmds = append(cmds, Cut(*s, f.SelectionBytes()))
 				}
 			case key.Matches(msg, config.Keys.Editor.SelectLeft):
-				file.SelectLeft(moveSize)
+				f.SelectLeft(moveSize)
 			case key.Matches(msg, config.Keys.Editor.SelectRight):
-				file.SelectRight(moveSize)
+				f.SelectRight(moveSize)
 			case key.Matches(msg, config.Keys.Editor.SelectUp):
-				file.SelectUp(moveSize)
+				f.SelectUp(moveSize)
 			case key.Matches(msg, config.Keys.Editor.SelectDown):
-				file.SelectDown(moveSize)
+				f.SelectDown(moveSize)
 			case key.Matches(msg, config.Keys.Editor.SelectAll):
-				file.SelectAll()
+				f.SelectAll()
 
 			case key.Matches(msg, config.Keys.Editor.SaveFile):
-				cmds = append(cmds, SaveFile(file.Name()))
+				cmds = append(cmds, SaveFile(f.Name()))
 			case key.Matches(msg, config.Keys.Editor.Tab):
-				cmds = append(cmds, file.InsertRunes([]rune{'\t'}))
+				cmds = append(cmds, f.InsertRunes([]rune{'\t'}))
 			case key.Matches(msg, config.Keys.Editor.RemoveTab):
-				cmds = append(cmds, file.RemoveTab())
+				cmds = append(cmds, f.RemoveTab())
 			case key.Matches(msg, config.Keys.Editor.Newline):
-				file.ResetMark()
-				cmds = append(cmds, file.InsertNewLine())
+				f.ResetMark()
+				cmds = append(cmds, f.InsertNewLine())
 			case key.Matches(msg, config.Keys.Editor.DeleteRight):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
-					file.ResetMark()
+					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
+					f.ResetMark()
 				} else {
-					cmds = append(cmds, file.DeleteAfter(1))
+					cmds = append(cmds, f.DeleteAfter(1))
 				}
 			case key.Matches(msg, config.Keys.Editor.DeleteLeft):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
-					file.ResetMark()
+					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
+					f.ResetMark()
 				} else {
-					row, col := file.Cursor()
-					toDelete := file.buffer.Line(row).RuneBytes(col - 1)
-					cmds = append(cmds, file.DeleteBefore(1))
-					if lang := file.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
-						row, col = file.Cursor()
+					row, col := f.Cursor()
+					toDelete := f.Buffer().Line(row).RuneBytes(col - 1)
+					cmds = append(cmds, f.DeleteBefore(1))
+					if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
+						row, col = f.Cursor()
 
-						fileTree := file.Tree()
+						fileTree := f.Tree()
 						if fileTree != nil {
 							tree := fileTree.FindTree(buffer.Position{
 								Row: row,
@@ -758,7 +758,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 								continue
 							}
 							closeWidth := runewidth.StringWidth(pair.Close)
-							behindCursor := file.buffer.BytesRange(
+							behindCursor := f.Buffer().BytesRange(
 								buffer.Position{
 									Row: row,
 									Col: col,
@@ -769,57 +769,57 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 								},
 							)
 							if string(behindCursor) == pair.Close {
-								cmds = append(cmds, file.Replace(row, col, row, col+closeWidth, nil))
+								cmds = append(cmds, f.Replace(row, col, row, col+closeWidth, nil))
 								break
 							}
 						}
 					}
 				}
 			case key.Matches(msg, config.Keys.Editor.DuplicateLine):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.Insert(file.SelectionBytes()))
-					file.ResetMark()
+					cmds = append(cmds, f.Insert(f.SelectionBytes()))
+					f.ResetMark()
 				} else {
-					cmds = append(cmds, file.DuplicateLine())
+					cmds = append(cmds, f.DuplicateLine())
 				}
 			case key.Matches(msg, config.Keys.Editor.DeleteWordLeft):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
-					file.ResetMark()
+					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
+					f.ResetMark()
 				} else {
-					cmds = append(cmds, file.DeleteWordLeft())
+					cmds = append(cmds, f.DeleteWordLeft())
 				}
 			case key.Matches(msg, config.Keys.Editor.DeleteWordRight):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
-					file.ResetMark()
+					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
+					f.ResetMark()
 				} else {
-					cmds = append(cmds, file.DeleteWordRight())
+					cmds = append(cmds, f.DeleteWordRight())
 				}
 			case key.Matches(msg, config.Keys.Editor.DeleteLine):
-				s := file.Selection()
+				s := f.Selection()
 				if s != nil {
-					cmds = append(cmds, file.DeleteRange(s.Start, s.End))
-					file.ResetMark()
+					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
+					f.ResetMark()
 				} else {
-					cmds = append(cmds, file.DeleteLine())
+					cmds = append(cmds, f.DeleteLine())
 				}
 			case key.Matches(msg, config.Keys.Editor.ToggleComment):
-				cmds = append(cmds, file.ToggleComment())
+				cmds = append(cmds, f.ToggleComment())
 				overwriteCursorBlink = true
 			case key.Matches(msg, config.Keys.Editor.Debug):
 				log.Println("DEBUG")
-				cmds = append(cmds, ls.GetInlayHint(file.Name(), buffer.Range{
+				cmds = append(cmds, ls.GetInlayHint(f.Name(), buffer.Range{
 					Start: buffer.Position{
 						Row: 0,
 						Col: 0,
 					},
 					End: buffer.Position{
-						Row: file.buffer.LinesLen(),
-						Col: file.buffer.LineLen(max(file.buffer.LinesLen()-1, 0)),
+						Row: f.Buffer().LinesLen(),
+						Col: f.Buffer().LineLen(max(f.Buffer().LinesLen()-1, 0)),
 					},
 				}))
 				return e, tea.Batch(cmds...)
@@ -828,18 +828,18 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				if msg.Alt {
 					break
 				}
-				cmds = append(cmds, file.InsertRunes(msg.Runes))
-				if file.autocomplete.Visible() {
-					row, col := file.Cursor()
-					cmds = append(cmds, ls.GetAutocompletion(file.Name(), row, col))
+				cmds = append(cmds, f.InsertRunes(msg.Runes))
+				if f.Autocomplete().Visible() {
+					row, col := f.Cursor()
+					cmds = append(cmds, ls.GetAutocompletion(f.Name(), row, col))
 				}
 
 				// handle auto pairs
-				if lang := file.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
+				if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
 					for _, pair := range lang.Config.AutoPairs {
 						if string(msg.Runes) == pair.Open {
-							row, col := file.Cursor()
-							cmds = append(cmds, file.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
+							row, col := f.Cursor()
+							cmds = append(cmds, f.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
 							break
 						}
 					}
@@ -848,14 +848,14 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		}
 	}
 
-	if cmd = file.UpdateCursor(msg); cmd != nil {
+	if cmd = f.UpdateCursor(msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	newRow, newCol := file.Cursor()
+	newRow, newCol := f.Cursor()
 	if oldRow != newRow || oldCol != newCol || overwriteCursorBlink {
-		file.SetCursorBlink(false)
-		cmds = append(cmds, file.CursorBlinkCmd())
+		f.SetCursorBlink(false)
+		cmds = append(cmds, f.CursorBlinkCmd())
 	}
 
 	return e, tea.Batch(cmds...)
@@ -868,8 +868,8 @@ func (e *Editor) View(width int, height int) string {
 		width -= lipgloss.Width(fileTree)
 	}
 
-	file := e.File()
-	if file == nil {
+	f := e.File()
+	if f == nil {
 		width -= config.Theme.Editor.EmptyStyle.GetHorizontalBorderSize()
 		height -= config.Theme.Editor.EmptyStyle.GetVerticalBorderSize()
 
@@ -891,7 +891,7 @@ func (e *Editor) View(width int, height int) string {
 		height -= lipgloss.Height(searchBar)
 	}
 
-	editor := file.View(width, height, e.fileTree.Visible(), e.treeSitterDebug)
+	editor := f.View(width, height, e.fileTree.Visible(), e.treeSitterDebug)
 
 	if searchBar != "" {
 		editor = lipgloss.JoinVertical(lipgloss.Left, searchBar, editor)
@@ -929,16 +929,16 @@ func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
 
 func (e *Editor) FileTabsView(width int) string {
 	var fileNames []string
-	for path, file := range e.files {
+	for path, f := range e.files {
 		var languageName string
-		if file.language != nil {
-			languageName = file.language.Name
+		if f.Language() != nil {
+			languageName = f.Language().Name
 		}
 		icon := config.Theme.Icons.FileIcon(languageName)
 
-		fileName := clampString(file.FileName(), 16)
+		fileName := clampString(f.FileName(), 16)
 		fileName = fmt.Sprintf("%c %s", icon, fileName)
-		if file.Dirty() {
+		if f.Dirty() {
 			fileName += "*"
 		} else {
 			fileName += " "

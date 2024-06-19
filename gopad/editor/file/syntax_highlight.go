@@ -1,4 +1,4 @@
-package editor
+package file
 
 import (
 	"fmt"
@@ -42,8 +42,10 @@ func (f *File) MatchesForLineCol(row int, col int) []Match {
 }
 
 func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
-	var currentStyle *lipgloss.Style
-	var referenceStyle *lipgloss.Style
+	var (
+		currentStyle   *lipgloss.Style
+		referenceStyle *lipgloss.Style
+	)
 	for _, match := range f.MatchesForLineCol(row, col) {
 		if match.ReferenceType != "" {
 			newStyle := getMatchingStyle(match.ReferenceType, f.language.Name)
@@ -59,15 +61,15 @@ func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipglos
 		}
 	}
 
-	if currentStyle == nil && referenceStyle == nil {
-		return style
-	}
-
 	if referenceStyle != nil {
 		return style.Copy().Inherit(*referenceStyle)
 	}
 
-	return style.Copy().Inherit(*currentStyle)
+	if currentStyle != nil {
+		return style.Copy().Inherit(*currentStyle)
+	}
+
+	return style
 }
 
 func getMatchingStyle(matchType string, name string) *lipgloss.Style {
@@ -134,17 +136,15 @@ func highlightTree(tree *Tree) []Match {
 
 	var matches []Match
 	var scopes []*LocalScope
-	var localRef *LocalDef
-	var localDef *LocalDef
-	var lastMatch *sitter.QueryMatch
+	var lastDef *LocalDef
+	var lastRef *LocalDef
+	var lastCapture *sitter.QueryCapture
 	for {
 		match, index, ok := queryCursor.NextCapture()
 		if !ok {
 			break
 		}
 		capture := match.Captures[index]
-
-		log.Println("Capture:", match.ID, capture.Index, query.Query.CaptureNameForID(capture.Index))
 
 		captureRange := buffer.Range{
 			Start: buffer.Position{
@@ -179,26 +179,24 @@ func highlightTree(tree *Tree) []Match {
 					LocalDefs: nil,
 				})
 			} else if query.DefinitionCaptureID != nil && capture.Index == *query.DefinitionCaptureID {
-				log.Println("Definition:", capture.Node.Content())
+				log.Println("New definition:", capture.Node.Content())
 				if len(scopes) > 0 {
 					def := &LocalDef{
 						Name: capture.Node.Content(),
 						Type: "",
 					}
 
-					localDef = def
+					lastDef = def
 
 					scope := scopes[len(scopes)-1]
 					scope.LocalDefs = append(scope.LocalDefs, def)
 				}
-
 			} else if query.ReferenceCaptureID != nil && capture.Index == *query.ReferenceCaptureID {
-				log.Println("Reference:", capture.Node.Content())
+				log.Println("Found reference:", capture.Node.Content())
 				for i := len(scopes) - 1; i >= 0; i-- {
 					for _, def := range scopes[i].LocalDefs {
 						if def.Name == capture.Node.Content() {
-							log.Println("Found Definition for Reference:", def)
-							localRef = def
+							lastRef = def
 							break
 						}
 					}
@@ -207,20 +205,18 @@ func highlightTree(tree *Tree) []Match {
 					}
 				}
 			}
-			lastMatch = match
+
+			lastCapture = nil
 			continue
 		}
 
-		priority := 100
-		if priorityStr, ok := match.Properties["priority"]; ok {
-			if parsedPriority, err := strconv.Atoi(priorityStr); err == nil {
-				priority = parsedPriority
-			}
+		if lastCapture != nil && !capture.Node.Equal(lastCapture.Node) {
+			lastDef = nil
+			lastRef = nil
 		}
 
-		if localDef != nil {
-			log.Println("Adding definition type:", query.Query.CaptureNameForID(capture.Index))
-			localDef.Type = query.Query.CaptureNameForID(capture.Index)
+		if lastDef != nil {
+			lastDef.Type = query.Query.CaptureNameForID(capture.Index)
 		}
 
 		highlightMatch := Match{
@@ -229,21 +225,16 @@ func highlightTree(tree *Tree) []Match {
 				End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
 			},
 			Type:     query.Query.CaptureNameForID(capture.Index),
-			Priority: priority,
+			Priority: getPriority(match),
 			Source:   tree.Language.Name,
 		}
 
-		if localRef != nil {
-			log.Println("Adding reference type:", *localRef)
-			highlightMatch.ReferenceType = localRef.Type
+		if lastRef != nil {
+			highlightMatch.ReferenceType = lastRef.Type
 		}
 
 		matches = append(matches, highlightMatch)
-		if lastMatch != nil && lastMatch.ID != match.ID {
-			localRef = nil
-			localDef = nil
-		}
-		lastMatch = match
+		lastCapture = &capture
 	}
 
 	for _, subTree := range tree.SubTrees {
@@ -252,4 +243,14 @@ func highlightTree(tree *Tree) []Match {
 	}
 
 	return matches
+}
+
+func getPriority(match *sitter.QueryMatch) int {
+	priority := 100
+	if priorityStr, ok := match.Properties["priority"]; ok {
+		if parsedPriority, err := strconv.Atoi(priorityStr); err == nil {
+			priority = parsedPriority
+		}
+	}
+	return priority
 }

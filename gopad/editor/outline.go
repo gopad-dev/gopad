@@ -7,22 +7,19 @@ import (
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-func Outline(f *File) tea.Cmd {
+func Outline(f *file.File) tea.Cmd {
 	return func() tea.Msg {
-		if f.tree == nil {
-			return nil
-		}
-
 		return outlineMsg(f.OutlineTree())
 	}
 }
 
-type outlineMsg []OutlineItem
+type outlineMsg []file.OutlineItem
 
 type outlineItem struct {
 	r        buffer.Range
@@ -42,7 +39,7 @@ func (o outlineItem) FilterValue() string {
 	return o.rawTitle
 }
 
-func renderOutlineItem(file *File, selectedStyle lipgloss.Style, selected bool, item OutlineItem) outlineItem {
+func renderOutlineItem(file *file.File, selectedStyle lipgloss.Style, selected bool, item file.OutlineItem) outlineItem {
 	codeCharStyle := config.Theme.Editor.CodeLineCharStyle
 
 	var (
@@ -80,7 +77,7 @@ const OutlineOverlayID = "editor.outline"
 
 var _ overlay.Overlay = (*OutlineOverlay)(nil)
 
-func NewOutlineOverlay(f *File) OutlineOverlay {
+func NewOutlineOverlay(f *file.File) OutlineOverlay {
 	l := config.NewList[outlineItem](nil)
 	l.TextInput.Placeholder = "Search symbols..."
 	l.Focus()
@@ -92,8 +89,8 @@ func NewOutlineOverlay(f *File) OutlineOverlay {
 }
 
 type OutlineOverlay struct {
-	f     *File
-	items []OutlineItem
+	f     *file.File
+	items []file.OutlineItem
 	list  list.Model[outlineItem]
 }
 

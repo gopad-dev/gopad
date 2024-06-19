@@ -47,12 +47,17 @@ hint = { underline = true }
 "comment.note" = { foreground = '2', bold = true }
 "comment.todo" = { foreground = '15', bold = true }
 
-"constant" = { foreground = '11' }
+"variable" = { }
+"variable.builtin" = { foreground = '14' }
+"variable.parameter" = { foreground = '3' }
+"variable.other" = { foreground = '1' }
+
+"constant" = { foreground = '3' }
 "constant.numeric" = { foreground = '3' }
 "constant.builtin" = { foreground = '9' }
 "constant.builtin.boolean" = { foreground = '3' }
-"constant.character.escape" = { foreground = '14' }
-"constant.other.placeholder" = { foreground = '14' }
+"constant.character.escape" = { foreground = '6', bold = true }
+"constant.other.placeholder" = { foreground = '6', bold = true }
 
 "function" = { foreground = '14' }
 "function.builtin" = { foreground = '14' }
@@ -69,15 +74,10 @@ hint = { underline = true }
 "operator" = { }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
-"string.escape" = { foreground = '14' }
 "string.special" = { foreground = '3' }
 "string.special.path" = { foreground = '10', bold = true }
 "string.special.url" = { foreground = '4' }
 "type" = { foreground = '11', bold = true }
-
-"variable" = { }
-"variable.builtin" = { foreground = '14' }
-"variable.parameter" = { foreground = '3' }
 
 "markup.heading" = { foreground = '6' }
 "markup.heading.marker" = { foreground = '13' }

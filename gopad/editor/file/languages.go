@@ -1,4 +1,4 @@
-package editor
+package file
 
 import (
 	"embed"
@@ -27,9 +27,7 @@ const (
 	queryOutlineFileName    = "outline.scm"
 )
 
-var (
-	languages []*Language
-)
+var Languages []*Language
 
 type Language struct {
 	Name    string
@@ -104,7 +102,7 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 			}
 		}
 
-		languages = append(languages, lang)
+		Languages = append(Languages, lang)
 	}
 
 	return nil
@@ -266,7 +264,7 @@ func readQuery(config string, defaultConfigs embed.FS, name string, query string
 }
 
 func GetLanguage(name string) *Language {
-	for _, lang := range languages {
+	for _, lang := range Languages {
 		if lang.Name == name || slices.Contains(lang.Config.AltNames, name) {
 			return lang
 		}
@@ -276,7 +274,7 @@ func GetLanguage(name string) *Language {
 }
 
 func GetLanguageByMIMEType(mimeType string) *Language {
-	for _, language := range languages {
+	for _, language := range Languages {
 		if slices.Contains(language.Config.MIMETypes, mimeType) {
 			return language
 		}
@@ -288,7 +286,7 @@ func GetLanguageByFilename(filename string) *Language {
 	ext := filepath.Ext(filename)
 	fileName := filepath.Base(filename)
 
-	for _, language := range languages {
+	for _, language := range Languages {
 		if slices.Contains(language.Config.FileTypes, ext) || slices.Contains(language.Config.Files, fileName) || matchGlobs(language.Config.Files, filename) {
 			return language
 		}

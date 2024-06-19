@@ -1,4 +1,4 @@
-package editor
+package file
 
 import (
 	"fmt"
@@ -145,6 +145,14 @@ func (f *File) SetLanguage(name string) {
 	// reset tree and matches when changing language
 	f.tree = nil
 	f.matches = nil
+}
+
+func (f *File) Buffer() *buffer.Buffer {
+	return f.buffer
+}
+
+func (f *File) Autocomplete() *Autocompleter {
+	return f.autocomplete
 }
 
 func (f *File) Range() buffer.Range {
@@ -583,7 +591,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		slices.Reverse(matches)
 		var currentMatches []string
 		for _, match := range matches {
-			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s) (%s: [%d, %d] - [%d, %d]) ", match.Type, match.ReferenceType, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col))
+			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d] ref: %s) ", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, match.ReferenceType))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 

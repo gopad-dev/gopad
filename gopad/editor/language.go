@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -16,7 +17,7 @@ const SetLanguageOverlayID = "editor.language"
 var _ overlay.Overlay = (*SetLanguageOverlay)(nil)
 
 func NewSetLanguageOverlay() SetLanguageOverlay {
-	l := config.NewList(languages)
+	l := config.NewList(file.Languages)
 	l.TextInput.Placeholder = "Type a language and press enter to set it"
 	l.Focus()
 
@@ -26,7 +27,7 @@ func NewSetLanguageOverlay() SetLanguageOverlay {
 }
 
 type SetLanguageOverlay struct {
-	l list.Model[*Language]
+	l list.Model[*file.Language]
 }
 
 func (s SetLanguageOverlay) ID() string {
@@ -60,7 +61,7 @@ func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			if item == nil {
 				return s, nil
 			}
-			lang := item.(*Language)
+			lang := item.(*file.Language)
 			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), SetLanguage(lang.Name))
 		}
 	}

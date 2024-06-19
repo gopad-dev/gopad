@@ -7,7 +7,7 @@
 
 (command_name) @function
 
-(variable_name) @variable.other.member
+(variable_name) @variable
 
 [
   "case"

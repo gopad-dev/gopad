@@ -4,14 +4,28 @@
 (field_identifier) @property
 (identifier) @variable
 
+(const_declaration
+  (const_spec
+    name: (identifier) @constant))
+
+(source_file
+  (var_declaration
+    (var_spec
+      name: (identifier) @variable.other)))
+
 ; Function calls
+
+(call_expression
+  function: (identifier) @function)
 
 (call_expression
   function: (identifier) @function.builtin
   (#match? @function.builtin "^(append|cap|close|complex|copy|delete|imag|len|make|new|panic|print|println|real|recover|min|max)$"))
 
+; Type Conversions
 (call_expression
-  function: (identifier) @function)
+  function: (identifier) @type.builtin
+  (#match? @type.builtin "^(any|bool|byte|comparable|complex128|complex64|error|float32|float64|int|int16|int32|int64|int8|rune|string|uint|uint16|uint32|uint64|uint8|uintptr)$"))
 
 (call_expression
   function: (selector_expression
@@ -25,6 +39,13 @@
 
 ((type_identifier) @type.builtin
   (#match? @type.builtin "^(any|bool|byte|comparable|complex128|complex64|error|float32|float64|int|int16|int32|int64|int8|rune|string|uint|uint16|uint32|uint64|uint8|uintptr)$"))
+
+(composite_literal
+  (literal_value
+    (keyed_element
+      .
+      (literal_element
+        (identifier) @property))))
 
 ; Function definitions
 
@@ -47,16 +68,16 @@
 (type_declaration
   (type_spec
     (interface_type
-	  (method_elem
-	    name: (field_identifier) @function.method))))
+      (method_elem
+        name: (field_identifier) @function.method))))
 
 (type_declaration
   (type_spec
     (interface_type
-	  (method_elem
-	    (parameter_list
-	      (parameter_declaration
-	        name: (identifier) @variable.parameter))))))
+      (method_elem
+        (parameter_list
+          (parameter_declaration
+            name: (identifier) @variable.parameter))))))
 
 
 ; Labels

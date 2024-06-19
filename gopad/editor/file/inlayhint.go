@@ -1,4 +1,4 @@
-package editor
+package file
 
 import (
 	"go.gopad.dev/gopad/gopad/ls"
