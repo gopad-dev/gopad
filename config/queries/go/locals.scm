@@ -5,7 +5,7 @@
   (function_declaration)
   (type_declaration)
   (block)
-] @local.scope
+  ] @local.scope
 
 ; Definitions
 
