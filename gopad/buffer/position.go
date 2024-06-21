@@ -61,6 +61,22 @@ func (p Position) ToProtocol() protocol.Position {
 	}
 }
 
+func (p Position) Compare(start Position) int {
+	if p.Row < start.Row {
+		return -1
+	}
+	if p.Row > start.Row {
+		return 1
+	}
+	if p.Col < start.Col {
+		return -1
+	}
+	if p.Col > start.Col {
+		return 1
+	}
+	return 0
+}
+
 func ParseRange(r protocol.Range) Range {
 	return Range{
 		Start: ParsePosition(r.Start),
@@ -110,4 +126,11 @@ func (r Range) ToProtocol() protocol.Range {
 
 func (r Range) Lines() int {
 	return r.End.Row - r.Start.Row + 1
+}
+
+func (r Range) Compare(start Range) int {
+	if c := r.Start.Compare(start.Start); c != 0 {
+		return c
+	}
+	return r.End.Compare(start.End)
 }

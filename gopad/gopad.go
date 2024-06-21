@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
@@ -140,6 +141,11 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
+	start := time.Now()
+	defer func() {
+		log.Printf("gopad view took %s", time.Since(start))
+	}()
+
 	appBar := g.AppBar()
 	codeBar := g.CodeBar()
 

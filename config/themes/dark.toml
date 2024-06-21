@@ -66,6 +66,7 @@ hint = 0xf06e8
 "xml" = 0xf05c0
 "python" = 0xf0320
 "requirements" = 0xf0320
+"javascript" = 0xf031e
 
 [styles]
 [styles.diagnostics]

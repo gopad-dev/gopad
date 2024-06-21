@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
@@ -862,6 +863,11 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 }
 
 func (e *Editor) View(width int, height int) string {
+	start := time.Now()
+	defer func() {
+		log.Printf("editor view took %s", time.Since(start))
+	}()
+
 	var fileTree string
 	if e.fileTree.Visible() {
 		fileTree = e.fileTree.View(height)

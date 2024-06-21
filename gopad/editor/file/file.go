@@ -2,11 +2,13 @@ package file
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -85,13 +87,14 @@ type File struct {
 	language              *Language
 	tree                  *Tree
 	autocomplete          *Autocompleter
-	diagnosticVersions    map[ls.DiagnosticType]int32
-	diagnostics           []ls.Diagnostic
-	inlayHints            []ls.InlayHint
-	matchesVersion        int32
-	matches               []Match
-	changes               []Change
 	showCurrentDiagnostic bool
+
+	diagnosticVersions map[ls.DiagnosticType]int32
+	diagnostics        []ls.Diagnostic
+	inlayHints         []ls.InlayHint
+	matchesVersion     int32
+	matches            []Match
+	changes            []Change
 }
 
 func (f *File) Name() string {
@@ -441,6 +444,11 @@ func (f *File) ToggleLineComment() tea.Cmd {
 }
 
 func (f *File) View(width int, height int, border bool, debug bool) string {
+	start := time.Now()
+	defer func() {
+		log.Printf("file view took %s", time.Since(start))
+	}()
+
 	styles := config.Theme.Editor
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
