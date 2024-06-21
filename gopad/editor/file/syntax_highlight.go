@@ -5,15 +5,16 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	sitter "go.gopad.dev/go-tree-sitter"
+	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-func (f *File) SetMatches(version int32, matches []Match) {
+func (f *File) SetMatches(version int32, matches [][]*Match) {
 	if version < f.matchesVersion {
 		return
 	}
@@ -25,19 +26,22 @@ func (f *File) SetMatches(version int32, matches []Match) {
 	f.matches = append(f.matches, matches...)
 }
 
-func (f *File) Matches() []Match {
-	return f.matches
-}
-
-func (f *File) MatchesForLineCol(row int, col int) []Match {
+func (f *File) MatchesForLineCol(row int, col int) []*Match {
 	pos := buffer.Position{Row: row, Col: col}
 
-	var matches []Match
-	for _, match := range f.matches {
+	if len(f.matches) <= row {
+		return nil
+	}
+
+	lineMatches := f.matches[row]
+
+	var matches []*Match
+	for _, match := range lineMatches {
 		if match.Range.Contains(pos) {
 			matches = append(matches, match)
 		}
 	}
+
 	return matches
 }
 
@@ -116,25 +120,24 @@ type LocalScope struct {
 }
 
 func (f *File) HighlightTree() {
+	now := time.Now()
+	defer func() {
+		log.Println("highlighting took", time.Since(now))
+	}()
 	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil {
 		return
 	}
 	version := f.Version()
 
-	matches := highlightTree(f.tree.Copy())
-	// slices.SortFunc(matches, func(a, b Match) int {
-	//	return b.Priority - a.Priority
-	// })
-
-	f.SetMatches(version, matches)
+	f.SetMatches(version, highlightTree(f.tree.Copy(), f.buffer.LinesLen()))
 }
 
-func highlightTree(tree *Tree) []Match {
+func highlightTree(tree *Tree, lines int) [][]*Match {
 	query := tree.Language.Grammar.HighlightsQuery
 	queryCursor := sitter.NewQueryCursor()
 	queryCursor.Exec(query.Query, tree.Tree.RootNode())
 
-	var matches []Match
+	lineMatches := make([][]*Match, lines)
 	var scopes []*LocalScope
 	var lastDef *LocalDef
 	var lastRef *LocalDef
@@ -172,14 +175,12 @@ func highlightTree(tree *Tree) []Match {
 
 		if uint32(match.PatternIndex) < query.HighlightsPatternIndex {
 			if query.ScopeCaptureID != nil && capture.Index == *query.ScopeCaptureID {
-				log.Println("New scope")
 				scopes = append(scopes, &LocalScope{
 					Inherits:  true,
 					Range:     captureRange,
 					LocalDefs: nil,
 				})
 			} else if query.DefinitionCaptureID != nil && capture.Index == *query.DefinitionCaptureID {
-				log.Println("New definition:", capture.Node.Content())
 				if len(scopes) > 0 {
 					def := &LocalDef{
 						Name: capture.Node.Content(),
@@ -192,7 +193,6 @@ func highlightTree(tree *Tree) []Match {
 					scope.LocalDefs = append(scope.LocalDefs, def)
 				}
 			} else if query.ReferenceCaptureID != nil && capture.Index == *query.ReferenceCaptureID {
-				log.Println("Found reference:", capture.Node.Content())
 				for i := len(scopes) - 1; i >= 0; i-- {
 					for _, def := range scopes[i].LocalDefs {
 						if def.Name == capture.Node.Content() {
@@ -219,30 +219,39 @@ func highlightTree(tree *Tree) []Match {
 			lastDef.Type = query.Query.CaptureNameForID(capture.Index)
 		}
 
-		highlightMatch := Match{
+		var refType string
+		if lastRef != nil {
+			refType = lastRef.Type
+		}
+
+		lineMatch := &Match{
 			Range: buffer.Range{
 				Start: buffer.Position{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
 				End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
 			},
-			Type:     query.Query.CaptureNameForID(capture.Index),
-			Priority: getPriority(match),
-			Source:   tree.Language.Name,
+			Type:          query.Query.CaptureNameForID(capture.Index),
+			ReferenceType: refType,
+			Priority:      getPriority(match),
+			Source:        tree.Language.Name,
 		}
 
-		if lastRef != nil {
-			highlightMatch.ReferenceType = lastRef.Type
+		for row := captureRange.Start.Row; row <= captureRange.End.Row; row++ {
+			lineMatches[row] = append(lineMatches[row], lineMatch)
 		}
 
-		matches = append(matches, highlightMatch)
 		lastCapture = &capture
 	}
 
 	for _, subTree := range tree.SubTrees {
-		subMatches := highlightTree(subTree)
-		matches = append(matches, subMatches...)
+		for row, matches := range highlightTree(subTree, lines) {
+			if len(matches) == 0 {
+				continue
+			}
+			lineMatches[row] = append(lineMatches[row], matches...)
+		}
 	}
 
-	return matches
+	return lineMatches
 }
 
 func getPriority(match *sitter.QueryMatch) int {
