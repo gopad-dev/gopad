@@ -19,51 +19,35 @@
   function: (identifier) @function)
 
 (call_expression
+  function: (selector_expression
+              field: (field_identifier) @function.method))
+
+(call_expression
   function: (identifier) @function.builtin
   (#any-of? @function.builtin "append" "cap" "close" "complex" "copy" "delete" "imag" "len" "make" "new" "panic" "print" "println" "real" "recover" "min" "max"))
-
-; Type Conversions
-(call_expression
-  function: (identifier) @type.builtin
-  (#any-of? @type.builtin "any" "bool" "byte" "comparable" "complex128" "complex64" "error" "float32" "float64" "int" "int16" "int32" "int64" "int8" "rune" "string" "uint" "uint16" "uint32" "uint64" "uint8" "uintptr"))
 
 (call_expression
   function: (selector_expression
               field: (field_identifier) @function.method))
 
-; Types
+; Type Conversions
 
-[
-  "chan"
-  "map"
-  ] @type.builtin
-
-(type_parameter_list
-  (type_parameter_declaration
-    name: (identifier) @type.parameter))
-
-((type_identifier) @type.builtin
-    (#any-of? @function.builtin "append" "cap" "close" "complex" "copy" "delete" "imag" "len" "make" "new" "panic" "print" "println" "real" "recover" "min" "max"))
-
-(composite_literal
-  (literal_value
-    (keyed_element
-      .
-      (literal_element
-        (identifier) @property))))
+(call_expression
+  function: (identifier) @type.builtin
+  (#any-of? @type.builtin "any" "bool" "byte" "comparable" "complex128" "complex64" "error" "float32" "float64" "int" "int16" "int32" "int64" "int8" "rune" "string" "uint" "uint16" "uint32" "uint64" "uint8" "uintptr"))
 
 ; Function definitions
 
 (function_declaration
   name: (identifier) @function)
 
+(method_declaration
+  name: (field_identifier) @function.method)
+
 (function_declaration
   (parameter_list
     (parameter_declaration
       name: (identifier) @variable.parameter)))
-
-(method_declaration
-  name: (field_identifier) @function.method)
 
 (method_declaration
   (parameter_list
@@ -84,6 +68,26 @@
           (parameter_declaration
             name: (identifier) @variable.parameter))))))
 
+; Types
+
+[
+  "chan"
+  "map"
+  ] @type.builtin
+
+(type_parameter_list
+  (type_parameter_declaration
+    name: (identifier) @type.parameter))
+
+((type_identifier) @type.builtin
+  (#any-of? @type.builtin "any" "bool" "byte" "comparable" "complex128" "complex64" "error" "float32" "float64" "int" "int16" "int32" "int64" "int8" "rune" "string" "uint" "uint16" "uint32" "uint64" "uint8" "uintptr"))
+
+(composite_literal
+  (literal_value
+    (keyed_element
+      .
+      (literal_element
+        (identifier) @property))))
 
 ; Labels
 
@@ -153,14 +157,14 @@
 [
   "import"
   "package"
-] @keyword.control.import
+  ] @keyword.control.import
 
 [
   "else"
   "case"
   "switch"
   "if"
-] @keyword.conditional
+  ] @keyword.conditional
 
 "for" @keyword.repeat
 
@@ -195,7 +199,6 @@
 [
   (interpreted_string_literal)
   (raw_string_literal)
-  (rune_literal)
   ] @string
 
 (rune_literal) @constant.character

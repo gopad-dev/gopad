@@ -87,7 +87,7 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "comment.note" = { foreground = '2', bold = true }
 "comment.todo" = { foreground = '15', bold = true }
 
-"variable" = { }
+"variable" = { foreground = '15' }
 "variable.builtin" = { foreground = '14' }
 "variable.parameter" = { foreground = '3' }
 "variable.other" = { foreground = '1' }
@@ -107,11 +107,11 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "keyword.directive" = { foreground = '13', italic = true }
 "section" = { foreground = '13' }
 
-#"punctuation.delimiter" = { foreground = '11' }
+"punctuation.delimiter" = { foreground = '15' }
 "punctuation.special" = { foreground = '13' }
-#"punctuation.bracket" = { foreground = '11' }
+"punctuation.bracket" = { foreground = '15' }
 
-"operator" = { }
+"operator" = { foreground = '15' }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
 "string.special" = { foreground = '3' }
@@ -123,7 +123,7 @@ hint = { underline = true, underline_style = 'curly', underline_color = '248' }
 "markup.heading.marker" = { foreground = '13' }
 "markup.raw" = { foreground = '10' }
 # reset highlight for block code to allow injection of language specific styles
-"markup.raw.block" = { }
+"markup.raw.block" = { foreground = '15' }
 "markup.list" = { foreground = '13' }
 "markup.quote" = { foreground = '10' }
 "markup.link.url" = { foreground = '14', underline = true }

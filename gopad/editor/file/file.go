@@ -591,21 +591,25 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		slices.Reverse(matches)
 		var currentMatches []string
 		for _, match := range matches {
-			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d] ref: %s) ", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, match.ReferenceType))
+			var currentRef string
+			if match.ReferenceType != "" {
+				currentRef = fmt.Sprintf(" ref: %s", match.ReferenceType)
+			}
+			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]%s)", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, currentRef))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 
 		diagnostics := f.DiagnosticsForLineCol(cursorRow, realCursorCol)
 		var currentDiagnostics []string
 		for _, diag := range diagnostics {
-			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d]) ", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
+			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d])", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Diagnostics: %s", strings.Join(currentDiagnostics, ", ")))
 
 		hints := f.InlayHintsForLine(cursorRow)
 		var currentHints []string
 		for _, hint := range hints {
-			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d]) ", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
+			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d])", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", ")))
 	}
