@@ -93,7 +93,7 @@ type File struct {
 	diagnostics        []ls.Diagnostic
 	inlayHints         []ls.InlayHint
 	matchesVersion     int32
-	matches            []Match
+	matches            [][]*Match
 	changes            []Change
 }
 

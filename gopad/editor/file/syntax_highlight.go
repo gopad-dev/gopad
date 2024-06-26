@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 )
 
-func (f *File) SetMatches(version int32, matches []Match) {
+func (f *File) SetMatches(version int32, matches [][]*Match) {
 	if version < f.matchesVersion {
 		return
 	}
@@ -25,11 +26,17 @@ func (f *File) SetMatches(version int32, matches []Match) {
 	f.matches = append(f.matches, matches...)
 }
 
-func (f *File) MatchesForLineCol(row int, col int) []Match {
+func (f *File) MatchesForLineCol(row int, col int) []*Match {
 	pos := buffer.Position{Row: row, Col: col}
 
-	var matches []Match
-	for _, match := range f.matches {
+	if len(f.matches) <= row {
+		return nil
+	}
+
+	lineMatches := f.matches[row]
+
+	var matches []*Match
+	for _, match := range lineMatches {
 		if match.Range.Contains(pos) {
 			matches = append(matches, match)
 		}
@@ -115,22 +122,22 @@ type LocalScope struct {
 func (f *File) HighlightTree() {
 	now := time.Now()
 	defer func() {
-		fmt.Println("highlighting took", time.Since(now))
+		log.Println("highlighting took", time.Since(now))
 	}()
 	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil {
 		return
 	}
 	version := f.Version()
 
-	f.SetMatches(version, highlightTree(f.tree.Copy()))
+	f.SetMatches(version, highlightTree(f.tree.Copy(), f.buffer.LinesLen()))
 }
 
-func highlightTree(tree *Tree) []Match {
+func highlightTree(tree *Tree, lines int) [][]*Match {
 	query := tree.Language.Grammar.HighlightsQuery
 	queryCursor := sitter.NewQueryCursor()
 	queryCursor.Exec(query.Query, tree.Tree.RootNode())
 
-	var matches []Match
+	lineMatches := make([][]*Match, lines)
 	var scopes []*LocalScope
 	var lastDef *LocalDef
 	var lastRef *LocalDef
@@ -217,7 +224,7 @@ func highlightTree(tree *Tree) []Match {
 			refType = lastRef.Type
 		}
 
-		matches = append(matches, Match{
+		lineMatch := &Match{
 			Range: buffer.Range{
 				Start: buffer.Position{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
 				End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
@@ -226,16 +233,25 @@ func highlightTree(tree *Tree) []Match {
 			ReferenceType: refType,
 			Priority:      getPriority(match),
 			Source:        tree.Language.Name,
-		})
+		}
+
+		for row := captureRange.Start.Row; row <= captureRange.End.Row; row++ {
+			lineMatches[row] = append(lineMatches[row], lineMatch)
+		}
 
 		lastCapture = &capture
 	}
 
 	for _, subTree := range tree.SubTrees {
-		matches = append(matches, highlightTree(subTree)...)
+		for row, matches := range highlightTree(subTree, lines) {
+			if len(matches) == 0 {
+				continue
+			}
+			lineMatches[row] = append(lineMatches[row], matches...)
+		}
 	}
 
-	return matches
+	return lineMatches
 }
 
 func getPriority(match *sitter.QueryMatch) int {
