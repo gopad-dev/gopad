@@ -15,6 +15,17 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
+const (
+	ErrorStyle             = "error"
+	ErrorInlineStyle       = "error.inline"
+	WarningStyle           = "warning"
+	WarningInlineStyle     = "warning.inline"
+	InformationStyle       = "information"
+	InformationInlineStyle = "information.inline"
+	HintStyle              = "hint"
+	HintInlineStyle        = "hint.inline"
+)
+
 type RawThemeConfig struct {
 	Name   string       `toml:"name"`
 	Colors ColorsConfig `toml:"colors"`
@@ -71,14 +82,14 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				ResultStyle: lipgloss.NewStyle().Padding(0, 1),
 			},
 			Diagnostics: DiagnosticStyles{
-				ErrorStyle:           lipgloss.NewStyle().Foreground(colors.ErrorColor).Bold(true),
-				ErrorCharStyle:       c.Styles.Diagnostics.Error.Style(),
-				WarningStyle:         lipgloss.NewStyle().Foreground(colors.WarningColor).Bold(true),
-				WarningCharStyle:     c.Styles.Diagnostics.Warning.Style(),
-				InformationStyle:     lipgloss.NewStyle().Foreground(colors.InformationColor).Bold(true),
-				InformationCharStyle: c.Styles.Diagnostics.Information.Style(),
-				HintStyle:            lipgloss.NewStyle().Foreground(colors.HintColor).Bold(true),
-				HintCharStyle:        c.Styles.Diagnostics.Hint.Style(),
+				ErrorStyle:           c.Styles[ErrorStyle].Style(),
+				ErrorCharStyle:       c.Styles[ErrorInlineStyle].Style(),
+				WarningStyle:         c.Styles[WarningStyle].Style(),
+				WarningCharStyle:     c.Styles[WarningInlineStyle].Style(),
+				InformationStyle:     c.Styles[InformationStyle].Style(),
+				InformationCharStyle: c.Styles[InformationInlineStyle].Style(),
+				HintStyle:            c.Styles[HintStyle].Style(),
+				HintCharStyle:        c.Styles[HintInlineStyle].Style(),
 			},
 			Documentation: DocumentationStyles{
 				Style:        lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
@@ -90,7 +101,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				ItemStyle:         lipgloss.NewStyle(),
 				SelectedItemStyle: lipgloss.NewStyle().Reverse(true),
 			},
-			CodeStyles: c.Styles.Code.Styles(),
+			CodeStyles: c.Styles.Styles(),
 		},
 		Overlay: OverlayStyles{
 			Styles: overlay.Styles{
@@ -116,7 +127,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 		FilePicker: filepicker.Styles{
 			DisabledCursor:   lipgloss.NewStyle().Foreground(colors.DisabledCursorColor),
 			Cursor:           lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Bold(true),
-			Symlink:          lipgloss.NewStyle().Foreground(colors.InformationColor),
+			Symlink:          lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
 			Directory:        lipgloss.NewStyle().Foreground(colors.PrimaryColor),
 			File:             lipgloss.NewStyle().Foreground(colors.PrimaryTextColor),
 			DisabledFile:     lipgloss.NewStyle().Foreground(colors.DisabledTextColor),
@@ -124,7 +135,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 			Permission:       lipgloss.NewStyle().Foreground(colors.DisabledTextColor),
 			Selected:         lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Bold(true),
 			FileSize:         lipgloss.NewStyle().Foreground(colors.DisabledTextColor).Width(7).Align(lipgloss.Right),
-			EmptyDirectory:   lipgloss.NewStyle().Foreground(colors.ErrorColor).PaddingLeft(2).SetString("No Files Found."),
+			EmptyDirectory:   lipgloss.NewStyle().Foreground(colors.PrimaryColor).PaddingLeft(2).SetString("No Files Found."),
 		},
 		Cursor: cursor.Styles{
 			BlockCursor:     lipgloss.NewStyle().Foreground(colors.CursorColor).Reverse(true),
@@ -164,11 +175,6 @@ type ColorsConfig struct {
 	BackgroundColor          string `toml:"background_color"`
 	SecondaryBackgroundColor string `toml:"secondary_background_color"`
 
-	ErrorColor       string `toml:"error_color"`
-	WarningColor     string `toml:"warning_color"`
-	InformationColor string `toml:"information_color"`
-	HintColor        string `toml:"hint_color"`
-
 	CursorColor         string `toml:"cursor_color"`
 	DisabledCursorColor string `toml:"disabled_cursor_color"`
 }
@@ -185,36 +191,19 @@ func (c ColorsConfig) Colors() Colors {
 		BackgroundColor:          lipgloss.Color(c.BackgroundColor),
 		SecondaryBackgroundColor: lipgloss.Color(c.SecondaryBackgroundColor),
 
-		ErrorColor:       lipgloss.Color(c.ErrorColor),
-		WarningColor:     lipgloss.Color(c.WarningColor),
-		InformationColor: lipgloss.Color(c.InformationColor),
-		HintColor:        lipgloss.Color(c.HintColor),
-
 		CursorColor:         lipgloss.Color(c.CursorColor),
 		DisabledCursorColor: lipgloss.Color(c.DisabledCursorColor),
 	}
 }
 
-type CodeStyles map[string]Style
+type StylesConfig map[string]Style
 
-func (c CodeStyles) Styles() map[string]lipgloss.Style {
+func (c StylesConfig) Styles() map[string]lipgloss.Style {
 	m := make(map[string]lipgloss.Style)
 	for k, v := range c {
 		m[k] = v.Style()
 	}
 	return m
-}
-
-type StylesConfig struct {
-	Diagnostics DiagnosticsStylesConfig `toml:"diagnostics"`
-	Code        CodeStyles              `toml:"code"`
-}
-
-type DiagnosticsStylesConfig struct {
-	Error       Style `toml:"error"`
-	Warning     Style `toml:"warning"`
-	Information Style `toml:"information"`
-	Hint        Style `toml:"hint"`
 }
 
 type IconsConfig struct {

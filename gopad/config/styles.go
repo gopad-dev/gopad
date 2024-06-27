@@ -49,11 +49,6 @@ type Colors struct {
 	BackgroundColor          lipgloss.Color
 	SecondaryBackgroundColor lipgloss.Color
 
-	ErrorColor       lipgloss.Color
-	WarningColor     lipgloss.Color
-	InformationColor lipgloss.Color
-	HintColor        lipgloss.Color
-
 	CursorColor         lipgloss.Color
 	DisabledCursorColor lipgloss.Color
 }

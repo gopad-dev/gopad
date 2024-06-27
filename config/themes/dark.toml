@@ -9,10 +9,6 @@ secondary_text_color = '248'
 disabled_text_color = '8'
 background_color = ''
 secondary_background_color = '235'
-error_color = '1'
-warning_color = '3'
-information_color = '2'
-hint_color = '248'
 cursor_color = '9'
 disabled_cursor_color = '1'
 
@@ -68,15 +64,20 @@ hint = 0xf06e8
 "requirements" = 0xf0320
 "javascript" = 0xf031e
 
+# Style configuration
 [styles]
-[styles.diagnostics]
-error = { underline = true, underline_style = 'curly', underline_color = '1' }
-warning = { underline = true, underline_style = 'curly', underline_color = '3' }
-information = { underline = true, underline_style = 'curly', underline_color = '2' }
-hint = { underline = true, underline_style = 'curly', underline_color = '248' }
+"error" = { foreground = '1', bold = true }
+"warning" = { foreground = '3', bold = true }
+"information" = { foreground = '2', bold = true }
+"hint" = { foreground = '248', bold = true }
+"trace" = { foreground = '15', bold = true }
 
-# Code style configuration
-[styles.code]
+# Code styles
+"error.inline" = { underline = true, underline_style = 'curly', underline_color = '1' }
+"warning.inline" = { underline = true, underline_style = 'curly', underline_color = '3' }
+"information.inline" = { underline = true, underline_style = 'curly', underline_color = '2' }
+"hint.inline" = { underline = true, underline_style = 'curly', underline_color = '248' }
+
 "tag" = { foreground = '9' }
 "attribute" = { foreground = '3' }
 "property" = { foreground = '9' }
