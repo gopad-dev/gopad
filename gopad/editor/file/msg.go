@@ -1,4 +1,4 @@
-package editor
+package file
 
 import (
 	"fmt"
@@ -11,10 +11,10 @@ import (
 )
 
 func Save() tea.Msg {
-	return saveMsg{}
+	return SaveMsg{}
 }
 
-type saveMsg struct{}
+type SaveMsg struct{}
 
 func SaveAll() tea.Msg {
 	return saveAllMsg{}
@@ -23,38 +23,38 @@ func SaveAll() tea.Msg {
 type saveAllMsg struct{}
 
 func Close() tea.Msg {
-	return closeMsg{}
+	return CloseMsg{}
 }
 
-type closeMsg struct{}
+type CloseMsg struct{}
 
 func CloseAll() tea.Msg {
-	return closeAllMsg{}
+	return CloseAllMsg{}
 }
 
-type closeAllMsg struct{}
+type CloseAllMsg struct{}
 
 func Rename() tea.Msg {
-	return renameMsg{}
+	return RenameMsg{}
 }
 
-type renameMsg struct{}
+type RenameMsg struct{}
 
 func Delete() tea.Msg {
-	return deleteMsg{}
+	return DeleteMsg{}
 }
 
-type deleteMsg struct{}
+type DeleteMsg struct{}
 
 func SetLanguage(lang string) tea.Cmd {
 	return func() tea.Msg {
-		return setLanguageMsg{
+		return SetLanguageMsg{
 			Language: lang,
 		}
 	}
 }
 
-type setLanguageMsg struct {
+type SetLanguageMsg struct {
 	Language string
 }
 
@@ -63,10 +63,10 @@ func Paste() tea.Msg {
 	if err != nil {
 		return notifications.Add(fmt.Sprintf("Error pasting: %s", err))()
 	}
-	return pasteMsg(text)
+	return PasteMsg(text)
 }
 
-type pasteMsg []byte
+type PasteMsg []byte
 
 func Copy(b []byte) tea.Cmd {
 	return func() tea.Msg {
@@ -85,16 +85,16 @@ func Cut(s buffer.Range, b []byte) tea.Cmd {
 		}
 
 		return tea.Batch(func() tea.Msg {
-			return cutMsg(s)
+			return CutMsg(s)
 		}, notifications.Add("Cut to clipboard"))()
 	}
 }
 
-type cutMsg buffer.Range
+type CutMsg buffer.Range
 
 func Select(fromRow int, fromCol int, toRow int, toCol int) tea.Cmd {
 	return func() tea.Msg {
-		return selectMsg{
+		return SelectMsg{
 			FromRow: fromRow,
 			FromCol: fromCol,
 			ToRow:   toRow,
@@ -103,7 +103,7 @@ func Select(fromRow int, fromCol int, toRow int, toCol int) tea.Cmd {
 	}
 }
 
-type selectMsg struct {
+type SelectMsg struct {
 	FromRow int
 	FromCol int
 	ToRow   int
@@ -112,98 +112,110 @@ type selectMsg struct {
 
 func Scroll(row int, col int) tea.Cmd {
 	return func() tea.Msg {
-		return scrollMsg{
+		return ScrollMsg{
 			Row: row,
 			Col: col,
 		}
 	}
 }
 
-type scrollMsg struct {
+type ScrollMsg struct {
 	Row int
 	Col int
 }
 
 func OpenDir(name string) tea.Cmd {
 	return func() tea.Msg {
-		return openDirMsg{
+		return OpenDirMsg{
 			Name: name,
 		}
 	}
 }
 
-type openDirMsg struct {
+type OpenDirMsg struct {
 	Name string
 }
 
 func OpenFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return openFileMsg{
+		return OpenFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type openFileMsg struct {
+func OpenFilePosition(name string, row int, col int) tea.Cmd {
+	return func() tea.Msg {
+		return OpenFileMsg{
+			Name: name,
+			Row:  row,
+			Col:  col,
+		}
+	}
+}
+
+type OpenFileMsg struct {
 	Name string
+	Row  int
+	Col  int
 }
 
 func SaveFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return saveFileMsg{
+		return SaveFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type saveFileMsg struct {
+type SaveFileMsg struct {
 	Name string
 }
 
 func CloseFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return closeFileMsg{
+		return CloseFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type closeFileMsg struct {
+type CloseFileMsg struct {
 	Name string
 }
 
 func FocusFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return focusFileMsg{
+		return FocusFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type focusFileMsg struct {
+type FocusFileMsg struct {
 	Name string
 }
 
 func NewFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return newFileMsg{
+		return NewFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type newFileMsg struct {
+type NewFileMsg struct {
 	Name string
 }
 
 func RenameFile(name string) tea.Cmd {
 	return func() tea.Msg {
-		return renameFileMsg{
+		return RenameFileMsg{
 			Name: name,
 		}
 	}
 }
 
-type renameFileMsg struct {
+type RenameFileMsg struct {
 	Name string
 }

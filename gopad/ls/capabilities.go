@@ -67,6 +67,14 @@ func clientCapabilities(cfg config.LanguageServerConfig) protocol.ClientCapabili
 		}
 	}
 
+	var definition *protocol.DefinitionTextDocumentClientCapabilities
+	if slices.Contains(cfg.Features, config.LanguageServerFeatureGoToDefinition) {
+		definition = &protocol.DefinitionTextDocumentClientCapabilities{
+			DynamicRegistration: false,
+			LinkSupport:         false,
+		}
+	}
+
 	return protocol.ClientCapabilities{
 		Workspace: &protocol.WorkspaceClientCapabilities{
 			WorkspaceFolders: true,
@@ -77,6 +85,7 @@ func clientCapabilities(cfg config.LanguageServerConfig) protocol.ClientCapabili
 			PublishDiagnostics: publishDiagnostics,
 			InlayHint:          inlayHint,
 			Diagnostic:         diagnostic,
+			Definition:         definition,
 		},
 	}
 }

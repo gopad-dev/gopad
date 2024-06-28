@@ -138,7 +138,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			item := o.list.Selected().(outlineItem)
 			return o, tea.Batch(
 				overlay.Close(OutlineOverlayID),
-				Scroll(item.r.Start.Row, item.r.Start.Col),
+				file.Scroll(item.r.Start.Row, item.r.Start.Col),
 			)
 
 		case key.Matches(msg, config.Keys.Cancel):

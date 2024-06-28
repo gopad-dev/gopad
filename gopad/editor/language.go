@@ -62,7 +62,7 @@ func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 				return s, nil
 			}
 			lang := item.(*file.Language)
-			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), SetLanguage(lang.Name))
+			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), file.SetLanguage(lang.Name))
 		}
 	}
 

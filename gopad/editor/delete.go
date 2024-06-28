@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -16,7 +17,7 @@ var _ overlay.Overlay = (*DeleteOverlay)(nil)
 
 func NewDeleteOverlay() DeleteOverlay {
 	bOK := config.NewButton("OK", func() tea.Cmd {
-		return tea.Sequence(overlay.Close(DeleteOverlayID), Delete)
+		return tea.Sequence(overlay.Close(DeleteOverlayID), file.Delete)
 	})
 
 	bCancel := config.NewButton("Cancel", func() tea.Cmd {
@@ -64,7 +65,7 @@ func (q DeleteOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		case key.Matches(msg, config.Keys.Cancel):
 			return q, overlay.Close(DeleteOverlayID)
 		case key.Matches(msg, config.Keys.Editor.DeleteRight):
-			return q, tea.Sequence(overlay.Close(DeleteOverlayID), Delete)
+			return q, tea.Sequence(overlay.Close(DeleteOverlayID), file.Delete)
 		case key.Matches(msg, config.Keys.Left):
 			q.buttonOK.Focus()
 			q.buttonCancel.Blur()

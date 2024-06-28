@@ -1,17 +1,23 @@
 ; Identifiers
 
 (type_identifier) @type
-(field_identifier) @property
+(field_identifier) @variable
 (identifier) @variable
+
+; mark exported fields as properties
+((field_identifier) @property
+  (#match? @property "^[A-Z]"))
 
 (const_declaration
   (const_spec
     name: (identifier) @constant))
 
+; mark exported var as properties
 (source_file
   (var_declaration
     (var_spec
-      name: (identifier) @variable.other)))
+      name: (identifier) @property
+      (#match? @property "^[A-Z]"))))
 
 ; Function calls
 
@@ -79,6 +85,11 @@
   (type_parameter_declaration
     name: (identifier) @type.parameter))
 
+(func_literal
+  parameters: (parameter_list
+    (parameter_declaration
+      name: (identifier) @variable.parameter)))
+
 ((type_identifier) @type.builtin
   (#any-of? @type.builtin "any" "bool" "byte" "comparable" "complex128" "complex64" "error" "float32" "float64" "int" "int16" "int32" "int64" "int8" "rune" "string" "uint" "uint16" "uint32" "uint64" "uint8" "uintptr"))
 
@@ -87,12 +98,20 @@
     (keyed_element
       .
       (literal_element
-        (identifier) @property))))
+        (identifier) @variable))))
+
+; mark exported fields as properties
+(composite_literal
+  (literal_value
+    (keyed_element
+      .
+      (literal_element
+        (identifier) @property
+        (#match? @property "^[A-Z]")))))
 
 ; Labels
 
-(labeled_statement
-  (label_name) @label)
+(label_name) @label
 
 ; Operators
 

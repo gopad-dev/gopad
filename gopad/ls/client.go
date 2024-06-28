@@ -151,7 +151,11 @@ func (l *Client) update(msg tea.Msg) tea.Cmd {
 
 	case FileDeletedMsg:
 		cmds = append(cmds, l.updateSupportedServers(msg.Name, msg)...)
+
 	case GetInlayHintMsg:
+		cmds = append(cmds, l.updateSupportedServers(msg.Name, msg)...)
+
+	case GetDefinitionMsg:
 		cmds = append(cmds, l.updateSupportedServers(msg.Name, msg)...)
 	}
 

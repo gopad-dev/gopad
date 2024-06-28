@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
+	file2 "go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -20,7 +21,7 @@ func NewCloseOverlay(files []string) CloseOverlay {
 	bOK := config.NewButton("OK", func() tea.Cmd {
 		var cmds []tea.Cmd
 		for _, file := range files {
-			cmds = append(cmds, CloseFile(file))
+			cmds = append(cmds, file2.CloseFile(file))
 		}
 		cmds = append(cmds, overlay.Close(CloseOverlayID))
 		return tea.Sequence(cmds...)
@@ -76,7 +77,7 @@ func (o CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		switch {
 		case key.Matches(msg, config.Keys.Editor.CloseFile):
 			for _, file := range o.files {
-				cmds = append(cmds, CloseFile(file))
+				cmds = append(cmds, file2.CloseFile(file))
 			}
 			return o, tea.Sequence(cmds...)
 		case key.Matches(msg, config.Keys.Left):

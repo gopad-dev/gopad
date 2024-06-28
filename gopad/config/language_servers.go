@@ -51,7 +51,8 @@ type LanguageServerConfig struct {
 type LanguageServerFeature string
 
 const (
-	LanguageServerFeatureCompletion  LanguageServerFeature = "completion"
-	LanguageServerFeatureDiagnostics LanguageServerFeature = "diagnostics"
-	LanguageServerFeatureInlayHints  LanguageServerFeature = "inlay_hints"
+	LanguageServerFeatureCompletion     LanguageServerFeature = "completion"
+	LanguageServerFeatureDiagnostics    LanguageServerFeature = "diagnostics"
+	LanguageServerFeatureInlayHints     LanguageServerFeature = "inlay_hints"
+	LanguageServerFeatureGoToDefinition LanguageServerFeature = "go_to_definition"
 )

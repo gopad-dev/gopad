@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbletea"
 
 	"go.gopad.dev/gopad/gopad/editor"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -57,31 +58,31 @@ var Actions = []Action{
 	{
 		Name: "Save File",
 		Run: func() tea.Cmd {
-			return editor.Save
+			return file.Save
 		},
 	},
 	{
 		Name: "Save all Files",
 		Run: func() tea.Cmd {
-			return editor.SaveAll
+			return file.SaveAll
 		},
 	},
 	{
 		Name: "Rename File",
 		Run: func() tea.Cmd {
-			return editor.Rename
+			return file.Rename
 		},
 	},
 	{
 		Name: "Close File",
 		Run: func() tea.Cmd {
-			return editor.Close
+			return file.Close
 		},
 	},
 	{
 		Name: "Close All Files",
 		Run: func() tea.Cmd {
-			return editor.CloseAll
+			return file.CloseAll
 		},
 	},
 	{

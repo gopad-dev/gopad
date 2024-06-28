@@ -31,7 +31,7 @@
   (atx_h6_marker) @markup.heading.marker
   (inline) @markup.heading.6)
 
-(info_string) @label
+(info_string) @attribute
 
 (pipe_table_header
   (pipe_table_cell) @markup.heading)
@@ -59,7 +59,7 @@
 
 (fenced_code_block
   (info_string
-    (language) @label
+    (language) @attribute
     (#set! conceal "")))
 
 (link_destination) @markup.link.url

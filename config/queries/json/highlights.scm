@@ -1,7 +1,7 @@
+(string) @string
+
 (pair
   key: (_) @property)
-
-(string) @string
 
 (number) @constant.numeric
 

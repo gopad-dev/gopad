@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
@@ -58,7 +59,7 @@ func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		case key.Matches(msg, config.Keys.OK):
 			cmds = append(cmds, tea.Sequence(
 				overlay.Close(NewOverlayID),
-				NewFile(o.fileName.Value()),
+				file.NewFile(o.fileName.Value()),
 			))
 			return o, tea.Batch(cmds...)
 		}

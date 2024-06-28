@@ -11,7 +11,7 @@ args = []
 file_types = ['.go']
 files = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
 roots = ['go.mod', 'go.sum', 'go.work', 'go.work.sum']
-features = ['inlay_hints', 'diagnostics', 'completion']
+features = ['inlay_hints', 'diagnostics', 'completion', 'go_to_definition']
 
 [language_servers.gopls.config]
 'ui.completion.usePlaceholders' = true

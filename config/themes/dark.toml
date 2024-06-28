@@ -4,7 +4,7 @@ name = 'dark'
 [colors]
 primary_color = '6'
 primary_selected_color = '14'
-primary_text_color = '15'
+primary_text_color = '7'
 secondary_text_color = '248'
 disabled_text_color = '8'
 background_color = ''
@@ -79,9 +79,9 @@ hint = 0xf06e8
 "hint.inline" = { underline = true, underline_style = 'curly', underline_color = '248' }
 
 "tag" = { foreground = '9' }
-"attribute" = { foreground = '3' }
+"attribute" = { foreground = '3', italic = true }
 "property" = { foreground = '9' }
-"label" = { foreground = '13', italic = true }
+"label" = { foreground = '15', bold = true }
 
 "comment" = { foreground = '8', italic = true }
 "comment.error" = { foreground = '1', bold = true }
@@ -89,13 +89,16 @@ hint = 0xf06e8
 "comment.note" = { foreground = '2', bold = true }
 "comment.todo" = { foreground = '15', bold = true }
 
-"variable" = { foreground = '15' }
+"variable" = { foreground = '7' }
 "variable.builtin" = { foreground = '14' }
 "variable.parameter" = { foreground = '3' }
 "variable.other" = { foreground = '1' }
+"variable.other.member" = { foreground = '7' }
 
 "constant" = { foreground = '3' }
 "constant.numeric" = { foreground = '3' }
+"constant.numeric.integer" = { foreground = '3' }
+"constant.numeric.float" = { foreground = '3' }
 "constant.builtin" = { foreground = '9' }
 "constant.builtin.boolean" = { foreground = '3' }
 "constant.character.escape" = { foreground = '6', bold = true }
@@ -105,15 +108,15 @@ hint = 0xf06e8
 "function.builtin" = { foreground = '14' }
 "function.macro" = { foreground = '14' }
 "constructor" = { foreground = '14' }
-"keyword" = { foreground = '13' }
+"keyword" = { foreground = '13', italic = true }
 "keyword.directive" = { foreground = '13', italic = true }
 "section" = { foreground = '13' }
 
-"punctuation.delimiter" = { foreground = '15' }
+"punctuation.delimiter" = { foreground = '7' }
 "punctuation.special" = { foreground = '13' }
-"punctuation.bracket" = { foreground = '15' }
+"punctuation.bracket" = { foreground = '7' }
 
-"operator" = { foreground = '15' }
+"operator" = { foreground = '7' }
 "special" = { foreground = '14' }
 "string" = { foreground = '10', bold = true }
 "string.special" = { foreground = '3' }
@@ -125,11 +128,11 @@ hint = 0xf06e8
 "markup.heading.marker" = { foreground = '13' }
 "markup.raw" = { foreground = '10' }
 # reset highlight for block code to allow injection of language specific styles
-"markup.raw.block" = { foreground = '15' }
+"markup.raw.block" = { foreground = '7' }
 "markup.list" = { foreground = '13' }
 "markup.quote" = { foreground = '10' }
 "markup.link.url" = { foreground = '14', underline = true }
-"markup.link.text" = { foreground = '13' }
+"markup.link.text" = { foreground = '13', underline = true }
 "markup.bold" = { bold = true }
 "markup.italic" = { italic = true }
 "markup.underline" = { underline = true }
@@ -138,3 +141,6 @@ hint = 0xf06e8
 "diff.plus" = { foreground = '10' }
 "diff.delta" = { foreground = '11' }
 "diff.minus" = { foreground = '9' }
+
+# Language specific styles
+"property.toml" = { foreground = '13', italic = true }

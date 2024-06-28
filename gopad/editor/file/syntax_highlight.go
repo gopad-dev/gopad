@@ -5,7 +5,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"go.gopad.dev/go-tree-sitter"
@@ -120,10 +119,6 @@ type LocalScope struct {
 }
 
 func (f *File) HighlightTree() {
-	now := time.Now()
-	defer func() {
-		log.Println("highlighting took", time.Since(now))
-	}()
 	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil {
 		return
 	}
@@ -167,14 +162,24 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 			lastScope := scopes[len(scopes)-1]
 			if captureRange.Start.GreaterThan(lastScope.Range.End) {
 				scopes = scopes[:len(scopes)-1]
+				lastRef = nil
+				lastDef = nil
 				continue
 			}
 
 			break
 		}
 
+		//if lastCapture != nil && !capture.Node.Equal(lastCapture.Node) {
+		if lastCapture != nil && lastCapture.Node.Content() != capture.Node.Content() {
+			lastDef = nil
+			lastRef = nil
+			log.Println("Reset def and ref")
+		}
+
 		if uint32(match.PatternIndex) < query.HighlightsPatternIndex {
 			if query.ScopeCaptureID != nil && capture.Index == *query.ScopeCaptureID {
+				log.Println("New scope")
 				scopes = append(scopes, &LocalScope{
 					Inherits:  true,
 					Range:     captureRange,
@@ -182,6 +187,7 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 				})
 			} else if query.DefinitionCaptureID != nil && capture.Index == *query.DefinitionCaptureID {
 				if len(scopes) > 0 {
+					log.Println("New def", capture.Node.Content())
 					def := &LocalDef{
 						Name: capture.Node.Content(),
 						Type: "",
@@ -194,8 +200,11 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 				}
 			} else if query.ReferenceCaptureID != nil && capture.Index == *query.ReferenceCaptureID {
 				for i := len(scopes) - 1; i >= 0; i-- {
-					for _, def := range scopes[i].LocalDefs {
-						if def.Name == capture.Node.Content() {
+					for ii := len(scopes[i].LocalDefs) - 1; ii >= 0; ii-- {
+						def := scopes[i].LocalDefs[ii]
+
+						if def.Type != "" && def.Name == capture.Node.Content() {
+							log.Printf("Found def: %q %q %q\n", def.Name, def.Type, capture.Node.Content())
 							lastRef = def
 							break
 						}
@@ -206,16 +215,16 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 				}
 			}
 
-			lastCapture = nil
+			lastCapture = &capture
 			continue
 		}
 
-		if lastCapture != nil && !capture.Node.Equal(lastCapture.Node) {
-			lastDef = nil
-			lastRef = nil
-		}
-
 		if lastDef != nil {
+			var lastCaptureContent string
+			if lastCapture != nil {
+				lastCaptureContent = lastCapture.Node.Content()
+			}
+			log.Printf("Set def type %q %q %q", query.Query.CaptureNameForID(capture.Index), capture.Node.Content(), lastCaptureContent)
 			lastDef.Type = query.Query.CaptureNameForID(capture.Index)
 		}
 

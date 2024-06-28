@@ -26,8 +26,8 @@ The following scopes are available for styling:
 - `namespace`
 - `special`
 
-- `keyword`
-    - `control`
+- `keyword` - Keywords
+    - `control` - Control flow keywords
         - `conditional` - `if`, `else`
         - `repeat` - `for`, `while`, `loop`
         - `import` - `import`, `export`
@@ -40,9 +40,9 @@ The following scopes are available for styling:
         - `type` - The type of something, `class`, `function`, `var`, `let`, etc.
         - `modifier` - Storage modifiers like `static`, `mut`, `const`, `ref`, etc.
 
-- `function`
+- `function` - Functions
     - `builtin` - Built-in functions (`len`, `print`, etc.)
-    - `method`
+    - `method` - Methods
         - `private` - Private methods
     - `macro`
     - `special` - (preprocessor in C)
@@ -63,12 +63,12 @@ The following scopes are available for styling:
 
 - `constant` - Constants
     - `builtin` Special constants provided by the language (`true`, `false`, `nil`, etc.)
-        - `boolean`
+        - `boolean` - `true`, `false`
     - `character`
         - `escape` - Escape sequences in strings (`\n`, `\t`, etc.)
     - `numeric` (numbers)
-        - `integer`
-        - `float`
+        - `integer` - `int`, `uint`, etc.
+        - `float` - `float32`, `float64`, etc.
     - `other` - Other constants
         - `placeholder` - Placeholders like `%v` in Go
 
@@ -105,7 +105,7 @@ The following scopes are available for styling:
     - `bold` - Bold text
     - `italic` - Italic text
     - `strikethrough` - Strikethrough text
-    - `link`
+    - `link` - Links
         - `url` - URLs pointed to by links
         - `label` - non-URL link references
         - `text` - URL and image descriptions in links
@@ -114,12 +114,12 @@ The following scopes are available for styling:
         - `inline` - Inline code blocks
         - `block` - Block code blocks
 
-- `diff` - version control changes
-    - `plus` - additions
-        - `gutter` - gutter indicator
-    - `minus` - deletions
-        - `gutter` - gutter indicator
-    - `delta` - modifications
-        - `moved` - renamed or moved files/changes
-        - `conflict` - merge conflicts
-        - `gutter` - gutter indicator
+- `diff` - Version control changes
+    - `plus` - Additions
+        - `gutter` - Gutter indicator
+    - `minus` - Deletions
+        - `gutter` - Gutter indicator
+    - `delta` - Modifications
+        - `moved` - Renamed or moved files/changes
+        - `conflict` - Merge conflicts
+        - `gutter` - Gutter indicator

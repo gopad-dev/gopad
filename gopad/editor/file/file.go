@@ -2,13 +2,11 @@ package file
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -95,6 +93,8 @@ type File struct {
 	matchesVersion     int32
 	matches            [][]*Match
 	changes            []Change
+	definitions        []ls.Definition
+	definitionsIndex   int
 }
 
 func (f *File) Name() string {
@@ -444,11 +444,6 @@ func (f *File) ToggleLineComment() tea.Cmd {
 }
 
 func (f *File) View(width int, height int, border bool, debug bool) string {
-	start := time.Now()
-	defer func() {
-		log.Printf("file view took %s", time.Since(start))
-	}()
-
 	styles := config.Theme.Editor
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -458,8 +453,9 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	prefixLength := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
 	width -= prefixLength + styles.CodePrefixStyle.GetHorizontalFrameSize() + 1
 
+	// debug takes up 4 lines
 	if debug {
-		height = max(height-3, 0)
+		height = max(height-4, 0)
 	}
 
 	f.refreshCursorViewOffset(width-2, height)
@@ -620,6 +616,12 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d])", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", ")))
+
+		var currentDefinitions []string
+		for _, definitions := range f.definitions {
+			currentDefinitions = append(currentDefinitions, fmt.Sprintf("%s ([%d, %d] - [%d, %d])", definitions.Name, definitions.Range.Start.Row, definitions.Range.Start.Col, definitions.Range.End.Row, definitions.Range.End.Col))
+		}
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Definitions: %s", strings.Join(currentDefinitions, ", ")))
 	}
 
 	return editorCode

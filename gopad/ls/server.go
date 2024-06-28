@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -182,6 +181,30 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
+	case GetDefinitionMsg:
+		locations, err := c.server.Definition(context.Background(), &protocol.DefinitionParams{
+			TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+				TextDocument: protocol.TextDocumentIdentifier{
+					URI: protocol.DocumentURI("file://" + msg.Name),
+				},
+				Position: protocol.Position{
+					Line:      uint32(msg.Row),
+					Character: uint32(msg.Col),
+				},
+			},
+		})
+		if err != nil {
+			return Err(err)
+		}
+
+		definitions := make([]Definition, 0, len(locations))
+		for _, location := range locations {
+			definitions = append(definitions, Definition{
+				Name:  location.URI.Filename(),
+				Range: buffer.ParseRange(location.Range),
+			})
+		}
+		cmds = append(cmds, UpdateDefinition(msg.Name, definitions))
 	case GetInlayHintMsg:
 		result, err := c.server.InlayHint(context.Background(), &protocol.InlayHintParams{
 			TextDocument: protocol.TextDocumentIdentifier{
@@ -192,7 +215,6 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 		if err != nil {
 			return Err(err)
 		}
-		log.Println("InlayHints", result)
 
 		hints := make([]InlayHint, 0, len(result))
 		for _, hint := range result {
