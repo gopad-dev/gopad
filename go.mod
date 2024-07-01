@@ -16,6 +16,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/charmbracelet/x/ansi v0.1.2
 	github.com/dustin/go-humanize v1.0.1
+	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.15.2

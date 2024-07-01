@@ -75,7 +75,7 @@ files = []
 line_comment_tokens = []
 block_comment_tokens = []
 auto_pairs = []
-grammar = { name = 'printf', symbol_name = 'printf', install = { git = 'https://github.com/tree-sitter-grammars/tree-sitter-printf', rev = '0e0aceabbf607ea09e03562f5d8a56f048ddea3d', ref = 'main', ref_type = 'commit' } }
+grammar = { name = 'printf', symbol_name = 'printf', install = { git = 'https://github.com/gopad-dev/tree-sitter-printf', rev = '91e29c2c9708725d73e5c184c9e91dc68e280aec', ref = 'main', ref_type = 'commit' } }
 
 [languages.toml]
 alt_names = []

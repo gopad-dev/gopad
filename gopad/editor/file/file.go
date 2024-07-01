@@ -114,7 +114,7 @@ func (f *File) FileName() string {
 	return f.buffer.FileName()
 }
 
-func (f *File) LineEnding() any {
+func (f *File) LineEnding() buffer.LineEnding {
 	return f.buffer.LineEnding()
 }
 

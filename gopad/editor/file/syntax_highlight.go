@@ -2,7 +2,6 @@ package file
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -174,12 +173,10 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 		if lastCapture != nil && lastCapture.Node.Content() != capture.Node.Content() {
 			lastDef = nil
 			lastRef = nil
-			log.Println("Reset def and ref")
 		}
 
 		if uint32(match.PatternIndex) < query.HighlightsPatternIndex {
 			if query.ScopeCaptureID != nil && capture.Index == *query.ScopeCaptureID {
-				log.Println("New scope")
 				scopes = append(scopes, &LocalScope{
 					Inherits:  true,
 					Range:     captureRange,
@@ -187,7 +184,6 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 				})
 			} else if query.DefinitionCaptureID != nil && capture.Index == *query.DefinitionCaptureID {
 				if len(scopes) > 0 {
-					log.Println("New def", capture.Node.Content())
 					def := &LocalDef{
 						Name: capture.Node.Content(),
 						Type: "",
@@ -204,7 +200,6 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 						def := scopes[i].LocalDefs[ii]
 
 						if def.Type != "" && def.Name == capture.Node.Content() {
-							log.Printf("Found def: %q %q %q\n", def.Name, def.Type, capture.Node.Content())
 							lastRef = def
 							break
 						}
@@ -220,11 +215,6 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 		}
 
 		if lastDef != nil {
-			var lastCaptureContent string
-			if lastCapture != nil {
-				lastCaptureContent = lastCapture.Node.Content()
-			}
-			log.Printf("Set def type %q %q %q", query.Query.CaptureNameForID(capture.Index), capture.Node.Content(), lastCaptureContent)
 			lastDef.Type = query.Query.CaptureNameForID(capture.Index)
 		}
 

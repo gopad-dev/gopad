@@ -60,5 +60,5 @@ func (h HelpOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 }
 
 func (h HelpOverlay) View(width int, height int) string {
-	return h.help.View(width, config.Keys)
+	return h.help.View(width, height, config.Keys)
 }

@@ -83,7 +83,7 @@ func (m Model) View(background string, width int, height int) string {
 		marginX, marginY := overlay.Margin()
 
 		overlayWidth := width - marginX*2 - m.Styles.Style.GetHorizontalFrameSize() - m.Styles.ContentStyle.GetHorizontalFrameSize()
-		overlayHeight := height - marginY*2 - m.Styles.Style.GetVerticalFrameSize() - m.Styles.ContentStyle.GetHorizontalFrameSize()
+		overlayHeight := height - marginY*2 - m.Styles.Style.GetVerticalFrameSize() - m.Styles.ContentStyle.GetVerticalFrameSize()
 		if overlay.Title() != "" {
 			overlayHeight -= m.Styles.TitleStyle.GetVerticalFrameSize() + 1
 		}

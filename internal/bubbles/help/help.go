@@ -99,13 +99,13 @@ func (m Model) Update(_ tea.Msg) (Model, tea.Cmd) {
 }
 
 // View renders the help view's current state.
-func (m Model) View(width int, k KeyMap) string {
-	return m.FullHelpView(width, k.FullHelpView())
+func (m Model) View(width int, height int, k KeyMap) string {
+	return m.FullHelpView(width, height, k.FullHelpView())
 }
 
 // FullHelpView renders help columns from a slice of key binding slices. Each
 // top level slice entry renders into a column.
-func (m Model) FullHelpView(width int, groups []KeyMapCategory) string {
+func (m Model) FullHelpView(width int, height int, groups []KeyMapCategory) string {
 	if len(groups) == 0 {
 		return ""
 	}

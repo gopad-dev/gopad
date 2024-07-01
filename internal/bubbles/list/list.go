@@ -1,11 +1,13 @@
 package list
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
@@ -71,6 +73,7 @@ type Model[T Item] struct {
 	items     []modelItem[T]
 	item      int
 	offset    int
+	listID    string
 }
 
 func (m *Model[T]) Focus() tea.Cmd {
@@ -91,6 +94,10 @@ func (m *Model[T]) SetWidth(width int) {
 
 func (m *Model[T]) SetHeight(height int) {
 	m.height = height
+}
+
+func (m *Model[T]) SetListID(id string) {
+	m.listID = id
 }
 
 func (m *Model[T]) selected() *modelItem[T] {
@@ -140,6 +147,9 @@ func (m *Model[T]) filteredItems() []modelItem[T] {
 
 func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		zone.Get()
+		strings.CutPrefix(msg.)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.Up):
@@ -225,7 +235,12 @@ func (m Model[T]) itemsView(width int, height int) string {
 			strs = append(strs, m.Styles.ItemDescriptionStyle.Render(item.item.Description()))
 		}
 
-		str += style.Render(strs...) + "\n"
+		s := style.Render(strs...)
+		if m.listID != "" {
+			s = zone.Mark(fmt.Sprintf("list:%s:%d", m.listID, ii), s)
+		}
+
+		str += s + "\n"
 	}
 
 	str = strings.TrimRight(str, "\n")

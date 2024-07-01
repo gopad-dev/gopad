@@ -20,6 +20,7 @@ func NewSetLanguageOverlay() SetLanguageOverlay {
 	l := config.NewList(file.Languages)
 	l.TextInput.Placeholder = "Type a language and press enter to set it"
 	l.Focus()
+	l.SetListID("file.language")
 
 	return SetLanguageOverlay{
 		l: l,

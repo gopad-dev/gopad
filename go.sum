@@ -39,6 +39,8 @@ github.com/gopad-dev/termenv v0.0.0-20240413225005-5f4a43fcdd7b h1:SLq7trtMVCe4E
 github.com/gopad-dev/termenv v0.0.0-20240413225005-5f4a43fcdd7b/go.mod h1:hxSnBBYLK21Vtq/PHd0S2FYCxBXzBua8ov5s1RobyRQ=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
+github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c h1:hu82xYs8yOIM1TSq+L5VIZeRsHVROpe3gL0qscUlXJA=
+github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c/go.mod h1:fMHACHXouhQO+NLAFvHEeKdVSzG7L/O1khqsvswCTmk=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=

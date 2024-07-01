@@ -10,13 +10,19 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
+)
+
+const (
+	ZoneTheme = "theme"
 )
 
 func New(lsClient *ls.Client, version string, workspace string, args []string) (*Gopad, error) {
@@ -67,6 +73,14 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case overlay.ResetFocusMsg:
 		cmds = append(cmds, g.editor.Focus())
+		return g, tea.Batch(cmds...)
+
+	case tea.MouseMsg:
+		switch {
+		case mouse.Matches(msg, ZoneTheme, tea.MouseButtonLeft, tea.MouseActionRelease):
+			cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
+			return g, tea.Batch(cmds...)
+		}
 
 	case tea.KeyMsg:
 		log.Println("KeyMsg", msg)
@@ -155,7 +169,7 @@ func (g Gopad) View() string {
 		view = g.notifications.View()
 	}
 
-	return view
+	return zone.Scan(view)
 }
 
 func (g Gopad) AppBar() string {
@@ -169,7 +183,7 @@ func (g Gopad) CodeBar() string {
 	width := g.width - config.Theme.Editor.CodeBarStyle.GetHorizontalFrameSize()
 	file := g.editor.File()
 
-	infoLine := fmt.Sprintf("%s | ", config.Theme.Name)
+	infoLine := fmt.Sprintf("%s | ", zone.Mark(ZoneTheme, config.Theme.Name))
 
 	if file != nil {
 		if s := file.Selection(); s != nil {
@@ -198,13 +212,13 @@ func (g Gopad) CodeBar() string {
 				if language.Grammar == nil {
 					grammarName += " (not loaded)"
 				}
-				name = fmt.Sprintf("%s (ts: %s)", name, grammarName)
+				name = zone.Mark(editor.ZoneFileLanguage, fmt.Sprintf("%s (ts: %s)", name, grammarName))
 			}
 
 			infoLine += fmt.Sprintf("%s | ", name)
 		}
 
-		infoLine += fmt.Sprintf("%s | %s", file.LineEnding(), file.Encoding())
+		infoLine += fmt.Sprintf("%s | %s", zone.Mark(editor.ZoneFileLineEnding, file.LineEnding().String()), zone.Mark(editor.ZoneFileEncoding, file.Encoding()))
 	}
 	infoLine = strings.TrimSuffix(infoLine, " | ")
 

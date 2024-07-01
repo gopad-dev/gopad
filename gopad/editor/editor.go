@@ -21,6 +21,7 @@ import (
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/filetree"
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/searchbar"
@@ -29,6 +30,10 @@ import (
 const (
 	moveSize = 1
 	pageSize = 10
+
+	ZoneFileLanguage   = "file.language"
+	ZoneFileLineEnding = "file.lineEnding"
+	ZoneFileEncoding   = "file.encoding"
 )
 
 var fileIconByFileNameFunc = func(name string) rune {
@@ -482,8 +487,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			if e.fileTree.Visible() {
 				f := e.File()
 				if e.fileTree.Focused() {
-					e.fileTree.Blur()
 					if f != nil {
+						e.fileTree.Blur()
 						cmds = append(cmds, f.Focus())
 					}
 				} else {
@@ -581,8 +586,26 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		f.SetCursor(msg.ToRow, msg.ToCol)
 	case file.ScrollMsg:
 		f.SetCursor(msg.Row, msg.Col)
+	case tea.MouseMsg:
+		switch {
+		case mouse.Matches(msg, ZoneFileLanguage, tea.MouseButtonLeft, tea.MouseActionRelease):
+			cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
+			return e, tea.Batch(cmds...)
+		case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseButtonLeft, tea.MouseActionRelease):
+			log.Println("file line ending zone")
+			//cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
+			return e, tea.Batch(cmds...)
+		case mouse.Matches(msg, ZoneFileEncoding, tea.MouseButtonLeft, tea.MouseActionRelease):
+			log.Println("file encoding zone")
+			//cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
+			return e, tea.Batch(cmds...)
+		}
 	case tea.KeyMsg:
 		if e.focus {
+			if msg.Paste {
+				log.Println("paste msg", string(msg.Runes))
+				return e, tea.Batch(cmds...)
+			}
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete):
 				row, col := f.Cursor()
@@ -826,7 +849,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.ToggleComment):
 				cmds = append(cmds, f.ToggleComment())
 				overwriteCursorBlink = true
-			case key.Matches(msg, config.Keys.Editor.Debug):
+			case key.Matches(msg, config.Keys.Debug):
 				log.Println("DEBUG")
 
 			default:

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/spf13/cobra"
 
 	"go.gopad.dev/gopad/gopad"
@@ -33,15 +34,15 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			debug, _ := cmd.Flags().GetString("debug")
 			debugLSP, _ := cmd.Flags().GetString("debug-lsp")
 			pprof, _ := cmd.Flags().GetString("pprof")
+			mouse, _ := cmd.Flags().GetBool("mouse")
 
 			if debug != "" {
-				if debug != "-" {
-					logFile, err := tea.LogToFile(debug, "gopad")
-					if err != nil {
-						log.Panicln("failed to open debug log file:", err)
-					}
-					defer logFile.Close()
+				logFile, err := tea.LogToFile(debug, "gopad")
+				if err != nil {
+					log.Panicln("failed to open debug log file:", err)
 				}
+				defer logFile.Close()
+
 				log.Println("debug mode enabled")
 			} else {
 				log.SetOutput(io.Discard)
@@ -55,17 +56,24 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 					log.Panicln("failed to open debug lsp log file:", err)
 				}
 				defer lspLogFile.Close()
+
+				log.Println("debug lsp mode enabled")
 			} else {
 				lspLogFile = xio.NopCloser(io.Discard)
 			}
 
 			if pprof != "" {
-				log.Println("pprof enabled")
 				go func() {
 					if err := http.ListenAndServe(pprof, nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 						log.Println("failed to start pprof:", err)
 					}
 				}()
+				log.Println("pprof enabled")
+			}
+
+			if mouse {
+				zone.NewGlobal()
+				defer zone.Close()
 			}
 
 			loadConfig(configDir, defaultConfigs)
@@ -80,7 +88,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Panicln("failed to start gopad:", err)
 			}
 
-			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithFilter(lsClient.Filter))
+			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithFilter(lsClient.Filter))
 			lsClient.SetProgram(p)
 			log.Println("running gopad")
 			if _, err = p.Run(); err != nil {
@@ -93,9 +101,10 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 
 	cmd.PersistentFlags().StringP("config-dir", "c", "", "set configuration directory (Default: ./.gopad, $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)")
 	cmd.Flags().StringP("workspace", "w", "", "set workspace directory (Default: first directory argument)")
-	cmd.Flags().StringP("debug", "d", "", "set debug log file (use - for stdout)")
+	cmd.Flags().StringP("debug", "d", "", "set debug log file")
 	cmd.Flags().StringP("debug-lsp", "l", "", "set debug lsp log file")
 	cmd.Flags().StringP("pprof", "p", "", "set pprof address:port")
+	cmd.Flags().BoolP("mouse", "m", true, "enable mouse support (Default: true)")
 
 	return cmd
 }

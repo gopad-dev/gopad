@@ -32,6 +32,7 @@ type KeyMap struct {
 	Run        key.Binding
 	Terminal   key.Binding
 	KeyMapper  key.Binding
+	Debug      key.Binding
 }
 
 func (k KeyMap) ButtonKeyMap() button.KeyMap {
@@ -58,6 +59,7 @@ func (k KeyMap) FullHelpView() []help.KeyMapCategory {
 				k.Run,
 				k.Terminal,
 				k.KeyMapper,
+				k.Debug,
 			},
 		},
 	}
@@ -143,7 +145,6 @@ type EditorKeyMap struct {
 	DeleteLine      key.Binding
 
 	ToggleComment key.Binding
-	Debug         key.Binding
 
 	FileTree  filetree.KeyMap
 	SearchBar searchbar.KeyMap
@@ -162,19 +163,42 @@ func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
 				k.RenameFile,
 				k.DeleteFile,
 				emptyKeyBind,
-				k.Search,
-				k.ToggleFileTree,
-				k.NextFile,
-				k.PrevFile,
-				emptyKeyBind,
 				k.Autocomplete,
 				k.NextCompletion,
 				k.PrevCompletion,
 				k.ApplyCompletion,
 				emptyKeyBind,
+				k.ToggleFileTree,
+				k.Search,
 				k.RefreshSyntaxHighlight,
 				k.ToggleTreeSitterDebug,
 				k.DebugTreeSitterNodes,
+				emptyKeyBind,
+				k.Cut,
+				k.Copy,
+				k.Paste,
+				emptyKeyBind,
+				k.Undo,
+				k.Redo,
+				emptyKeyBind,
+				k.Tab,
+				k.RemoveTab,
+				k.Newline,
+				k.DeleteLeft,
+				k.DeleteRight,
+				k.DeleteWordLeft,
+				k.DeleteWordRight,
+				k.DuplicateLine,
+				k.DeleteLine,
+				emptyKeyBind,
+				k.ToggleComment,
+			},
+		},
+		{
+			Category: "Editor Navigation",
+			Keys: []key.Binding{
+				k.NextFile,
+				k.PrevFile,
 				emptyKeyBind,
 				k.CharacterLeft,
 				k.CharacterRight,
@@ -198,26 +222,6 @@ func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
 				k.SelectUp,
 				k.SelectDown,
 				k.SelectAll,
-				emptyKeyBind,
-				k.Cut,
-				k.Copy,
-				k.Paste,
-				emptyKeyBind,
-				k.Undo,
-				k.Redo,
-				emptyKeyBind,
-				k.Tab,
-				k.RemoveTab,
-				k.Newline,
-				k.DeleteLeft,
-				k.DeleteRight,
-				k.DeleteWordLeft,
-				k.DeleteWordRight,
-				k.DuplicateLine,
-				k.DeleteLine,
-				emptyKeyBind,
-				k.ToggleComment,
-				k.Debug,
 			},
 		},
 	}
@@ -351,6 +355,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 		Run:       "ctrl+k",
 		Terminal:  "ctrl+t",
 		KeyMapper: "f4",
+		Debug:     "f12",
 	}
 }
 
@@ -372,6 +377,7 @@ type KeyMapConfig struct {
 	Run        string              `toml:"run"`
 	Terminal   string              `toml:"terminal"`
 	KeyMapper  string              `toml:"key_mapper"`
+	Debug      string              `toml:"debug"`
 }
 
 func (k KeyMapConfig) Keys() KeyMap {
@@ -429,6 +435,10 @@ func (k KeyMapConfig) Keys() KeyMap {
 		KeyMapper: key.NewBinding(
 			key.WithKeys(k.KeyMapper),
 			key.WithHelp(k.KeyMapper, "open key mapper"),
+		),
+		Debug: key.NewBinding(
+			key.WithKeys(k.Debug),
+			key.WithHelp(k.Debug, "debug"),
 		),
 	}
 }
@@ -734,10 +744,6 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 		ToggleComment: key.NewBinding(
 			key.WithKeys(k.ToggleComment),
 			key.WithHelp(k.ToggleComment, "toggle comment"),
-		),
-		Debug: key.NewBinding(
-			key.WithKeys(k.Debug),
-			key.WithHelp(k.Debug, "debug"),
 		),
 		FileTree:  k.FileTree.KeyMap(),
 		SearchBar: k.SearchBar.KeyMap(),

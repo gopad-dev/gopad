@@ -70,11 +70,16 @@ help        Help about any command
 version     Show version information
 ```
 
-#### Flags
+#### Global Flags
 
 ```bash
   -c, --config-dir string   set configuration directory (Default: ./.gopad, $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)
-  -d, --debug string        set debug log file (use - for stdout)
+```
+
+#### Flags
+
+```bash
+  -d, --debug string        set debug log file
   -l, --debug-lsp string    set debug lsp log file
   -h, --help                help for gopad
   -p, --pprof string        set pprof address:port
