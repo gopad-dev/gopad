@@ -1,16 +1,14 @@
 package file
 
 import (
-	"log"
+	"github.com/charmbracelet/bubbletea"
 
-	tea "github.com/charmbracelet/bubbletea"
-
+	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
 func (f *File) SetDefinitions(definitions []ls.Definition) tea.Cmd {
-	log.Println("setting definitions", definitions)
 	if len(definitions) == 0 {
 		return notifications.Add("No definition found")
 	}
@@ -23,7 +21,10 @@ func (f *File) SetDefinitions(definitions []ls.Definition) tea.Cmd {
 }
 
 func (f *File) openDefinition(definition ls.Definition) tea.Cmd {
-	return OpenFilePosition(definition.Name, definition.Range.Start.Row, definition.Range.Start.Col)
+	return OpenFilePosition(definition.Name, &buffer.Position{
+		Row: definition.Range.Start.Row,
+		Col: definition.Range.Start.Col,
+	})
 }
 
 func (f *File) ShowDefinitions() tea.Cmd {

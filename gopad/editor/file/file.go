@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lrstanley/bubblezone"
 	"go.gopad.dev/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/buffer"
@@ -21,12 +22,14 @@ import (
 	"go.gopad.dev/gopad/internal/xrunes"
 )
 
-type FileMode int
+type Mode int
 
 const (
-	FileModeReadOnly FileMode = iota
-	FileModeWrite
+	ModeReadOnly Mode = iota
+	ModeWrite
 )
+
+const ZoneFileLinePrefix = "file.line:"
 
 type Change struct {
 	StartIndex  uint32
@@ -36,7 +39,7 @@ type Change struct {
 	Text []byte
 }
 
-func NewFileWithBuffer(b *buffer.Buffer, mode FileMode) *File {
+func NewFileWithBuffer(b *buffer.Buffer, mode Mode) *File {
 	return &File{
 		buffer: b,
 		mode:   mode,
@@ -70,9 +73,9 @@ func NewFileFromName(name string) (*File, error) {
 		return nil, err
 	}
 
-	mode := FileModeWrite
+	mode := ModeWrite
 	if stat.Mode().Perm()&0200 == 0 {
-		mode = FileModeReadOnly
+		mode = ModeReadOnly
 	}
 
 	return NewFileWithBuffer(b, mode), nil
@@ -80,7 +83,7 @@ func NewFileFromName(name string) (*File, error) {
 
 type File struct {
 	buffer                *buffer.Buffer
-	mode                  FileMode
+	mode                  Mode
 	cursor                Cursor
 	language              *Language
 	tree                  *Tree
@@ -95,6 +98,7 @@ type File struct {
 	changes            []Change
 	definitions        []ls.Definition
 	definitionsIndex   int
+	positions          [][]pos
 }
 
 func (f *File) Name() string {
@@ -126,11 +130,11 @@ func (f *File) Version() int32 {
 	return f.buffer.Version()
 }
 
-func (f *File) Mode() FileMode {
+func (f *File) Mode() Mode {
 	return f.mode
 }
 
-func (f *File) SetMode(mode FileMode) {
+func (f *File) SetMode(mode Mode) {
 	f.mode = mode
 }
 
@@ -443,6 +447,25 @@ func (f *File) ToggleLineComment() tea.Cmd {
 	})
 }
 
+func (f File) GetCursorForCharPos(row int, col int) (int, int) {
+	if row >= len(f.positions) {
+		return max(f.buffer.LinesLen()-1, 0), 0
+	}
+
+	linePositions := f.positions[row]
+	if col >= len(linePositions) {
+		return row, f.buffer.LineLen(row)
+	}
+
+	p := linePositions[col]
+	return p.row, p.col
+}
+
+type pos struct {
+	row int
+	col int
+}
+
 func (f *File) View(width int, height int, border bool, debug bool) string {
 	styles := config.Theme.Editor
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
@@ -467,8 +490,11 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	selection := f.Selection()
 
 	var editorCode string
+	positions := make([][]pos, max(height, 0))
 	for i := range height {
 		ln := i + offsetRow
+
+		var linePositions []pos
 
 		codeLineStyle := styles.CodeLineStyle
 		codePrefixStyle := styles.CodePrefixStyle
@@ -508,6 +534,10 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		for ii := range width - prefixLength + 1 {
 			col := ii + offsetCol
 
+			if col <= line.Len() {
+				linePositions = append(linePositions, pos{row: ln, col: col})
+			}
+
 			inSelection := selection != nil && selection.Contains(buffer.Position{Row: ln, Col: col})
 
 			var char string
@@ -528,10 +558,10 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			style := f.HighestMatchStyle(codeLineCharStyle, ln, col)
 			style = f.HighestLineColDiagnosticStyle(style, ln, col)
 
-			if inSelection {
-				char = styles.CodeSelectionStyle.Copy().Inherit(style).Render(char)
-			} else if ln == cursorRow && ii == realCursorCol {
+			if ln == cursorRow && ii == realCursorCol {
 				char = f.cursor.cursor.View(char, style)
+			} else if inSelection {
+				char = styles.CodeSelectionStyle.Copy().Inherit(style).Render(char)
 			} else {
 				char = style.Render(char)
 			}
@@ -556,6 +586,8 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			}
 		}
 
+		positions[i] = linePositions
+
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
 			lineWidth := ansi.StringWidth(string(codeLine))
 			if lineWidth < width {
@@ -568,8 +600,12 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			codeLine = append(codeLine, codeLineCharStyle.Render(strings.Repeat(" ", width-lineWidth))...)
 		}
 
-		editorCode += borderStyle(codeLineStyle.Render(prefix+string(codeLine))) + "\n"
+		editorCodeLine := zone.Mark(fmt.Sprintf("%s%d", ZoneFileLinePrefix, ln), string(codeLine))
+
+		editorCode += borderStyle(codeLineStyle.Render(prefix+editorCodeLine)) + "\n"
 	}
+
+	f.positions = positions
 
 	editorCode = strings.TrimSuffix(editorCode, "\n")
 

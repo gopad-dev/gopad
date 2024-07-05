@@ -170,6 +170,7 @@ func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
 				emptyKeyBind,
 				k.ToggleFileTree,
 				k.Search,
+				k.OpenOutline,
 				k.RefreshSyntaxHighlight,
 				k.ToggleTreeSitterDebug,
 				k.DebugTreeSitterNodes,

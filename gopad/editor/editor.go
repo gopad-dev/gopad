@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lrstanley/bubblezone"
 	"github.com/mattn/go-runewidth"
 	"go.gopad.dev/go-tree-sitter"
 
@@ -34,6 +36,7 @@ const (
 	ZoneFileLanguage   = "file.language"
 	ZoneFileLineEnding = "file.lineEnding"
 	ZoneFileEncoding   = "file.encoding"
+	ZoneFilePrefix     = "file:"
 )
 
 var fileIconByFileNameFunc = func(name string) rune {
@@ -159,7 +162,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	f := file.NewFileWithBuffer(buff, file.FileModeWrite)
+	f := file.NewFileWithBuffer(buff, file.ModeWrite)
 
 	e.files = append(e.files, f)
 
@@ -382,7 +385,6 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		wCmds = append(wCmds, ls.WorkspaceOpened(msg.Name))
 		return e, tea.Batch(append(cmds, tea.Sequence(wCmds...))...)
 	case file.OpenFileMsg:
-		log.Println("open file msg", msg)
 		cmd, err := e.OpenFile(msg.Name)
 		if err != nil {
 			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while opening file %s: %s", msg.Name, err.Error())))
@@ -394,7 +396,9 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s opened", msg.Name)))
 		e.fileTree.Blur()
 		e.SetFileByName(msg.Name)
-		e.File().SetCursor(msg.Row, msg.Col)
+		if msg.Position != nil {
+			e.File().SetCursor(msg.Position.Row, msg.Position.Col)
+		}
 		cmds = append(cmds, e.File().Focus())
 		return e, tea.Batch(cmds...)
 	case file.SaveFileMsg:
@@ -523,7 +527,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 	f := e.File()
 	if f == nil {
-		return e, nil
+		return e, tea.Batch(cmds...)
 	}
 	oldRow, oldCol := f.Cursor()
 
@@ -587,17 +591,60 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	case file.ScrollMsg:
 		f.SetCursor(msg.Row, msg.Col)
 	case tea.MouseMsg:
+		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
+			if z.InBounds(msg) {
+				row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), file.ZoneFileLinePrefix))
+				col, _ := z.Pos(msg)
+				row, col = f.GetCursorForCharPos(row, col)
+
+				switch {
+				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionRelease):
+					f.SetCursor(row, col)
+					if s := f.Selection(); s == nil || s.Zero() {
+						f.ResetMark()
+					}
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionPress):
+					f.SetMark(row, col)
+					f.SetCursor(row, col)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionMotion):
+					f.SetCursor(row, col)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonWheelLeft), mouse.MatchesShift(msg, "", tea.MouseButtonWheelDown):
+					f.MoveCursorLeft(1)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonWheelRight), mouse.MatchesShift(msg, "", tea.MouseButtonWheelUp):
+					f.MoveCursorRight(1)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonWheelUp):
+					f.MoveCursorUp(1)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonWheelDown):
+					f.MoveCursorDown(1)
+					return e, tea.Batch(cmds...)
+				}
+			}
+		}
+
+		for _, z := range zone.GetPrefix(ZoneFilePrefix) {
+			if z.InBounds(msg) {
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
+				e.SetFile(i)
+			}
+		}
+
 		switch {
 		case mouse.Matches(msg, ZoneFileLanguage, tea.MouseButtonLeft, tea.MouseActionRelease):
 			cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
 			return e, tea.Batch(cmds...)
 		case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseButtonLeft, tea.MouseActionRelease):
 			log.Println("file line ending zone")
-			//cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
+			// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
 			return e, tea.Batch(cmds...)
 		case mouse.Matches(msg, ZoneFileEncoding, tea.MouseButtonLeft, tea.MouseActionRelease):
 			log.Println("file encoding zone")
-			//cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
+			// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
 			return e, tea.Batch(cmds...)
 		}
 	case tea.KeyMsg:
@@ -651,7 +698,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					return e, tea.Batch(cmds...)
 				}
 
-				debugFile := file.NewFileWithBuffer(buff, file.FileModeReadOnly)
+				debugFile := file.NewFileWithBuffer(buff, file.ModeReadOnly)
 
 				e.files = append(e.files, debugFile)
 				e.activeFile = len(e.files) - 1
@@ -856,7 +903,15 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				if msg.Alt {
 					break
 				}
-				cmds = append(cmds, f.InsertRunes(msg.Runes))
+
+				text := []byte(string(msg.Runes))
+				if s := f.Selection(); s != nil {
+					cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
+					f.ResetMark()
+				} else {
+					cmds = append(cmds, f.Insert(text))
+				}
+
 				if f.Autocomplete().Visible() {
 					row, col := f.Cursor()
 					cmds = append(cmds, ls.GetAutocompletion(f.Name(), row, col))
@@ -957,7 +1012,7 @@ func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
 
 func (e *Editor) FileTabsView(width int) string {
 	var fileNames []string
-	for path, f := range e.files {
+	for i, f := range e.files {
 		var languageName string
 		if f.Language() != nil {
 			languageName = f.Language().Name
@@ -973,10 +1028,10 @@ func (e *Editor) FileTabsView(width int) string {
 		}
 
 		style := config.Theme.Editor.FileStyle
-		if path == e.activeFile {
+		if i == e.activeFile {
 			style = config.Theme.Editor.FileSelectedStyle
 		}
-		fileNames = append(fileNames, style.Render(fileName))
+		fileNames = append(fileNames, zone.Mark(fmt.Sprintf("file:%d", i), style.Render(fileName)))
 	}
 
 	if config.Gopad.FileView.OpenFilesWrap {

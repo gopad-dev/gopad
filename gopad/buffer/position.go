@@ -134,3 +134,7 @@ func (r Range) Compare(start Range) int {
 	}
 	return r.End.Compare(start.End)
 }
+
+func (r Range) Zero() bool {
+	return r.Start.Equal(r.End)
+}

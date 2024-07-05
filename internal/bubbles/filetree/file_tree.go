@@ -6,14 +6,17 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/mattn/go-runewidth"
 
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
@@ -133,26 +136,28 @@ var DefaultIcons = Icons{
 
 func New() Model {
 	return Model{
-		Width:     24,
-		Styles:    DefaultStyles,
-		KeyMap:    DefaultKeyMap,
-		Icons:     DefaultIcons,
-		EmptyText: "No folder open",
+		Width:      24,
+		Styles:     DefaultStyles,
+		KeyMap:     DefaultKeyMap,
+		Icons:      DefaultIcons,
+		EmptyText:  "No folder open",
+		zonePrefix: zone.NewPrefix(),
 	}
 }
 
 type Model struct {
-	entry     *Entry
-	focus     bool
-	show      bool
-	offset    int
-	Width     int
-	Styles    Styles
-	Icons     Icons
-	KeyMap    KeyMap
-	EmptyText string
-	Ignored   []string
-	OpenFile  func(string) tea.Cmd
+	entry      *Entry
+	focus      bool
+	show       bool
+	offset     int
+	Width      int
+	Styles     Styles
+	Icons      Icons
+	KeyMap     KeyMap
+	EmptyText  string
+	Ignored    []string
+	OpenFile   func(string) tea.Cmd
+	zonePrefix string
 }
 
 func (m *Model) Open(name string) error {
@@ -234,6 +239,35 @@ func (m *Model) Focus() {
 
 func (m *Model) Blur() {
 	m.focus = false
+}
+
+func (m *Model) selectIndex(i int) *Entry {
+	if m.entry == nil {
+		return nil
+	}
+
+	var currentIndex int
+	var selected *Entry
+	var walk func(*Entry)
+	walk = func(e *Entry) {
+		if currentIndex == i {
+			e.Selected = true
+			selected = e
+		} else {
+			e.Selected = false
+		}
+
+		currentIndex++
+		if e.IsDir && !e.Open {
+			return
+		}
+
+		for _, child := range e.Children {
+			walk(child)
+		}
+	}
+	walk(m.entry)
+	return selected
 }
 
 func (m *Model) SelectNext() {
@@ -322,6 +356,14 @@ func (m *Model) Selected() *Entry {
 	return walk(m.entry)
 }
 
+func (m Model) zoneEntryID(i int) string {
+	return fmt.Sprintf("file_tree:%s:%d", m.zonePrefix, i)
+}
+
+func (m Model) zoneID() string {
+	return fmt.Sprintf("file_tree:%s", m.zonePrefix)
+}
+
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -331,6 +373,33 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, notifications.Add("Error updating file tree: "+err.Error()))
 		}
 		return m, tea.Batch(cmds...)
+	case tea.MouseMsg:
+		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease {
+			zonePrefix := fmt.Sprintf("file_tree:%s:", m.zonePrefix)
+			for _, z := range zone.GetPrefix(zonePrefix) {
+				if z.InBounds(msg) {
+					i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zonePrefix))
+					entry := m.selectIndex(i)
+
+					if entry.IsDir {
+						entry.Open = !entry.Open
+					} else {
+						cmds = append(cmds, m.OpenFile(entry.Path))
+					}
+
+					return m, tea.Batch(cmds...)
+				}
+			}
+		}
+
+		switch {
+		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelUp):
+			m.SelectPrev()
+			return m, nil
+		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelDown):
+			m.SelectNext()
+			return m, nil
+		}
 	case tea.KeyMsg:
 		if m.focus {
 			switch {
@@ -372,6 +441,7 @@ func (m Model) View(height int) string {
 		return m.Styles.Style.Render(m.Styles.EmptyStyle.Height(height).Width(m.Width).Render(m.EmptyText))
 	}
 
+	var i int
 	var entries []string
 	var selected int
 	var walk func(*Entry, string)
@@ -379,8 +449,10 @@ func (m Model) View(height int) string {
 		if e.Selected {
 			selected = len(entries)
 		}
-		entries = append(entries, m.entryView(e, indent))
-		if !e.Open {
+		entries = append(entries, m.entryView(e, i, indent))
+		i++
+
+		if e.IsDir && !e.Open {
 			return
 		}
 		for _, child := range e.Children {
@@ -405,10 +477,10 @@ func (m Model) View(height int) string {
 
 	tree = strings.TrimSuffix(tree, "\n")
 
-	return m.Styles.Style.Height(height).Width(m.Width).Render(tree)
+	return zone.Mark(m.zoneID(), m.Styles.Style.Height(height).Width(m.Width).Render(tree))
 }
 
-func (m Model) entryView(e *Entry, indent string) string {
+func (m Model) entryView(e *Entry, i int, indent string) string {
 	var icon rune
 
 	if e.IsDir {
@@ -439,10 +511,13 @@ func (m Model) entryView(e *Entry, indent string) string {
 
 	if e.Selected {
 		if m.Focused() {
-			return m.Styles.EntrySelectedStyle.Render(line)
+			line = m.Styles.EntrySelectedStyle.Render(line)
+		} else {
+			line = m.Styles.EntrySelectedUnfocusedStyle.Render(line)
 		}
-		return m.Styles.EntrySelectedUnfocusedStyle.Render(line)
+	} else {
+		line = m.Styles.EntryStyle.Render(line)
 	}
 
-	return m.Styles.EntryStyle.Render(line)
+	return zone.Mark(m.zoneEntryID(i), line)
 }

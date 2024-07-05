@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
-	file2 "go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -74,16 +74,16 @@ func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	if ok, file := o.filePicker.DidSelect(msg); ok {
-		stat, err := os.Stat(file)
+	if ok, f := o.filePicker.DidSelect(msg); ok {
+		stat, err := os.Stat(f)
 		if err != nil {
-			cmds = append(cmds, notifications.Add(fmt.Sprintf("Error statting path %s: %s", file, err)))
+			cmds = append(cmds, notifications.Add(fmt.Sprintf("Error statting path %s: %s", f, err)))
 			return o, tea.Batch(cmds...)
 		}
 		if stat.IsDir() {
-			cmd = file2.OpenDir(file)
+			cmd = file.OpenDir(f)
 		} else {
-			cmd = file2.OpenFile(file)
+			cmd = file.OpenFile(f)
 		}
 		cmds = append(cmds, tea.Sequence(overlay.Close(OpenOverlayID), cmd))
 	}

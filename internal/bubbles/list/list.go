@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
@@ -57,23 +58,25 @@ func New[T Item](items []T) Model[T] {
 	ti.Placeholder = "Type to search"
 
 	return Model[T]{
-		TextInput: ti,
-		KeyMap:    DefaultKeyMap,
-		Styles:    DefaultStyles,
-		items:     parseItems(items),
+		TextInput:  ti,
+		KeyMap:     DefaultKeyMap,
+		Styles:     DefaultStyles,
+		items:      parseItems(items),
+		zonePrefix: zone.NewPrefix(),
 	}
 }
 
 type Model[T Item] struct {
-	TextInput textinput.Model
-	KeyMap    KeyMap
-	Styles    Styles
-	width     int
-	height    int
-	items     []modelItem[T]
-	item      int
-	offset    int
-	listID    string
+	TextInput  textinput.Model
+	KeyMap     KeyMap
+	Styles     Styles
+	width      int
+	height     int
+	items      []modelItem[T]
+	item       int
+	offset     int
+	zonePrefix string
+	clicked    bool
 }
 
 func (m *Model[T]) Focus() tea.Cmd {
@@ -96,11 +99,7 @@ func (m *Model[T]) SetHeight(height int) {
 	m.height = height
 }
 
-func (m *Model[T]) SetListID(id string) {
-	m.listID = id
-}
-
-func (m *Model[T]) selected() *modelItem[T] {
+func (m *Model[T]) selectedItem() *modelItem[T] {
 	items := m.filteredItems()
 	if m.item < len(items) {
 		return &items[m.item]
@@ -108,11 +107,12 @@ func (m *Model[T]) selected() *modelItem[T] {
 	return nil
 }
 
-func (m *Model[T]) Selected() Item {
-	if item := m.selected(); item != nil {
+func (m *Model[T]) Selected() T {
+	if item := m.selectedItem(); item != nil {
 		return item.item
 	}
-	return nil
+	var zero T
+	return zero
 }
 
 func (m *Model[T]) Select(i int) {
@@ -122,7 +122,7 @@ func (m *Model[T]) Select(i int) {
 }
 
 func (m *Model[T]) SelectedIndex() int {
-	selected := m.selected()
+	selected := m.selectedItem()
 	if selected != nil {
 		return selected.index
 	}
@@ -145,11 +145,41 @@ func (m *Model[T]) filteredItems() []modelItem[T] {
 	return filterItems(m.items, m.TextInput.Value())
 }
 
+func (m Model[T]) zoneItemID(i int) string {
+	return fmt.Sprintf("list:%s:%d", m.zonePrefix, i)
+}
+
+func (m Model[T]) zoneID() string {
+	return fmt.Sprintf("list:%s", m.zonePrefix)
+}
+
+func (m *Model[T]) Clicked() bool {
+	return m.clicked
+}
+
 func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		zone.Get()
-		strings.CutPrefix(msg.)
+		for i := range len(m.filteredItems()) {
+			if mouse.Matches(msg, m.zoneItemID(i), tea.MouseButtonLeft, tea.MouseActionRelease) {
+				m.item = i
+				m.clicked = true
+				return m, nil
+			}
+		}
+
+		switch {
+		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelUp):
+			if m.item > 0 {
+				m.item--
+			}
+			return m, nil
+		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelDown):
+			if m.item < len(m.items)-1 {
+				m.item++
+			}
+			return m, nil
+		}
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.Up):
@@ -236,8 +266,8 @@ func (m Model[T]) itemsView(width int, height int) string {
 		}
 
 		s := style.Render(strs...)
-		if m.listID != "" {
-			s = zone.Mark(fmt.Sprintf("list:%s:%d", m.listID, ii), s)
+		if m.zonePrefix != "" {
+			s = zone.Mark(m.zoneItemID(ii), s)
 		}
 
 		str += s + "\n"
@@ -250,5 +280,11 @@ func (m Model[T]) itemsView(width int, height int) string {
 		style = style.Width(width - style.GetHorizontalFrameSize())
 	}
 
-	return style.Render(str)
+	str = style.Render(str)
+
+	if m.zonePrefix != "" {
+		str = zone.Mark(m.zoneID(), str)
+	}
+
+	return str
 }

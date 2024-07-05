@@ -30,51 +30,50 @@ type RenameOverlay struct {
 	fileName textinput.Model
 }
 
-func (h RenameOverlay) ID() string {
+func (r RenameOverlay) ID() string {
 	return RenameOverlayID
 }
 
-func (h RenameOverlay) Position() (lipgloss.Position, lipgloss.Position) {
+func (r RenameOverlay) Position() (lipgloss.Position, lipgloss.Position) {
 	return lipgloss.Center, lipgloss.Center
 }
 
-func (h RenameOverlay) Margin() (int, int) {
+func (r RenameOverlay) Margin() (int, int) {
 	return 0, 0
 }
 
-func (h RenameOverlay) Title() string {
+func (r RenameOverlay) Title() string {
 	return "Rename File"
 }
 
-func (h RenameOverlay) Init() tea.Cmd {
+func (r RenameOverlay) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (h RenameOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (r RenameOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Cancel):
-			cmds = append(cmds, overlay.Close(RenameOverlayID))
-		case key.Matches(msg, config.Keys.OK, config.Keys.Editor.RenameFile):
-			cmds = append(cmds, tea.Sequence(
+		case key.Matches(msg, config.Keys.OK):
+			return r, tea.Sequence(
 				overlay.Close(RenameOverlayID),
-				file.RenameFile(h.fileName.Value()),
-			))
-			return h, tea.Batch(cmds...)
+				file.RenameFile(r.fileName.Value()),
+			)
+		case key.Matches(msg, config.Keys.Cancel):
+			return r, overlay.Close(RenameOverlayID)
 		}
 	}
 
 	var cmd tea.Cmd
-	h.fileName, cmd = h.fileName.Update(msg)
+	r.fileName, cmd = r.fileName.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	return h, tea.Batch(cmds...)
+	return r, tea.Batch(cmds...)
 }
 
-func (h RenameOverlay) View(width int, height int) string {
-	return h.fileName.View()
+func (r RenameOverlay) View(width int, height int) string {
+	return r.fileName.View()
 }

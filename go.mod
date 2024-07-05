@@ -4,6 +4,7 @@ go 1.22
 
 replace (
 	github.com/charmbracelet/lipgloss => github.com/gopad-dev/lipgloss v0.0.0-20240422161526-eea0119313bc
+	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240705195549-e9b758108f05
 	github.com/muesli/termenv => github.com/gopad-dev/termenv v0.0.0-20240413225005-5f4a43fcdd7b
 	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240529205148-623e5abff393
 )
@@ -12,7 +13,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/charmbracelet/bubbles v0.18.0
-	github.com/charmbracelet/bubbletea v0.26.4
+	github.com/charmbracelet/bubbletea v0.26.6
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/charmbracelet/x/ansi v0.1.2
 	github.com/dustin/go-humanize v1.0.1
@@ -25,7 +26,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2
-	go.gopad.dev/go-tree-sitter v0.0.0-20240619234809-725453cd8bed
+	go.gopad.dev/go-tree-sitter v0.0.0-20240620185356-89c6dfd0fb37
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.1-0.20240203004437-3c0d4339e51f
 	golang.org/x/text v0.16.0
@@ -33,7 +34,7 @@ require (
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/x/exp/term v0.0.0-20240606154654-7c42867b53c7 // indirect
+	github.com/charmbracelet/x/exp/term v0.0.0-20240625164403-2627ec16405d // indirect
 	github.com/charmbracelet/x/input v0.1.2 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.2 // indirect

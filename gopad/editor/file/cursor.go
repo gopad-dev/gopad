@@ -89,6 +89,10 @@ func (f *File) SetMark(row, col int) {
 	}
 }
 
+func (f *File) HasMark() bool {
+	return f.cursor.mark != nil
+}
+
 func (f *File) ResetMark() {
 	f.cursor.mark = nil
 }
@@ -109,6 +113,9 @@ func (f *File) Selection() *buffer.Range {
 	}
 
 	cursorRow, cursorCol := f.Cursor()
+	if cursorRow == f.cursor.mark.row && cursorCol == f.cursor.mark.col {
+		return nil
+	}
 
 	if cursorRow < f.cursor.mark.row || (cursorRow == f.cursor.mark.row && cursorCol < f.cursor.mark.col) {
 		return &buffer.Range{
@@ -171,7 +178,8 @@ func (f *File) SelectUp(count int) {
 
 func (f *File) MoveCursorUp(count int) {
 	if f.cursor.mark != nil {
-		f.cursor.mark = nil
+		f.SetCursor(f.cursor.mark.row, f.cursor.mark.col)
+		f.ResetMark()
 	}
 
 	f.moveCursorUp(count)
@@ -235,7 +243,8 @@ func (f *File) SelectLeft(count int) {
 
 func (f *File) MoveCursorLeft(count int) {
 	if f.cursor.mark != nil {
-		f.cursor.mark = nil
+		f.SetCursor(f.cursor.mark.row, f.cursor.mark.col)
+		f.ResetMark()
 	}
 
 	f.moveCursorLeft(count)

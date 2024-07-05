@@ -144,20 +144,18 @@ func OpenFile(name string) tea.Cmd {
 	}
 }
 
-func OpenFilePosition(name string, row int, col int) tea.Cmd {
+func OpenFilePosition(name string, position *buffer.Position) tea.Cmd {
 	return func() tea.Msg {
 		return OpenFileMsg{
-			Name: name,
-			Row:  row,
-			Col:  col,
+			Name:     name,
+			Position: position,
 		}
 	}
 }
 
 type OpenFileMsg struct {
-	Name string
-	Row  int
-	Col  int
+	Name     string
+	Position *buffer.Position
 }
 
 func SaveFile(name string) tea.Cmd {

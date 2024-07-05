@@ -83,15 +83,15 @@ func NewOutlineOverlay(f *file.File) OutlineOverlay {
 	l.Focus()
 
 	return OutlineOverlay{
-		f:    f,
-		list: l,
+		f: f,
+		l: l,
 	}
 }
 
 type OutlineOverlay struct {
 	f     *file.File
 	items []file.OutlineItem
-	list  list.Model[outlineItem]
+	l     list.Model[outlineItem]
 }
 
 func (o OutlineOverlay) ID() string {
@@ -113,9 +113,9 @@ func (o OutlineOverlay) Title() string {
 func (o *OutlineOverlay) renderOutlineItems() {
 	var out []outlineItem
 	for i, item := range o.items {
-		out = append(out, renderOutlineItem(o.f, o.list.Styles.ItemSelectedStyle, o.list.SelectedIndex() == i, item))
+		out = append(out, renderOutlineItem(o.f, o.l.Styles.ItemSelectedStyle, o.l.SelectedIndex() == i, item))
 	}
-	o.list.SetItems(out)
+	o.l.SetItems(out)
 }
 
 func (o OutlineOverlay) Init() tea.Cmd {
@@ -134,25 +134,32 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		o.renderOutlineItems()
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, config.Keys.Cancel):
+			return o, overlay.Close(OutlineOverlayID)
 		case key.Matches(msg, config.Keys.OK):
-			item := o.list.Selected().(outlineItem)
+			item := o.l.Selected()
 			return o, tea.Batch(
 				overlay.Close(OutlineOverlayID),
 				file.Scroll(item.r.Start.Row, item.r.Start.Col),
 			)
-
-		case key.Matches(msg, config.Keys.Cancel):
-			return o, overlay.Close(OutlineOverlayID)
 		}
 	}
 
 	var cmd tea.Cmd
-	o.list, cmd = o.list.Update(msg)
+	o.l, cmd = o.l.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
 	o.renderOutlineItems()
+
+	if o.l.Clicked() {
+		item := o.l.Selected()
+		return o, tea.Batch(
+			overlay.Close(OutlineOverlayID),
+			file.Scroll(item.r.Start.Row, item.r.Start.Col),
+		)
+	}
 
 	return o, tea.Batch(cmds...)
 }
@@ -162,9 +169,9 @@ func (o OutlineOverlay) View(width int, height int) string {
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
 	if width > 0 {
-		o.list.SetWidth(width)
+		o.l.SetWidth(width)
 	}
 
-	o.list.SetHeight(height - style.GetVerticalFrameSize() - 2)
-	return o.list.View()
+	o.l.SetHeight(height - style.GetVerticalFrameSize() - 2)
+	return o.l.View()
 }

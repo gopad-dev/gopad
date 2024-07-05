@@ -56,8 +56,8 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		case key.Matches(msg, config.Keys.Cancel):
 			return s, overlay.Close(SetThemeOverlayID)
 		case key.Matches(msg, config.Keys.OK):
-			item := s.l.Selected()
-			if item == nil {
+			theme := s.l.Selected()
+			if theme.Name == "" {
 				return s, nil
 			}
 			// TODO: set theme somehow
@@ -68,6 +68,15 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 
 	var cmd tea.Cmd
 	s.l, cmd = s.l.Update(msg)
+
+	if s.l.Clicked() {
+		item := s.l.Selected()
+		if item.Name != "" {
+			// TODO: set theme somehow
+			// theme := item.(config.ThemeConfig)
+			return s, tea.Batch(cmd, overlay.Close(SetThemeOverlayID))
+		}
+	}
 
 	return s, cmd
 }

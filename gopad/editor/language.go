@@ -12,7 +12,8 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-const SetLanguageOverlayID = "editor.language"
+const SetLanguageOverlayID = "file.language"
+const FileLanguageZoneID = "file.language"
 
 var _ overlay.Overlay = (*SetLanguageOverlay)(nil)
 
@@ -20,7 +21,6 @@ func NewSetLanguageOverlay() SetLanguageOverlay {
 	l := config.NewList(file.Languages)
 	l.TextInput.Placeholder = "Type a language and press enter to set it"
 	l.Focus()
-	l.SetListID("file.language")
 
 	return SetLanguageOverlay{
 		l: l,
@@ -58,17 +58,21 @@ func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		case key.Matches(msg, config.Keys.Cancel):
 			return s, overlay.Close(SetLanguageOverlayID)
 		case key.Matches(msg, config.Keys.OK):
-			item := s.l.Selected()
-			if item == nil {
+			lang := s.l.Selected()
+			if lang == nil {
 				return s, nil
 			}
-			lang := item.(*file.Language)
 			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), file.SetLanguage(lang.Name))
 		}
 	}
 
 	var cmd tea.Cmd
 	s.l, cmd = s.l.Update(msg)
+
+	if s.l.Clicked() {
+		lang := s.l.Selected()
+		return s, tea.Batch(cmd, overlay.Close(SetLanguageOverlayID), file.SetLanguage(lang.Name))
+	}
 
 	return s, cmd
 }

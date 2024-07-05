@@ -51,17 +51,17 @@ func (o NewOverlay) Init() tea.Cmd {
 
 func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Cancel, config.Keys.Editor.NewFile):
-			cmds = append(cmds, overlay.Close(NewOverlayID))
+		case key.Matches(msg, config.Keys.Cancel):
+			return o, overlay.Close(NewOverlayID)
 		case key.Matches(msg, config.Keys.OK):
-			cmds = append(cmds, tea.Sequence(
+			return o, tea.Sequence(
 				overlay.Close(NewOverlayID),
 				file.NewFile(o.fileName.Value()),
-			))
-			return o, tea.Batch(cmds...)
+			)
 		}
 	}
 

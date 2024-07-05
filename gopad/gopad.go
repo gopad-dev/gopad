@@ -76,6 +76,7 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return g, tea.Batch(cmds...)
 
 	case tea.MouseMsg:
+		log.Printf("MouseMsg: %#v\n", msg)
 		switch {
 		case mouse.Matches(msg, ZoneTheme, tea.MouseButtonLeft, tea.MouseActionRelease):
 			cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
@@ -83,7 +84,7 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		log.Println("KeyMsg", msg)
+		log.Printf("KeyMsg: %#v\n", msg)
 		// global keybindings
 		switch {
 		case key.Matches(msg, config.Keys.Quit):
@@ -154,6 +155,10 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
+	// now := time.Now()
+	// defer func() {
+	//	log.Printf("Render time: %s\n", time.Since(now))
+	// }()
 	appBar := g.AppBar()
 	codeBar := g.CodeBar()
 

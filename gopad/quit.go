@@ -68,15 +68,17 @@ func (q QuitOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Quit):
-			return q, tea.Quit
+			return q, q.buttonOK.OnClick()
+		case key.Matches(msg, config.Keys.Cancel):
+			return q, q.buttonCancel.OnClick()
 		case key.Matches(msg, config.Keys.Left):
 			q.buttonOK.Focus()
 			q.buttonCancel.Blur()
+			return q, nil
 		case key.Matches(msg, config.Keys.Right):
 			q.buttonOK.Blur()
 			q.buttonCancel.Focus()
-		case key.Matches(msg, config.Keys.Cancel):
-			return q, overlay.Close(QuitOverlayID)
+			return q, nil
 		}
 	}
 

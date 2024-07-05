@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
-	file2 "go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -19,11 +19,12 @@ var _ overlay.Overlay = (*CloseOverlay)(nil)
 
 func NewCloseOverlay(files []string) CloseOverlay {
 	bOK := config.NewButton("OK", func() tea.Cmd {
-		var cmds []tea.Cmd
-		for _, file := range files {
-			cmds = append(cmds, file2.CloseFile(file))
+		cmds := []tea.Cmd{
+			overlay.Close(CloseOverlayID),
 		}
-		cmds = append(cmds, overlay.Close(CloseOverlayID))
+		for _, f := range files {
+			cmds = append(cmds, file.CloseFile(f))
+		}
 		return tea.Sequence(cmds...)
 	})
 
@@ -46,73 +47,72 @@ type CloseOverlay struct {
 	buttonCancel button.Model
 }
 
-func (o CloseOverlay) ID() string {
+func (c CloseOverlay) ID() string {
 	return CloseOverlayID
 }
 
-func (o CloseOverlay) Position() (lipgloss.Position, lipgloss.Position) {
+func (c CloseOverlay) Position() (lipgloss.Position, lipgloss.Position) {
 	return lipgloss.Center, lipgloss.Center
 }
 
-func (o CloseOverlay) Margin() (int, int) {
+func (c CloseOverlay) Margin() (int, int) {
 	return 0, 0
 }
 
-func (o CloseOverlay) Title() string {
-	if len(o.files) > 1 {
+func (c CloseOverlay) Title() string {
+	if len(c.files) > 1 {
 		return "Close Files"
 	}
 	return "Close File"
 }
 
-func (o CloseOverlay) Init() tea.Cmd {
+func (c CloseOverlay) Init() tea.Cmd {
 	return nil
 }
 
-func (o CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (c CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Editor.CloseFile):
-			for _, file := range o.files {
-				cmds = append(cmds, file2.CloseFile(file))
-			}
-			return o, tea.Sequence(cmds...)
-		case key.Matches(msg, config.Keys.Left):
-			o.buttonOK.Focus()
-			o.buttonCancel.Blur()
-		case key.Matches(msg, config.Keys.Right):
-			o.buttonOK.Blur()
-			o.buttonCancel.Focus()
+			return c, c.buttonOK.OnClick()
 		case key.Matches(msg, config.Keys.Cancel):
-			return o, overlay.Close(CloseOverlayID)
+			return c, overlay.Close(CloseOverlayID)
+		case key.Matches(msg, config.Keys.Left):
+			c.buttonOK.Focus()
+			c.buttonCancel.Blur()
+			return c, nil
+		case key.Matches(msg, config.Keys.Right):
+			c.buttonOK.Blur()
+			c.buttonCancel.Focus()
+			return c, nil
 		}
 	}
 
 	var cmd tea.Cmd
-	o.buttonOK, cmd = o.buttonOK.Update(msg)
+	c.buttonOK, cmd = c.buttonOK.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	o.buttonCancel, cmd = o.buttonCancel.Update(msg)
+	c.buttonCancel, cmd = c.buttonCancel.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	return o, tea.Batch(cmds...)
+	return c, tea.Batch(cmds...)
 }
 
-func (o CloseOverlay) View(width int, height int) string {
+func (c CloseOverlay) View(width int, height int) string {
 	msg := "You have unsaved changes. Are you sure you want to close?"
-	if len(o.files) > 1 {
-		msg = fmt.Sprintf("You have unsaved changes in %d files. Are you sure you want to close?", len(o.files))
+	if len(c.files) > 1 {
+		msg = fmt.Sprintf("You have unsaved changes in %d files. Are you sure you want to close?", len(c.files))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.NewStyle().MarginBottom(1).Render(msg),
-		lipgloss.JoinHorizontal(lipgloss.Center, o.buttonOK.View(), o.buttonCancel.View()),
+		lipgloss.JoinHorizontal(lipgloss.Center, c.buttonOK.View(), c.buttonCancel.View()),
 	)
 }
