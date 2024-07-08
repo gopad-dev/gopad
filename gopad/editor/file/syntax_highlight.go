@@ -78,12 +78,12 @@ func getMatchingStyle(matchType string, name string) *lipgloss.Style {
 	var currentStyle *lipgloss.Style
 
 	for {
-		codeStyle, ok := config.Theme.Editor.CodeStyles[fmt.Sprintf("%s.%s", matchType, name)]
+		codeStyle, ok := config.Theme.CodeStyles[fmt.Sprintf("%s.%s", matchType, name)]
 		if ok {
 			currentStyle = &codeStyle
 			break
 		}
-		codeStyle, ok = config.Theme.Editor.CodeStyles[matchType]
+		codeStyle, ok = config.Theme.CodeStyles[matchType]
 		if ok {
 			currentStyle = &codeStyle
 			break
@@ -169,7 +169,7 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 			break
 		}
 
-		//if lastCapture != nil && !capture.Node.Equal(lastCapture.Node) {
+		// if lastCapture != nil && !capture.Node.Equal(lastCapture.Node) {
 		if lastCapture != nil && lastCapture.Node.Content() != capture.Node.Content() {
 			lastDef = nil
 			lastRef = nil

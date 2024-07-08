@@ -92,7 +92,7 @@ func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 
 func (o OpenOverlay) View(_ int, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		o.filePicker.View(height-config.Theme.Overlay.Styles.Style.GetVerticalFrameSize()-4),
+		o.filePicker.View(height-config.Theme.UI.Overlay.Styles.Style.GetVerticalFrameSize()-4),
 		"Press [esc] to cancel or [enter] to open.",
 	)
 }

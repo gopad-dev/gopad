@@ -129,7 +129,7 @@ var DefaultStyles = Styles{
 	Permission:       lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
 	Selected:         lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
 	FileSize:         lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(fileSizeWidth).Align(lipgloss.Right),
-	EmptyDirectory:   lipgloss.NewStyle().Foreground(lipgloss.Color("240")).PaddingLeft(paddingLeft).SetString("Bummer. No Files Found."),
+	EmptyDirectory:   lipgloss.NewStyle().Foreground(lipgloss.Color("240")).PaddingLeft(paddingLeft),
 }
 
 type errorMsg struct {
@@ -442,7 +442,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 // View returns the view of the file picker.
 func (m Model) View(height int) string {
 	if len(m.files) == 0 {
-		return m.Styles.EmptyDirectory.MaxHeight(height).String()
+		return m.Styles.EmptyDirectory.MaxHeight(height).Render("No Files Found.")
 	}
 	m.refreshViewOffset(height)
 	var s strings.Builder

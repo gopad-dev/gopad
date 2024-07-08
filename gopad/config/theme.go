@@ -15,22 +15,13 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-const (
-	ErrorStyle             = "error"
-	ErrorInlineStyle       = "error.inline"
-	WarningStyle           = "warning"
-	WarningInlineStyle     = "warning.inline"
-	InformationStyle       = "information"
-	InformationInlineStyle = "information.inline"
-	HintStyle              = "hint"
-	HintInlineStyle        = "hint.inline"
-)
-
 type RawThemeConfig struct {
-	Name   string       `toml:"name"`
-	Colors ColorsConfig `toml:"colors"`
-	Icons  IconsConfig  `toml:"icons"`
-	Styles StylesConfig `toml:"styles"`
+	Name       string           `toml:"name"`
+	Colors     Colors           `toml:"colors"`
+	Icons      IconsConfig      `toml:"icons"`
+	UI         UIConfig         `toml:"ui"`
+	Diagnostic DiagnosticConfig `toml:"diagnostic"`
+	CodeStyles CodeStylesConfig `toml:"code_styles"`
 }
 
 func (c RawThemeConfig) Title() string {
@@ -42,169 +33,133 @@ func (c RawThemeConfig) Description() string {
 }
 
 func (c RawThemeConfig) Theme() ThemeConfig {
-	colors := c.Colors.Colors()
+	colors := c.Colors
 	return ThemeConfig{
-		Name:             c.Name,
-		Colors:           colors,
-		Icons:            c.Icons,
-		AppBarStyle:      lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
-		AppBarTitleStyle: lipgloss.NewStyle().Padding(0, 1),
-		Editor: EditorStyles{
-			EmptyStyle: lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center),
-
-			FileStyle:         lipgloss.NewStyle().Foreground(colors.PrimaryColor).Padding(0, 1, 0, 2).Reverse(true),
-			FileSelectedStyle: lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Padding(0, 1, 0, 2).Reverse(true),
-
-			CodeBorderStyle: lipgloss.NewStyle().Border(lipgloss.NormalBorder(), false, false, false, true).BorderForeground(colors.PrimaryColor),
-
-			CodeLineStyle:     lipgloss.NewStyle(),
-			CodePrefixStyle:   lipgloss.NewStyle().Foreground(colors.SecondaryTextColor).Bold(true).Padding(0, 1),
-			CodeLineCharStyle: lipgloss.NewStyle(),
-
-			CodeCurrentLineStyle:       lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor),
-			CodeCurrentLinePrefixStyle: lipgloss.NewStyle().Foreground(colors.PrimaryTextColor).Bold(true).Background(colors.SecondaryBackgroundColor).Padding(0, 1),
-			CodeCurrentLineCharStyle:   lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor),
-
-			CodeSelectionStyle: lipgloss.NewStyle().Reverse(true),
-			CodeBarStyle:       lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true).Padding(0, 1),
-			CodeInlayHintStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor).Background(colors.SecondaryBackgroundColor).Bold(true).Italic(true),
-
+		Name:   c.Name,
+		Colors: colors,
+		Icons:  c.Icons.Styles(colors),
+		UI: UiStyles{
+			AppBar: AppBarStyles{
+				Style:      c.UI.AppBar.Style.Style(colors),
+				TitleStyle: c.UI.AppBar.Title.Style(colors).Padding(0, 1),
+				Files: AppBarFilesStyle{
+					Style:             c.UI.AppBar.Files.Style.Style(colors),
+					FileStyle:         c.UI.AppBar.Files.File.Style(colors).Padding(0, 1, 0, 2),
+					SelectedFileStyle: c.UI.AppBar.Files.SelectedFile.Style(colors).Padding(0, 1, 0, 2),
+				},
+			},
 			FileTree: filetree.Styles{
 				Style:                       lipgloss.NewStyle(),
 				EmptyStyle:                  lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center),
 				EntryPrefixStyle:            lipgloss.NewStyle().Faint(true),
-				EntryStyle:                  lipgloss.NewStyle(),
-				EntrySelectedStyle:          lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Reverse(true),
-				EntrySelectedUnfocusedStyle: lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true),
+				EntryStyle:                  c.UI.Menu.Entry.Style(colors),
+				EntrySelectedStyle:          c.UI.Menu.SelectedEntry.Style(colors),
+				EntrySelectedUnfocusedStyle: c.UI.Menu.SelectedEntryUnfocused.Style(colors),
+			},
+			FileView: FileViewStyles{
+				Style:                  lipgloss.Style{},
+				EmptyStyle:             c.UI.FileView.Empty.Style(colors).Align(lipgloss.Center, lipgloss.Center),
+				BorderStyle:            c.UI.FileView.Border.Style(colors).Border(lipgloss.NormalBorder(), false, false, false, true),
+				LineStyle:              c.UI.FileView.Line.Style(colors),
+				LinePrefixStyle:        c.UI.FileView.LinePrefix.Style(colors).Padding(0, 1),
+				LineCharStyle:          c.UI.FileView.LineChar.Style(colors),
+				CurrentLineStyle:       c.UI.FileView.CurrentLine.Style(colors),
+				CurrentLinePrefixStyle: c.UI.FileView.CurrentLinePrefix.Style(colors).Padding(0, 1),
+				CurrentLineCharStyle:   c.UI.FileView.CurrentLineChar.Style(colors),
+				SelectionStyle:         c.UI.FileView.Selection.Style(colors),
+				InlayHintStyle:         c.UI.FileView.InlayHint.Style(colors),
+			},
+			CodeBar: CodeBarStyles{
+				Style: c.UI.CodeBar.Style.Style(colors).Padding(0, 1),
 			},
 			SearchBar: searchbar.Styles{
 				Style:       lipgloss.NewStyle().Padding(0, 2),
 				ResultStyle: lipgloss.NewStyle().Padding(0, 1),
 			},
-			Diagnostics: DiagnosticStyles{
-				ErrorStyle:           c.Styles[ErrorStyle].Style(),
-				ErrorCharStyle:       c.Styles[ErrorInlineStyle].Style(),
-				WarningStyle:         c.Styles[WarningStyle].Style(),
-				WarningCharStyle:     c.Styles[WarningInlineStyle].Style(),
-				InformationStyle:     c.Styles[InformationStyle].Style(),
-				InformationCharStyle: c.Styles[InformationInlineStyle].Style(),
-				HintStyle:            c.Styles[HintStyle].Style(),
-				HintCharStyle:        c.Styles[HintInlineStyle].Style(),
-			},
+
 			Documentation: DocumentationStyles{
-				Style:        lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
-				MessageStyle: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor),
+				Style: c.UI.Menu.Style.Style(colors).Padding(0, 1),
 			},
 			Autocomplete: AutocompleteStyles{
-				Style: lipgloss.NewStyle().Background(colors.SecondaryBackgroundColor).Padding(0, 1),
-
-				ItemStyle:         lipgloss.NewStyle(),
-				SelectedItemStyle: lipgloss.NewStyle().Reverse(true),
-			},
-			CodeStyles: c.Styles.Styles(),
-		},
-		Overlay: OverlayStyles{
-			Styles: overlay.Styles{
-				Style:        lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center).Border(lipgloss.RoundedBorder()).BorderForeground(colors.PrimaryColor),
-				TitleStyle:   lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true).AlignHorizontal(lipgloss.Center).Margin(0, 1),
-				ContentStyle: lipgloss.NewStyle().Padding(1, 2),
+				Style:             c.UI.Menu.Style.Style(colors).Padding(0, 1),
+				ItemStyle:         c.UI.Menu.Entry.Style(colors),
+				SelectedItemStyle: c.UI.Menu.SelectedEntry.Style(colors),
 			},
 
-			NotificationStyle: lipgloss.NewStyle().Foreground(colors.PrimaryTextColor).Width(16).Border(lipgloss.RoundedBorder()).BorderForeground(colors.PrimaryColor).Padding(0, 1),
+			Overlay: OverlayStyles{
+				Styles: overlay.Styles{
+					Style:        c.UI.Menu.Style.Style(colors).Align(lipgloss.Center, lipgloss.Center).Border(lipgloss.RoundedBorder()),
+					TitleStyle:   c.UI.Menu.Title.Style(colors).AlignHorizontal(lipgloss.Center).Margin(0, 1),
+					ContentStyle: c.UI.Menu.Content.Style(colors).Padding(1, 2),
+				},
 
-			RunOverlayStyle: lipgloss.NewStyle().Align(lipgloss.Top, lipgloss.Center).Border(lipgloss.RoundedBorder()).BorderForeground(colors.PrimaryColor).Padding(0, 1),
-		},
-		TextInput: textinput.Styles{
-			PromptStyle:        lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
-			FocusedPromptStyle: lipgloss.NewStyle().Foreground(colors.PrimaryTextColor),
-			TextStyle:          lipgloss.NewStyle().Foreground(colors.PrimaryTextColor),
-			PlaceholderStyle:   lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
-		},
-		Button: button.Styles{
-			Default: lipgloss.NewStyle().Foreground(colors.PrimaryColor).Reverse(true).Padding(0, 1).Margin(0, 1),
-			Focus:   lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Reverse(true).Padding(0, 1).Margin(0, 1),
-		},
-		FilePicker: filepicker.Styles{
-			DisabledCursor:   lipgloss.NewStyle().Foreground(colors.DisabledCursorColor),
-			Cursor:           lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Bold(true),
-			Symlink:          lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
-			Directory:        lipgloss.NewStyle().Foreground(colors.PrimaryColor),
-			File:             lipgloss.NewStyle().Foreground(colors.PrimaryTextColor),
-			DisabledFile:     lipgloss.NewStyle().Foreground(colors.DisabledTextColor),
-			DisabledSelected: lipgloss.NewStyle().Foreground(colors.DisabledTextColor),
-			Permission:       lipgloss.NewStyle().Foreground(colors.DisabledTextColor),
-			Selected:         lipgloss.NewStyle().Foreground(colors.PrimarySelectedColor).Bold(true),
-			FileSize:         lipgloss.NewStyle().Foreground(colors.DisabledTextColor).Width(7).Align(lipgloss.Right),
-			EmptyDirectory:   lipgloss.NewStyle().Foreground(colors.PrimaryColor).PaddingLeft(2).SetString("No Files Found."),
-		},
-		Cursor: cursor.Styles{
-			BlockCursor:     lipgloss.NewStyle().Foreground(colors.CursorColor).Reverse(true),
-			UnderlineCursor: lipgloss.NewStyle().Underline(true),
-		},
-		Help: help.Styles{
-			Ellipsis:       lipgloss.NewStyle(),
-			Header:         lipgloss.NewStyle().Reverse(true).AlignHorizontal(lipgloss.Center),
-			ShortKey:       lipgloss.NewStyle(),
-			ShortDesc:      lipgloss.NewStyle(),
-			ShortSeparator: lipgloss.NewStyle(),
-			FullKey:        lipgloss.NewStyle(),
-			FullDesc:       lipgloss.NewStyle(),
-			FullSeparator:  lipgloss.NewStyle(),
-		},
-		NotificationStyle: notifications.Styles{
-			Notification: lipgloss.NewStyle().Padding(0, 1).Border(lipgloss.RoundedBorder()).BorderForeground(colors.PrimaryColor),
-		},
-		List: list.Styles{
-			Style:             lipgloss.NewStyle().MarginLeft(1),
-			ItemStyle:         lipgloss.NewStyle().Padding(0, 1),
-			ItemSelectedStyle: lipgloss.NewStyle().Padding(0, 1).Reverse(true),
+				RunOverlayStyle: c.UI.Menu.Style.Style(colors).Align(lipgloss.Top, lipgloss.Center).Border(lipgloss.RoundedBorder()).Padding(0, 1),
+			},
 
-			ItemDescriptionStyle: lipgloss.NewStyle().Foreground(colors.SecondaryTextColor),
+			TextInput: textinput.Styles{
+				PromptStyle:        lipgloss.NewStyle(),
+				FocusedPromptStyle: lipgloss.NewStyle(),
+				TextStyle:          lipgloss.NewStyle(),
+				PlaceholderStyle:   lipgloss.NewStyle(),
+			},
+			Button: button.Styles{
+				Default: lipgloss.NewStyle().Padding(0, 1).Margin(0, 1),
+				Focus:   lipgloss.NewStyle().Padding(0, 1).Margin(0, 1),
+			},
+			FilePicker: filepicker.Styles{
+				DisabledCursor:   lipgloss.NewStyle(),
+				Cursor:           lipgloss.NewStyle().Bold(true),
+				Symlink:          lipgloss.NewStyle(),
+				Directory:        lipgloss.NewStyle(),
+				File:             lipgloss.NewStyle(),
+				DisabledFile:     lipgloss.NewStyle(),
+				DisabledSelected: lipgloss.NewStyle(),
+				Permission:       lipgloss.NewStyle(),
+				Selected:         lipgloss.NewStyle().Bold(true),
+				FileSize:         lipgloss.NewStyle().Width(7).Align(lipgloss.Right),
+				EmptyDirectory:   lipgloss.NewStyle().PaddingLeft(2),
+			},
+			Cursor: cursor.Styles{
+				BlockCursor:     c.UI.Cursor.Block.Style(colors),
+				UnderlineCursor: c.UI.Cursor.Underline.Style(colors).Underline(true),
+			},
+			Help: help.Styles{
+				Ellipsis:       lipgloss.NewStyle(),
+				Header:         lipgloss.NewStyle().AlignHorizontal(lipgloss.Center),
+				ShortKey:       lipgloss.NewStyle(),
+				ShortDesc:      lipgloss.NewStyle(),
+				ShortSeparator: lipgloss.NewStyle(),
+				FullKey:        lipgloss.NewStyle(),
+				FullDesc:       lipgloss.NewStyle(),
+				FullSeparator:  lipgloss.NewStyle(),
+			},
+			NotificationStyle: notifications.Styles{
+				Notification: c.UI.Menu.Style.Style(colors).Width(16).Border(lipgloss.RoundedBorder()).Padding(0, 1),
+			},
+			List: list.Styles{
+				Style:             lipgloss.NewStyle().MarginLeft(1),
+				ItemStyle:         lipgloss.NewStyle().Padding(0, 1),
+				ItemSelectedStyle: lipgloss.NewStyle().Padding(0, 1),
+
+				ItemDescriptionStyle: lipgloss.NewStyle(),
+			},
 		},
+
+		Diagnostic: DiagnosticStyles{
+			ErrorStyle:       c.Diagnostic.Error.Style(colors),
+			ErrorCharStyle:   c.Diagnostic.ErrorChar.Style(colors),
+			WarningStyle:     c.Diagnostic.Warning.Style(colors),
+			WarningCharStyle: c.Diagnostic.WarningChar.Style(colors),
+			InfoStyle:        c.Diagnostic.Info.Style(colors),
+			InfoCharStyle:    c.Diagnostic.InfoChar.Style(colors),
+			HintStyle:        c.Diagnostic.Hint.Style(colors),
+			HintCharStyle:    c.Diagnostic.HintChar.Style(colors),
+		},
+		CodeStyles: c.CodeStyles.Styles(colors),
 	}
 }
 
-type ColorsConfig struct {
-	PrimaryColor         string `toml:"primary_color"`
-	PrimarySelectedColor string `toml:"primary_selected_color"`
-
-	PrimaryTextColor   string `toml:"primary_text_color"`
-	SecondaryTextColor string `toml:"secondary_text_color"`
-	DisabledTextColor  string `toml:"disabled_text_color"`
-
-	BackgroundColor          string `toml:"background_color"`
-	SecondaryBackgroundColor string `toml:"secondary_background_color"`
-
-	CursorColor         string `toml:"cursor_color"`
-	DisabledCursorColor string `toml:"disabled_cursor_color"`
-}
-
-func (c ColorsConfig) Colors() Colors {
-	return Colors{
-		PrimaryColor:         lipgloss.Color(c.PrimaryColor),
-		PrimarySelectedColor: lipgloss.Color(c.PrimarySelectedColor),
-
-		PrimaryTextColor:   lipgloss.Color(c.PrimaryTextColor),
-		SecondaryTextColor: lipgloss.Color(c.SecondaryTextColor),
-		DisabledTextColor:  lipgloss.Color(c.DisabledTextColor),
-
-		BackgroundColor:          lipgloss.Color(c.BackgroundColor),
-		SecondaryBackgroundColor: lipgloss.Color(c.SecondaryBackgroundColor),
-
-		CursorColor:         lipgloss.Color(c.CursorColor),
-		DisabledCursorColor: lipgloss.Color(c.DisabledCursorColor),
-	}
-}
-
-type StylesConfig map[string]Style
-
-func (c StylesConfig) Styles() map[string]lipgloss.Style {
-	m := make(map[string]lipgloss.Style)
-	for k, v := range c {
-		m[k] = v.Style()
-	}
-	return m
-}
+type Colors map[string]lipgloss.Color
 
 type IconsConfig struct {
 	RootDir rune `toml:"root_dir"`
@@ -218,11 +173,128 @@ type IconsConfig struct {
 	Hint        rune `toml:"hint"`
 
 	Files map[string]rune `toml:"files"`
+
+	UnknownType IconConfig            `toml:"unknown_type"`
+	Types       map[string]IconConfig `toml:"types"`
 }
 
-func (c IconsConfig) FileIcon(name string) rune {
-	if r, ok := c.Files[name]; ok {
-		return r
+func (c IconsConfig) Styles(colors Colors) IconStyles {
+	files := make(map[string]lipgloss.Style, len(c.Files))
+	for k, v := range c.Files {
+		files[k] = lipgloss.NewStyle().SetString(string(v))
 	}
-	return c.File
+
+	types := make(map[string]lipgloss.Style, len(c.Types))
+	for k, v := range c.Types {
+		types[k] = v.Style.Style(colors).SetString(string(v.Icon))
+	}
+
+	return IconStyles{
+		RootDir: lipgloss.NewStyle().SetString(string(c.RootDir)),
+		Dir:     lipgloss.NewStyle().SetString(string(c.Dir)),
+		OpenDir: lipgloss.NewStyle().SetString(string(c.OpenDir)),
+		File:    lipgloss.NewStyle().SetString(string(c.File)),
+
+		Error:       lipgloss.NewStyle().SetString(string(c.Error)),
+		Warning:     lipgloss.NewStyle().SetString(string(c.Warning)),
+		Information: lipgloss.NewStyle().SetString(string(c.Information)),
+		Hint:        lipgloss.NewStyle().SetString(string(c.Hint)),
+
+		Files: files,
+
+		UnknownType: c.UnknownType.Style.Style(colors).SetString(string(c.UnknownType.Icon)),
+		Types:       types,
+	}
+}
+
+type IconConfig struct {
+	Icon  rune  `toml:"icon"`
+	Style Style `toml:"style"`
+}
+
+type UIConfig struct {
+	AppBar  AppBarUIConfig  `toml:"app_bar"`
+	CodeBar CodeBarUIConfig `toml:"code_bar"`
+
+	Menu   MenuUIConfig   `toml:"menu"`
+	Cursor CursorUIConfig `toml:"cursor"`
+
+	FileTree FileTreeUIConfig `toml:"file_tree"`
+	FileView FileViewUIConfig `toml:"file_view"`
+}
+
+type AppBarUIConfig struct {
+	Style Style `toml:"style"`
+	Title Style `toml:"title"`
+
+	Files AppBarFilesUIConfig `toml:"files"`
+}
+
+type AppBarFilesUIConfig struct {
+	Style        Style `toml:"style"`
+	File         Style `toml:"file"`
+	SelectedFile Style `toml:"selected_file"`
+}
+
+type CodeBarUIConfig struct {
+	Style Style `toml:"style"`
+}
+
+type MenuUIConfig struct {
+	Style   Style `toml:"style"`
+	Title   Style `toml:"title"`
+	Content Style `toml:"content"`
+
+	Entry                  Style `toml:"entry"`
+	SelectedEntry          Style `toml:"selected_entry"`
+	SelectedEntryUnfocused Style `toml:"selected_entry_unfocused"`
+}
+
+type CursorUIConfig struct {
+	Block     Style `toml:"block"`
+	Underline Style `toml:"underline"`
+}
+
+type FileTreeUIConfig struct {
+}
+
+type FileViewUIConfig struct {
+	Style  Style `toml:"style"`
+	Empty  Style `toml:"empty"`
+	Border Style `toml:"border"`
+
+	Line       Style `toml:"line"`
+	LinePrefix Style `toml:"line_prefix"`
+	LineChar   Style `toml:"line_char"`
+
+	CurrentLine       Style `toml:"current_line"`
+	CurrentLinePrefix Style `toml:"current_line_prefix"`
+	CurrentLineChar   Style `toml:"current_line_char"`
+
+	Selection Style `toml:"selection"`
+	InlayHint Style `toml:"inlay_hint"`
+}
+
+type DiagnosticConfig struct {
+	Error     Style `toml:"error"`
+	ErrorChar Style `toml:"error_char"`
+
+	Warning     Style `toml:"warning"`
+	WarningChar Style `toml:"warning_char"`
+
+	Info     Style `toml:"info"`
+	InfoChar Style `toml:"info_char"`
+
+	Hint     Style `toml:"hint"`
+	HintChar Style `toml:"hint_char"`
+}
+
+type CodeStylesConfig map[string]Style
+
+func (c CodeStylesConfig) Styles(colors Colors) map[string]lipgloss.Style {
+	m := make(map[string]lipgloss.Style, len(c))
+	for k, v := range c {
+		m[k] = v.Style(colors)
+	}
+	return m
 }

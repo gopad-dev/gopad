@@ -6,28 +6,67 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/help"
-	"go.gopad.dev/gopad/internal/bubbles/notifications"
-	"go.gopad.dev/gopad/internal/bubbles/textinput"
-
 	"go.gopad.dev/gopad/internal/bubbles/filetree"
+	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
+	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/searchbar"
+	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
 type ThemeConfig struct {
 	Name string
 
-	Colors Colors
-	Icons  IconsConfig
+	Colors     Colors
+	Icons      IconStyles
+	UI         UiStyles
+	Diagnostic DiagnosticStyles
+	CodeStyles map[string]lipgloss.Style
+}
 
-	AppBarStyle      lipgloss.Style
-	AppBarTitleStyle lipgloss.Style
+type IconStyles struct {
+	RootDir lipgloss.Style
+	Dir     lipgloss.Style
+	OpenDir lipgloss.Style
+	File    lipgloss.Style
 
-	Editor EditorStyles
+	Error       lipgloss.Style
+	Warning     lipgloss.Style
+	Information lipgloss.Style
+	Hint        lipgloss.Style
 
-	Overlay OverlayStyles
+	Files map[string]lipgloss.Style
+
+	UnknownType lipgloss.Style
+	Types       map[string]lipgloss.Style
+}
+
+func (c IconStyles) FileIcon(name string) lipgloss.Style {
+	if r, ok := c.Files[name]; ok {
+		return r
+	}
+	return c.File
+}
+
+func (c IconStyles) TypeIcon(name string) lipgloss.Style {
+	if r, ok := c.Types[name]; ok {
+		return r
+	}
+	return c.UnknownType
+}
+
+type UiStyles struct {
+	AppBar  AppBarStyles
+	CodeBar CodeBarStyles
+
+	FileTree filetree.Styles
+	FileView FileViewStyles
+
+	SearchBar     searchbar.Styles
+	Documentation DocumentationStyles
+	Autocomplete  AutocompleteStyles
+	Overlay       OverlayStyles
 
 	TextInput         textinput.Styles
 	Button            button.Styles
@@ -38,19 +77,38 @@ type ThemeConfig struct {
 	List              list.Styles
 }
 
-type Colors struct {
-	PrimaryColor         lipgloss.Color
-	PrimarySelectedColor lipgloss.Color
+type AppBarStyles struct {
+	Style      lipgloss.Style
+	TitleStyle lipgloss.Style
 
-	PrimaryTextColor   lipgloss.Color
-	SecondaryTextColor lipgloss.Color
-	DisabledTextColor  lipgloss.Color
+	Files AppBarFilesStyle
+}
 
-	BackgroundColor          lipgloss.Color
-	SecondaryBackgroundColor lipgloss.Color
+type AppBarFilesStyle struct {
+	Style             lipgloss.Style
+	FileStyle         lipgloss.Style
+	SelectedFileStyle lipgloss.Style
+}
 
-	CursorColor         lipgloss.Color
-	DisabledCursorColor lipgloss.Color
+type FileViewStyles struct {
+	Style       lipgloss.Style
+	EmptyStyle  lipgloss.Style
+	BorderStyle lipgloss.Style
+
+	LineStyle       lipgloss.Style
+	LinePrefixStyle lipgloss.Style
+	LineCharStyle   lipgloss.Style
+
+	CurrentLineStyle       lipgloss.Style
+	CurrentLinePrefixStyle lipgloss.Style
+	CurrentLineCharStyle   lipgloss.Style
+
+	SelectionStyle lipgloss.Style
+	InlayHintStyle lipgloss.Style
+}
+
+type CodeBarStyles struct {
+	Style lipgloss.Style
 }
 
 type EditorStyles struct {
@@ -84,19 +142,21 @@ type EditorStyles struct {
 }
 
 type DiagnosticStyles struct {
-	ErrorStyle           lipgloss.Style
-	ErrorCharStyle       lipgloss.Style
-	WarningStyle         lipgloss.Style
-	WarningCharStyle     lipgloss.Style
-	InformationStyle     lipgloss.Style
-	InformationCharStyle lipgloss.Style
-	HintStyle            lipgloss.Style
-	HintCharStyle        lipgloss.Style
+	ErrorStyle     lipgloss.Style
+	ErrorCharStyle lipgloss.Style
+
+	WarningStyle     lipgloss.Style
+	WarningCharStyle lipgloss.Style
+
+	InfoStyle     lipgloss.Style
+	InfoCharStyle lipgloss.Style
+
+	HintStyle     lipgloss.Style
+	HintCharStyle lipgloss.Style
 }
 
 type DocumentationStyles struct {
-	Style        lipgloss.Style
-	MessageStyle lipgloss.Style
+	Style lipgloss.Style
 }
 
 type AutocompleteStyles struct {
@@ -107,8 +167,6 @@ type AutocompleteStyles struct {
 }
 
 type OverlayStyles struct {
-	Styles overlay.Styles
-
-	NotificationStyle lipgloss.Style
-	RunOverlayStyle   lipgloss.Style
+	Styles          overlay.Styles
+	RunOverlayStyle lipgloss.Style
 }

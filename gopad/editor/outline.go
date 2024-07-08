@@ -40,7 +40,7 @@ func (o outlineItem) FilterValue() string {
 }
 
 func renderOutlineItem(file *file.File, selectedStyle lipgloss.Style, selected bool, item file.OutlineItem) outlineItem {
-	codeCharStyle := config.Theme.Editor.CodeLineCharStyle
+	codeCharStyle := config.Theme.UI.FileView.LineCharStyle
 
 	var (
 		title    string
@@ -165,7 +165,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 }
 
 func (o OutlineOverlay) View(width int, height int) string {
-	style := config.Theme.Overlay.RunOverlayStyle
+	style := config.Theme.UI.Overlay.RunOverlayStyle
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
 	if width > 0 {

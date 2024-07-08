@@ -269,9 +269,11 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 		items := make([]CompletionItem, 0, len(result.Items))
 		for _, resultItem := range result.Items {
 			item := CompletionItem{
-				Label:  resultItem.Label,
-				Detail: resultItem.Detail,
-				Text:   resultItem.InsertText,
+				Label:      resultItem.Label,
+				Detail:     resultItem.Detail,
+				Kind:       CompletionItemKind(resultItem.Kind),
+				Text:       resultItem.InsertText,
+				Deprecated: resultItem.Deprecated,
 			}
 
 			if resultItem.TextEdit != nil {

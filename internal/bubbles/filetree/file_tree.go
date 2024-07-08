@@ -120,18 +120,18 @@ var DefaultKeyMap = KeyMap{
 }
 
 type Icons struct {
-	RootDir          rune
-	Dir              rune
-	OpenDir          rune
-	File             rune
-	LanguageIconFunc func(string) rune
+	RootDir          lipgloss.Style
+	Dir              lipgloss.Style
+	OpenDir          lipgloss.Style
+	File             lipgloss.Style
+	LanguageIconFunc func(string) lipgloss.Style
 }
 
 var DefaultIcons = Icons{
-	RootDir: '📁',
-	Dir:     '📂',
-	OpenDir: '📁',
-	File:    '📄',
+	RootDir: lipgloss.NewStyle().SetString("📁"),
+	Dir:     lipgloss.NewStyle().SetString("'📂'"),
+	OpenDir: lipgloss.NewStyle().SetString("📁"),
+	File:    lipgloss.NewStyle().SetString("📄"),
 }
 
 func New() Model {
@@ -481,7 +481,7 @@ func (m Model) View(height int) string {
 }
 
 func (m Model) entryView(e *Entry, i int, indent string) string {
-	var icon rune
+	var icon lipgloss.Style
 
 	if e.IsDir {
 		if indent == "" {
@@ -497,12 +497,12 @@ func (m Model) entryView(e *Entry, i int, indent string) string {
 		if m.Icons.LanguageIconFunc != nil {
 			icon = m.Icons.LanguageIconFunc(e.Name)
 		}
-		if icon == 0 {
+		if icon.String() == "" {
 			icon = m.Icons.File
 		}
 	}
 
-	line := indent + string(icon) + " " + e.Name
+	line := indent + icon.Render() + " " + e.Name
 	if runewidth.StringWidth(line) > m.Width {
 		line = runewidth.Truncate(line, m.Width, "…")
 	} else {

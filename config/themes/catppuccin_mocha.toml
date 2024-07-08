@@ -1,0 +1,234 @@
+name = 'catppuccin mocha'
+
+# Color configuration
+[colors]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
+
+cursorline = "2a2b3c"
+secondary_cursor = "b5a6a8"
+
+[icons]
+root_dir = 0xef81
+dir = 0xf024b
+open_dir = 0xf0770
+file = 0xea7b
+
+error = 0xea87
+warning = 0xf071
+information = 0xf05a
+hint = 0xf06e8
+
+[icons.files]
+"go" = 0xe627
+"go-mod" = 0xe627
+"go-sum" = 0xe627
+"go-work" = 0xe627
+"go-template" = 0xe627
+"templ" = 0xe627
+"toml" = 0xe6b2
+"query" = 0xe21c
+"markdown" = 0xf0354
+"comment" = 0xf075
+"json" = 0xe60b
+"jsonc" = 0xe60b
+"json5" = 0xe60b
+"yaml" = 0xf0b20
+"gitignore" = 0xf05e
+"git-commit" = 0xf05e
+"git-config" = 0xf05e
+"git-rebase" = 0xf05e
+"gitattributes" = 0xf05e
+"hyprlang" = 0xf359
+"bash" = 0xf1183
+"css" = 0xe749
+"scss" = 0xe749
+"dockerfile" = 0xf0868
+"html" = 0xf031d
+"http" = 0xe749
+"java" = 0xf0b37
+"kotlin" = 0xf1219
+"nix" = 0xf1105
+"passwd" = 0xf4fc
+"properties" = 0xeb65
+"regex" = 0xf0451
+"sql" = 0xf01bc
+"sqlite" = 0xf01bc
+"sshd-config" = 0xf08c0
+"xml" = 0xf05c0
+"python" = 0xf0320
+"requirements" = 0xf0320
+"javascript" = 0xf031e
+
+unknown_type = 0xeb63
+
+[icons.types]
+"text" = { icon = 0xeb8d, style = { foreground = '$text' } }
+"method" = { icon = 0xea8c, style = { foreground = '$blue' } }
+"function" = { icon = 0xf0295, style = { foreground = '$blue' } }
+"constructor" = { icon = 0xf423, style = { foreground = '$sapphire' } }
+"field" = { icon = 0xeb5f, style = { foreground = '$blue' } }
+"variable" = { icon = 0xea88, style = { foreground = '$text' } }
+"class" = { icon = 0xeb5b, style = { foreground = '13' } }
+"interface" = { icon = 0xeb61, style = { foreground = '13' } }
+"module" = { icon = 0xea8b, style = { foreground = '13' } }
+"property" = { icon = 0xeb65, style = { foreground = '$blue' } }
+"unit" = { icon = 0xe21f, style = { foreground = '7' } }
+"value" = { icon = 0xea90, style = { foreground = '3' } }
+"enum" = { icon = 0xea95, style = { foreground = '13' } }
+"keyword" = { icon = 0xeb62, style = { foreground = '13' } }
+"snippet" = { icon = 0xeb66, style = { foreground = '7' } }
+"color" = { icon = 0xeb5c, style = { foreground = '15' } }
+"file" = { icon = 0xea7b, style = { foreground = '1' } }
+"reference" = { icon = 0xf481, style = { foreground = '1' } }
+"folder" = { icon = 0xf024b, style = { foreground = '1' } }
+"enum_member" = { icon = 0xeb5e, style = { foreground = '1' } }
+"constant" = { icon = 0xeb5d, style = { foreground = '1' } }
+"struct" = { icon = 0xf1b3, style = { foreground = '13' } }
+"event" = { icon = 0xea86, style = { foreground = '11' } }
+"operator" = { icon = 0xeb64, style = { foreground = '7' } }
+"type_parameter" = { icon = 0xea92, style = { foreground = '11' } }
+
+[ui]
+[ui.app_bar]
+style = { background = '$mantle', foreground = '$text' }
+title = { foreground = '$text' }
+
+[ui.app_bar.files]
+style = { background = '$mantle', foreground = '$text' }
+file = { foreground = '$text' }
+selected_file = { foreground = '$text', background = '$base' }
+
+[ui.code_bar]
+style = { background = '$mantle', foreground = '$text' }
+
+[ui.menu]
+style = { background = '$surface0', foreground = '$overlay2' }
+title = { foreground = '$text' }
+content = { foreground = '$text' }
+
+entry = { foreground = '$text' }
+selected_entry = { foreground = '$text', background = '$base' }
+selected_entry_unfocused = { foreground = '$text', background = '$base' }
+
+[ui.cursor]
+block = { foreground = '$text', background = '$text' }
+underline = { underline = true, underline_style = 'solid', underline_color = '$text' }
+
+[ui.file_tree]
+
+[ui.file_view]
+style = { background = '$base', foreground = '$text' }
+empty = { foreground = '$subtext1' }
+border = { foreground = '$overlay2' }
+
+line = { }
+line_prefix = { foreground = '$overlay2' }
+line_char = { }
+
+current_line = { background = '$surface0' }
+current_line_prefix = { background = '$surface0' }
+current_line_char = { background = '$surface0' }
+
+selection = { background = '$surface1' }
+inlay_hint = { foreground = '$subtext0', background = '$surface1', italic = true, bold = true }
+
+# Diagnostic Style configuration
+[diagnostic]
+error = { foreground = '$red', bold = true }
+error_char = { underline = true, underline_style = 'curly', underline_color = '$red' }
+
+warning = { foreground = '$yellow', bold = true }
+warning_char = { underline = true, underline_style = 'curly', underline_color = '$yellow' }
+
+info = { foreground = '$sky', bold = true }
+info_char = { underline = true, underline_style = 'curly', underline_color = '$sky' }
+
+hint = { foreground = '$teal', bold = true }
+hint_char = { underline = true, underline_style = 'curly', underline_color = '$teal' }
+
+# Code Style configuration
+[code_styles]
+"attribute" = { foreground = '$yellow' }
+
+"type" = { foreground = '$yellow' }
+"type.enum" = { foreground = '$teal' }
+
+"constructor" = { foreground = '$sapphire' }
+
+"constant" = { foreground = '$peach' }
+"constant.character" = { foreground = '$teal' }
+"constant.character.escape" = { foreground = '$flamingo' }
+
+"string" = { foreground = '$green' }
+"string.regexp" = { foreground = '$flamingo' }
+"string.special" = { foreground = '$blue' }
+"string.special.symbol" = { foreground = '$red' }
+
+"comment" = { foreground = '$overlay2', italic = true }
+
+"variable" = { foreground = '$text' }
+"variable.parameter" = { foreground = '$maroon', italic = true }
+"variable.builtin" = { foreground = '$red' }
+"variable.other.member" = { foreground = '$teal' }
+
+"label" = { foreground = '$sapphire' }
+
+"punctuation.delimiter" = { foreground = '$overlay2' }
+"punctuation.special" = { foreground = '$sky' }
+
+"keyword" = { foreground = '$mauve' }
+"keyword.control.conditional" = { foreground = '$mauve', italic = true }
+
+"function" = { foreground = '$blue' }
+"function.macro" = { foreground = '$blue' }
+
+"tag" = { foreground = '$blue' }
+
+"section" = { foreground = '$yellow', italic = true }
+
+"special" = { foreground = '$blue' }
+
+"markup.heading.marker" = { foreground = '$peach', bold = true }
+"markup.heading.1" = { foreground = '$lavender' }
+"markup.heading.2" = { foreground = '$mauve' }
+"markup.heading.3" = { foreground = '$green' }
+"markup.heading.4" = { foreground = '$yellow' }
+"markup.heading.5" = { foreground = '$flamingo' }
+"markup.heading.6" = { foreground = '$teal' }
+"markup.list" = { foreground = '$mauve' }
+"markup.bold" = { bold = true }
+"markup.italic" = { italic = true }
+"markup.link.url" = { foreground = '$blue', itatlic = true, underline = true }
+"markup.link.text" = { foreground = '$blue' }
+"markup.raw" = { foreground = '$flamingo' }
+# reset highlight for block code to allow injection of language specific styles
+"markup.raw.block" = { foreground = '$text' }
+
+"diff.plus" = { foreground = '$green' }
+"diff.delta" = { foreground = '$red' }
+"diff.minus" = { foreground = '$blue' }

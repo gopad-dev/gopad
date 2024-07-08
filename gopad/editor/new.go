@@ -75,7 +75,7 @@ func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 }
 
 func (o NewOverlay) View(width int, height int) string {
-	style := config.Theme.Overlay.Styles.Style
+	style := config.Theme.UI.Overlay.Styles.Style
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
 	if width > 0 {

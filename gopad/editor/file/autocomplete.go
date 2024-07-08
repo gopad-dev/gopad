@@ -4,20 +4,34 @@ import (
 	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func NewAutocompleter() *Autocompleter {
-	return &Autocompleter{}
+func NewAutocompleter(f *File) *Autocompleter {
+	return &Autocompleter{
+		file: f,
+	}
 }
 
 type Autocompleter struct {
+	file        *File
 	completions []ls.CompletionItem
 	completion  int
 	offset      int
 
 	show bool
+}
+
+func (s *Autocompleter) Update() tea.Cmd {
+	if s.Visible() {
+		row, col := s.file.Cursor()
+		return ls.GetAutocompletion(s.file.Name(), row, col)
+	}
+
+	return nil
 }
 
 func (s *Autocompleter) Visible() bool {
@@ -50,12 +64,13 @@ func (s *Autocompleter) Previous() {
 	}
 }
 
-func (s *Autocompleter) Selected() ls.CompletionItem {
-	if len(s.completions) == 0 {
-		return ls.CompletionItem{}
+func (s *Autocompleter) Selected() *ls.CompletionItem {
+	if len(s.completions) == 0 || s.completion >= len(s.completions) {
+		return nil
 	}
 
-	return s.completions[s.completion]
+	item := s.completions[s.completion]
+	return &item
 }
 
 func (s *Autocompleter) calculateOffset(height int) {
@@ -64,7 +79,7 @@ func (s *Autocompleter) calculateOffset(height int) {
 		return
 	}
 
-	if s.completion > s.offset+height {
+	if s.completion >= s.offset+height {
 		s.offset = s.completion - height + 1
 	} else if s.completion < s.offset {
 		s.offset = s.completion
@@ -77,9 +92,14 @@ func (s *Autocompleter) View(width int, height int) string {
 
 	s.calculateOffset(height)
 
-	autocompleteStyle := config.Theme.Editor.Autocomplete.Style
+	autocompleteStyle := config.Theme.UI.Autocomplete.Style
 
 	labelWidth := width - autocompleteStyle.GetHorizontalFrameSize()
+
+	if len(s.completions) == 0 {
+		view := config.Theme.UI.Autocomplete.ItemStyle.Render("No completions")
+		return autocompleteStyle.Width(width).MaxHeight(height).Render(view)
+	}
 
 	var view string
 	for i := range height {
@@ -89,17 +109,19 @@ func (s *Autocompleter) View(width int, height int) string {
 		}
 
 		completion := s.completions[ii]
-		style := config.Theme.Editor.Autocomplete.ItemStyle
-		details := completion.Kind.String()
+		style := config.Theme.UI.Autocomplete.ItemStyle
 
+		icon := completion.Kind.Icon()
+		details := completion.Kind.String()
 		if i == s.completion {
-			style = config.Theme.Editor.Autocomplete.SelectedItemStyle
+			style = config.Theme.UI.Autocomplete.SelectedItemStyle
 			if completion.Detail != "" {
 				details = completion.Detail
 			}
 		}
 
-		view += style.Render(fmt.Sprintf("%s%s%s", completion.Label, strings.Repeat(" ", labelWidth-len(completion.Label)-len(details)), details)) + "\n"
+		viewLabel := " " + completion.Label + strings.Repeat(" ", labelWidth-2-len(completion.Label)-len(details)) + details
+		view += fmt.Sprintf("%s%s", style.Render(icon), style.Render(viewLabel)) + "\n"
 	}
 
 	view = strings.TrimRight(view, "\n")

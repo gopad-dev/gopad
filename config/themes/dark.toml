@@ -64,6 +64,35 @@ hint = 0xf06e8
 "requirements" = 0xf0320
 "javascript" = 0xf031e
 
+unknown_type = 0xeb63
+
+[icons.types]
+"text" = { icon = 0xeb8d, style = { foreground = '10' } }
+"method" = { icon = 0xea8c, style = { foreground = '14' } }
+"function" = { icon = 0xf0295, style = { foreground = '14' } }
+"constructor" = { icon = 0xf423, style = { foreground = '14' } }
+"field" = { icon = 0xeb5f, style = { foreground = '9' } }
+"variable" = { icon = 0xea88, style = { foreground = '7' } }
+"class" = { icon = 0xeb5b, style = { foreground = '13' } }
+"interface" = { icon = 0xeb61, style = { foreground = '13' } }
+"module" = { icon = 0xea8b, style = { foreground = '13' } }
+"property" = { icon = 0xeb65, style = { foreground = '9' } }
+"unit" = { icon = 0xe21f, style = { foreground = '7' } }
+"value" = { icon = 0xea90, style = { foreground = '3' } }
+"enum" = { icon = 0xea95, style = { foreground = '13' } }
+"keyword" = { icon = 0xeb62, style = { foreground = '13' } }
+"snippet" = { icon = 0xeb66, style = { foreground = '7' } }
+"color" = { icon = 0xeb5c, style = { foreground = '15' } }
+"file" = { icon = 0xea7b, style = { foreground = '1' } }
+"reference" = { icon = 0xf481, style = { foreground = '1' } }
+"folder" = { icon = 0xf024b, style = { foreground = '1' } }
+"enum_member" = { icon = 0xeb5e, style = { foreground = '1' } }
+"constant" = { icon = 0xeb5d, style = { foreground = '1' } }
+"struct" = { icon = 0xf1b3, style = { foreground = '13' } }
+"event" = { icon = 0xea86, style = { foreground = '11' } }
+"operator" = { icon = 0xeb64, style = { foreground = '7' } }
+"type_parameter" = { icon = 0xea92, style = { foreground = '11' } }
+
 # Style configuration
 [styles]
 "error" = { foreground = '1', bold = true }

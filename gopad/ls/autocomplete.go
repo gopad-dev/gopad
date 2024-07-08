@@ -1,9 +1,12 @@
 package ls
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/gopad/config"
 )
 
 func GetAutocompletion(name string, row int, col int) tea.Cmd {
@@ -110,8 +113,13 @@ func (i CompletionItemKind) String() string {
 	}
 }
 
+func (i CompletionItemKind) Icon() string {
+	return config.Theme.Icons.TypeIcon(strings.ToLower(i.String())).Render()
+}
+
 const (
-	Text CompletionItemKind = iota
+	_ CompletionItemKind = iota
+	Text
 	Method
 	Function
 	Constructor

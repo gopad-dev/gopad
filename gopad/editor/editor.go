@@ -39,7 +39,7 @@ const (
 	ZoneFilePrefix     = "file:"
 )
 
-var fileIconByFileNameFunc = func(name string) rune {
+var fileIconByFileNameFunc = func(name string) lipgloss.Style {
 	language := file.GetLanguageByFilename(name)
 	var languageName string
 	if language != nil {
@@ -603,6 +603,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					if s := f.Selection(); s == nil || s.Zero() {
 						f.ResetMark()
 					}
+					cmds = append(cmds, f.Autocomplete().Update())
 					return e, tea.Batch(cmds...)
 				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionPress):
 					f.SetMark(row, col)
@@ -613,15 +614,19 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					return e, tea.Batch(cmds...)
 				case mouse.Matches(msg, "", tea.MouseButtonWheelLeft), mouse.MatchesShift(msg, "", tea.MouseButtonWheelDown):
 					f.MoveCursorLeft(1)
+					cmds = append(cmds, f.Autocomplete().Update())
 					return e, tea.Batch(cmds...)
 				case mouse.Matches(msg, "", tea.MouseButtonWheelRight), mouse.MatchesShift(msg, "", tea.MouseButtonWheelUp):
 					f.MoveCursorRight(1)
+					cmds = append(cmds, f.Autocomplete().Update())
 					return e, tea.Batch(cmds...)
 				case mouse.Matches(msg, "", tea.MouseButtonWheelUp):
 					f.MoveCursorUp(1)
+					cmds = append(cmds, f.Autocomplete().Update())
 					return e, tea.Batch(cmds...)
 				case mouse.Matches(msg, "", tea.MouseButtonWheelDown):
 					f.MoveCursorDown(1)
+					cmds = append(cmds, f.Autocomplete().Update())
 					return e, tea.Batch(cmds...)
 				}
 			}
@@ -666,21 +671,23 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				f.Autocomplete().Previous()
 			case key.Matches(msg, config.Keys.Editor.ApplyCompletion) && f.Autocomplete().Visible():
 				completion := f.Autocomplete().Selected()
-				if completion.Text != "" {
-					cmds = append(cmds, f.Insert([]byte(completion.Text)))
-				} else if completion.Edit != nil {
-					cmds = append(cmds, f.Replace(
-						completion.Edit.Range.Start.Row,
-						completion.Edit.Range.Start.Col,
-						completion.Edit.Range.End.Row,
-						completion.Edit.Range.End.Col,
-						[]byte(completion.Edit.NewText)),
-					)
-				} else {
-					cmds = append(cmds, f.Insert([]byte(completion.Label)))
+				if completion != nil {
+					if completion.Text != "" {
+						cmds = append(cmds, f.Insert([]byte(completion.Text)))
+					} else if completion.Edit != nil {
+						cmds = append(cmds, f.Replace(
+							completion.Edit.Range.Start.Row,
+							completion.Edit.Range.Start.Col,
+							completion.Edit.Range.End.Row,
+							completion.Edit.Range.End.Col,
+							[]byte(completion.Edit.NewText)),
+						)
+					} else {
+						cmds = append(cmds, f.Insert([]byte(completion.Label)))
+					}
 				}
 				f.Autocomplete().ClearCompletions()
-
+				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
 				if err := f.InitTree(); err != nil {
 					cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
@@ -737,12 +744,16 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, overlay.Open(NewRenameOverlay(f.Name())))
 			case key.Matches(msg, config.Keys.Editor.LineUp):
 				f.MoveCursorUp(moveSize)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.LineDown):
 				f.MoveCursorDown(moveSize)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.CharacterLeft):
 				f.MoveCursorLeft(moveSize)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.CharacterRight):
 				f.MoveCursorRight(moveSize)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.WordUp):
 				f.MoveCursorWordUp()
 			case key.Matches(msg, config.Keys.Editor.WordDown):
@@ -755,16 +766,20 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				f.MoveCursorUp(pageSize)
 			case key.Matches(msg, config.Keys.Editor.PageDown):
 				f.MoveCursorDown(pageSize)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.LineStart):
 				f.SetCursor(-1, 0)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.LineEnd):
 				cursorRow, _ := f.Cursor()
 				f.SetCursor(-1, f.Buffer().LineLen(cursorRow))
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.FileStart):
 				f.SetCursor(0, -1)
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.FileEnd):
 				f.SetCursor(f.Buffer().LinesLen(), -1)
-
+				cmds = append(cmds, f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.Copy):
 				selBytes := f.SelectionBytes()
 				if len(selBytes) > 0 {
@@ -796,7 +811,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, f.RemoveTab())
 			case key.Matches(msg, config.Keys.Editor.Newline):
 				f.ResetMark()
-				cmds = append(cmds, f.InsertNewLine())
+				cmds = append(cmds, f.InsertNewLine(), f.Autocomplete().Update())
 			case key.Matches(msg, config.Keys.Editor.DeleteRight):
 				s := f.Selection()
 				if s != nil {
@@ -912,10 +927,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					cmds = append(cmds, f.Insert(text))
 				}
 
-				if f.Autocomplete().Visible() {
-					row, col := f.Cursor()
-					cmds = append(cmds, ls.GetAutocompletion(f.Name(), row, col))
-				}
+				cmds = append(cmds, f.Autocomplete().Update())
 
 				// handle auto pairs
 				if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
@@ -953,10 +965,10 @@ func (e *Editor) View(width int, height int) string {
 
 	f := e.File()
 	if f == nil {
-		width -= config.Theme.Editor.EmptyStyle.GetHorizontalBorderSize()
-		height -= config.Theme.Editor.EmptyStyle.GetVerticalBorderSize()
+		width -= config.Theme.UI.FileView.EmptyStyle.GetHorizontalBorderSize()
+		height -= config.Theme.UI.FileView.EmptyStyle.GetVerticalBorderSize()
 
-		code := config.Theme.Editor.EmptyStyle.
+		code := config.Theme.UI.FileView.EmptyStyle.
 			Width(width).
 			Height(height).
 			Render(fmt.Sprintf("No file open.\n\nPress '%s' to open a file.", config.Keys.Editor.OpenFile.Help().Key))
@@ -964,7 +976,7 @@ func (e *Editor) View(width int, height int) string {
 		if fileTree == "" {
 			return code
 		}
-		code = config.Theme.Editor.CodeBorderStyle.Render(code)
+		code = config.Theme.UI.FileView.BorderStyle.Render(code)
 		return lipgloss.JoinHorizontal(lipgloss.Top, fileTree, code)
 	}
 
@@ -1017,19 +1029,19 @@ func (e *Editor) FileTabsView(width int) string {
 		if f.Language() != nil {
 			languageName = f.Language().Name
 		}
-		icon := config.Theme.Icons.FileIcon(languageName)
+		icon := config.Theme.Icons.FileIcon(languageName).Render()
 
 		fileName := clampString(f.FileName(), 16)
-		fileName = fmt.Sprintf("%c %s", icon, fileName)
+		fileName = fmt.Sprintf("%s %s", icon, fileName)
 		if f.Dirty() {
 			fileName += "*"
 		} else {
 			fileName += " "
 		}
 
-		style := config.Theme.Editor.FileStyle
+		style := config.Theme.UI.AppBar.Files.FileStyle
 		if i == e.activeFile {
-			style = config.Theme.Editor.FileSelectedStyle
+			style = config.Theme.UI.AppBar.Files.SelectedFileStyle
 		}
 		fileNames = append(fileNames, zone.Mark(fmt.Sprintf("file:%d", i), style.Render(fileName)))
 	}
@@ -1053,7 +1065,7 @@ func (e *Editor) FileTabsView(width int) string {
 
 	e.refreshActiveFileOffset(width, fileNames)
 
-	return strings.Join(fileNames[e.activeFileOffset:], "")
+	return config.Theme.UI.AppBar.Files.Style.Render(fileNames[e.activeFileOffset:]...)
 }
 
 func clampString(s string, length int) string {

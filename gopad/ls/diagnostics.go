@@ -32,11 +32,11 @@ type UpdateFileDiagnosticMsg struct {
 type DiagnosticSeverity int
 
 const (
-	DiagnosticSeverityNone        DiagnosticSeverity = 0
-	DiagnosticSeverityError       DiagnosticSeverity = 1
-	DiagnosticSeverityWarning     DiagnosticSeverity = 2
-	DiagnosticSeverityInformation DiagnosticSeverity = 3
-	DiagnosticSeverityHint        DiagnosticSeverity = 4
+	DiagnosticSeverityNone    DiagnosticSeverity = 0
+	DiagnosticSeverityError   DiagnosticSeverity = 1
+	DiagnosticSeverityWarning DiagnosticSeverity = 2
+	DiagnosticSeverityInfo    DiagnosticSeverity = 3
+	DiagnosticSeverityHint    DiagnosticSeverity = 4
 )
 
 func (d DiagnosticSeverity) String() string {
@@ -47,8 +47,8 @@ func (d DiagnosticSeverity) String() string {
 		return "Error"
 	case DiagnosticSeverityWarning:
 		return "Warning"
-	case DiagnosticSeverityInformation:
-		return "Information"
+	case DiagnosticSeverityInfo:
+		return "Info"
 	case DiagnosticSeverityHint:
 		return "Hint"
 	}
@@ -58,13 +58,13 @@ func (d DiagnosticSeverity) String() string {
 func (d DiagnosticSeverity) Icon() string {
 	switch d {
 	case DiagnosticSeverityError:
-		return string(config.Theme.Icons.Error)
+		return config.Theme.Icons.Error.Render()
 	case DiagnosticSeverityWarning:
-		return string(config.Theme.Icons.Warning)
-	case DiagnosticSeverityInformation:
-		return string(config.Theme.Icons.Information)
+		return config.Theme.Icons.Warning.Render()
+	case DiagnosticSeverityInfo:
+		return config.Theme.Icons.Information.Render()
 	case DiagnosticSeverityHint:
-		return string(config.Theme.Icons.Hint)
+		return config.Theme.Icons.Hint.Render()
 	}
 	return " "
 }
@@ -72,13 +72,13 @@ func (d DiagnosticSeverity) Icon() string {
 func (d DiagnosticSeverity) Style() lipgloss.Style {
 	switch d {
 	case DiagnosticSeverityError:
-		return config.Theme.Editor.Diagnostics.ErrorStyle
+		return config.Theme.Diagnostic.ErrorStyle
 	case DiagnosticSeverityWarning:
-		return config.Theme.Editor.Diagnostics.WarningStyle
-	case DiagnosticSeverityInformation:
-		return config.Theme.Editor.Diagnostics.InformationStyle
+		return config.Theme.Diagnostic.WarningStyle
+	case DiagnosticSeverityInfo:
+		return config.Theme.Diagnostic.InfoStyle
 	case DiagnosticSeverityHint:
-		return config.Theme.Editor.Diagnostics.HintStyle
+		return config.Theme.Diagnostic.HintStyle
 	}
 	return lipgloss.NewStyle()
 }
@@ -86,13 +86,13 @@ func (d DiagnosticSeverity) Style() lipgloss.Style {
 func (d DiagnosticSeverity) CharStyle() lipgloss.Style {
 	switch d {
 	case DiagnosticSeverityError:
-		return config.Theme.Editor.Diagnostics.ErrorCharStyle
+		return config.Theme.Diagnostic.ErrorCharStyle
 	case DiagnosticSeverityWarning:
-		return config.Theme.Editor.Diagnostics.WarningCharStyle
-	case DiagnosticSeverityInformation:
-		return config.Theme.Editor.Diagnostics.InformationCharStyle
+		return config.Theme.Diagnostic.WarningCharStyle
+	case DiagnosticSeverityInfo:
+		return config.Theme.Diagnostic.InfoCharStyle
 	case DiagnosticSeverityHint:
-		return config.Theme.Editor.Diagnostics.HintCharStyle
+		return config.Theme.Diagnostic.HintCharStyle
 	}
 	return lipgloss.NewStyle()
 }
@@ -135,7 +135,7 @@ func (d Diagnostic) View(width int, height int) string {
 	width = min(width, 60)
 	height = max(height-2, 0)
 
-	message := fmt.Sprintf("%s%s\n\n%s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.Editor.Documentation.MessageStyle.Render(" "+d.Message), d.Type, d.Name)
+	message := fmt.Sprintf("%s%s\n\n%s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.UI.Documentation.Style.Inline(true).Render(" "+d.Message), d.Type, d.Name)
 	if d.Source != "" {
 		message += fmt.Sprintf(" - %s", d.Source)
 	}
@@ -146,7 +146,7 @@ func (d Diagnostic) View(width int, height int) string {
 		message += fmt.Sprintf(" (%s)", d.CodeDescription)
 	}
 
-	return config.Theme.Editor.Documentation.Style.
+	return config.Theme.UI.Documentation.Style.
 		Width(width).
 		MaxHeight(height).
 		Render(message)

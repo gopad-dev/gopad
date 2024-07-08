@@ -40,7 +40,7 @@ type Change struct {
 }
 
 func NewFileWithBuffer(b *buffer.Buffer, mode Mode) *File {
-	return &File{
+	f := &File{
 		buffer: b,
 		mode:   mode,
 		cursor: Cursor{
@@ -50,8 +50,11 @@ func NewFileWithBuffer(b *buffer.Buffer, mode Mode) *File {
 		},
 		language:           GetLanguageByFilename(b.Name()),
 		diagnosticVersions: map[ls.DiagnosticType]int32{},
-		autocomplete:       NewAutocompleter(),
 	}
+
+	f.autocomplete = NewAutocompleter(f)
+
+	return f
 }
 
 func NewFileFromName(name string) (*File, error) {
@@ -467,14 +470,14 @@ type pos struct {
 }
 
 func (f *File) View(width int, height int, border bool, debug bool) string {
-	styles := config.Theme.Editor
+	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
-		borderStyle = styles.CodeBorderStyle.Render
+		borderStyle = styles.FileView.BorderStyle.Render
 	}
 
 	prefixLength := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
-	width -= prefixLength + styles.CodePrefixStyle.GetHorizontalFrameSize() + 1
+	width -= prefixLength + styles.FileView.BorderStyle.GetHorizontalFrameSize() + 1
 
 	// debug takes up 4 lines
 	if debug {
@@ -496,13 +499,13 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 
 		var linePositions []pos
 
-		codeLineStyle := styles.CodeLineStyle
-		codePrefixStyle := styles.CodePrefixStyle
-		codeLineCharStyle := styles.CodeLineCharStyle
+		codeLineStyle := styles.FileView.LineStyle
+		codePrefixStyle := styles.FileView.LinePrefixStyle
+		codeLineCharStyle := styles.FileView.LineCharStyle
 		if ln == cursorRow {
-			codeLineStyle = styles.CodeCurrentLineStyle
-			codePrefixStyle = styles.CodeCurrentLinePrefixStyle
-			codeLineCharStyle = styles.CodeCurrentLineCharStyle
+			codeLineStyle = styles.FileView.CurrentLineStyle
+			codePrefixStyle = styles.FileView.CurrentLinePrefixStyle
+			codeLineCharStyle = styles.FileView.CurrentLineCharStyle
 		}
 
 		if ln >= f.buffer.LinesLen() {
@@ -561,17 +564,17 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			if ln == cursorRow && ii == realCursorCol {
 				char = f.cursor.cursor.View(char, style)
 			} else if inSelection {
-				char = styles.CodeSelectionStyle.Copy().Inherit(style).Render(char)
+				char = styles.FileView.SelectionStyle.Copy().Inherit(style).Render(char)
 			} else {
 				char = style.Render(char)
 			}
 			codeLine = append(codeLine, char...)
 
 			paddingStyle := codeLineCharStyle
-			labelStyle := config.Theme.Editor.CodeInlayHintStyle
+			labelStyle := config.Theme.UI.FileView.InlayHintStyle
 			if inSelection {
-				paddingStyle = styles.CodeSelectionStyle.Copy().Inherit(paddingStyle)
-				labelStyle = styles.CodeSelectionStyle.Copy().Inherit(labelStyle)
+				paddingStyle = styles.FileView.SelectionStyle.Copy().Inherit(paddingStyle)
+				labelStyle = styles.FileView.SelectionStyle.Copy().Inherit(labelStyle)
 			}
 			for _, hint := range f.InlayHintsForLineCol(ln, col+1) {
 				var label string
@@ -613,7 +616,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
 		if diagnostic.Severity > 0 {
 			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
-				overlay.WithMarginX(styles.CodePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
+				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
 				overlay.WithMarginY(realCursorRow+1),
 			)
 		} else {
@@ -621,7 +624,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		}
 	} else if f.autocomplete.Visible() {
 		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(width, height), editorCode,
-			overlay.WithMarginX(styles.CodePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
+			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
 			overlay.WithMarginY(realCursorRow+1),
 		)
 	}

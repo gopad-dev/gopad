@@ -178,14 +178,14 @@ func (g Gopad) View() string {
 }
 
 func (g Gopad) AppBar() string {
-	appBar := config.Theme.AppBarTitleStyle.Render("gopad-" + g.version)
+	appBar := config.Theme.UI.AppBar.TitleStyle.Render("gopad-" + g.version)
 	appBar += g.editor.FileTabsView(g.width - lipgloss.Width(appBar))
 
-	return config.Theme.AppBarStyle.Width(g.width).Render(appBar)
+	return config.Theme.UI.AppBar.Style.Width(g.width).Render(appBar)
 }
 
 func (g Gopad) CodeBar() string {
-	width := g.width - config.Theme.Editor.CodeBarStyle.GetHorizontalFrameSize()
+	width := g.width - config.Theme.UI.CodeBar.Style.GetHorizontalFrameSize()
 	file := g.editor.File()
 
 	infoLine := fmt.Sprintf("%s | ", zone.Mark(ZoneTheme, config.Theme.Name))
@@ -208,9 +208,9 @@ func (g Gopad) CodeBar() string {
 
 		if language := file.Language(); language != nil {
 			name := language.Name
-			icon := config.Theme.Icons.FileIcon(name)
+			icon := config.Theme.Icons.FileIcon(name).Render()
 
-			name = fmt.Sprintf("%c %s", icon, name)
+			name = fmt.Sprintf("%s %s", icon, name)
 
 			if language.Config.Grammar != nil {
 				grammarName := language.Config.Grammar.Name
@@ -255,7 +255,7 @@ func (g Gopad) CodeBar() string {
 
 	codeBar := workspaceName + strings.Repeat(" ", max(1, width-lipgloss.Width(workspaceName)-lipgloss.Width(infoLine))) + infoLine
 
-	return config.Theme.Editor.CodeBarStyle.Width(g.width).Render(codeBar)
+	return config.Theme.UI.CodeBar.Style.Width(g.width).Render(codeBar)
 }
 
 func joinPaths(dirName string, baseName string) string {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
@@ -20,7 +21,7 @@ import (
 
 func NewList[T list.Item](items []T) list.Model[T] {
 	l := list.New(items)
-	l.Styles = Theme.List
+	l.Styles = Theme.UI.List
 	l.TextInput = NewTextInput()
 	l.TextInput.Cursor = NewCursor()
 	l.KeyMap = Keys.List()
@@ -29,14 +30,14 @@ func NewList[T list.Item](items []T) list.Model[T] {
 
 func NewOverlays() overlay.Model {
 	o := overlay.New()
-	o.Styles = Theme.Overlay.Styles
+	o.Styles = Theme.UI.Overlay.Styles
 
 	return o
 }
 
 func NewTextInput() textinput.Model {
 	ti := textinput.New()
-	ti.Styles = Theme.TextInput
+	ti.Styles = Theme.UI.TextInput
 	ti.Cursor = NewCursor()
 	ti.KeyMap = Keys.Editor.TextInputKeyMap()
 	return ti
@@ -48,21 +49,21 @@ func NewFilePicker(dir string, fileAllowed bool, dirAllowed bool) filepicker.Mod
 	fp.FileAllowed = fileAllowed
 	fp.DirAllowed = dirAllowed
 	fp.CurrentDirectory = dir
-	fp.Styles = Theme.FilePicker
+	fp.Styles = Theme.UI.FilePicker
 	fp.KeyMap = Keys.FilePicker
 	return fp
 }
 
 func NewButton(label string, onClick func() tea.Cmd) button.Model {
 	b := button.New(label, onClick)
-	b.Styles = Theme.Button
+	b.Styles = Theme.UI.Button
 	b.KeyMap = Keys.ButtonKeyMap()
 	return b
 }
 
 func NewCursor() cursor.Model {
 	c := cursor.New()
-	c.Styles = Theme.Cursor
+	c.Styles = Theme.UI.Cursor
 	c.BlinkInterval = time.Duration(Gopad.Editor.Cursor.BlinkInterval)
 	c.SetMode(Gopad.Editor.Cursor.Mode)
 	c.Shape = Gopad.Editor.Cursor.Shape
@@ -71,20 +72,20 @@ func NewCursor() cursor.Model {
 
 func NewHelp() help.Model {
 	h := help.New()
-	h.Styles = Theme.Help
+	h.Styles = Theme.UI.Help
 	return h
 }
 
 func NewNotifications() notifications.Model {
 	n := notifications.New()
-	n.Styles = Theme.NotificationStyle
+	n.Styles = Theme.UI.NotificationStyle
 	n.Margin = 1
 	return n
 }
 
-func NewFileTree(openFile func(name string) tea.Cmd, languageIconFunc func(name string) rune) filetree.Model {
+func NewFileTree(openFile func(name string) tea.Cmd, languageIconFunc func(name string) lipgloss.Style) filetree.Model {
 	ft := filetree.New()
-	ft.Styles = Theme.Editor.FileTree
+	ft.Styles = Theme.UI.FileTree
 	ft.KeyMap = Keys.Editor.FileTree
 	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.OpenFolder.Help().Key)
 	ft.OpenFile = openFile
@@ -105,7 +106,7 @@ func NewSearchBar(onSelect func(result searchbar.Result) tea.Cmd, onBlur tea.Cmd
 	sb.TextInput = NewTextInput()
 	sb.TextInput.Placeholder = "type to search"
 	sb.TextInput.Width = 20
-	sb.Styles = Theme.Editor.SearchBar
+	sb.Styles = Theme.UI.SearchBar
 	sb.KeyMap = Keys.Editor.SearchBar
 
 	return sb

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -18,22 +20,24 @@ type Style struct {
 	Faint          bool   `toml:"faint"`
 }
 
-func (s Style) Style() lipgloss.Style {
+func (s Style) Style(colors Colors) lipgloss.Style {
 	style := lipgloss.NewStyle()
 
 	if s.Foreground != "" {
-		style = style.Foreground(lipgloss.Color(s.Foreground))
+		style = style.Foreground(color(colors, s.Foreground))
+		style = style.BorderForeground(color(colors, s.Foreground))
 	}
 
 	if s.Background != "" {
-		style = style.Background(lipgloss.Color(s.Background))
+		style = style.Background(color(colors, s.Background))
+		style = style.BorderBackground(color(colors, s.Background))
 	}
 
 	style = style.Bold(s.Bold)
 	style = style.Italic(s.Italic)
 	style = style.Underline(s.Underline)
 	if s.UnderlineColor != "" {
-		style = style.UnderlineColor(lipgloss.Color(s.UnderlineColor))
+		style = style.UnderlineColor(color(colors, s.UnderlineColor))
 	}
 	style = style.UnderlineStyle(underlineStyle(s.UnderlineStyle))
 
@@ -43,6 +47,19 @@ func (s Style) Style() lipgloss.Style {
 	style = style.Faint(s.Faint)
 
 	return style
+}
+
+func color(colors Colors, color string) lipgloss.Color {
+	colorRef, ok := strings.CutPrefix(color, "$")
+	if ok {
+		if c, ok := colors[colorRef]; ok {
+			return c
+		}
+
+		panic("color ref not found: " + color)
+	}
+
+	return lipgloss.Color(color)
 }
 
 func underlineStyle(s string) lipgloss.UnderlineStyle {
