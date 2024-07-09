@@ -15,6 +15,7 @@ import (
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
+	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -73,6 +74,10 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case overlay.ResetFocusMsg:
 		cmds = append(cmds, g.editor.Focus())
+		return g, tea.Batch(cmds...)
+
+	case overlay.TakeFocusMsg:
+		g.editor.Blur()
 		return g, tea.Batch(cmds...)
 
 	case tea.MouseMsg:
@@ -143,7 +148,7 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if g.overlays, cmd = g.overlays.Update(msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	if _, ok := msg.(tea.KeyMsg); ok && g.overlays.Focused() {
+	if bubbles.IsInputMsg(msg) && g.overlays.Focused() {
 		return g, tea.Batch(cmds...)
 	}
 

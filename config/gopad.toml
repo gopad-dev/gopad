@@ -3,7 +3,7 @@
 #
 
 # General configuration
-theme = 'catppuccin mocha'
+theme = 'dark'
 
 # Editor configuration
 [editor]

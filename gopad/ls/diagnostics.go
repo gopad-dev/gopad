@@ -62,7 +62,7 @@ func (d DiagnosticSeverity) Icon() string {
 	case DiagnosticSeverityWarning:
 		return config.Theme.Icons.Warning.Render()
 	case DiagnosticSeverityInfo:
-		return config.Theme.Icons.Information.Render()
+		return config.Theme.Icons.Info.Render()
 	case DiagnosticSeverityHint:
 		return config.Theme.Icons.Hint.Render()
 	}

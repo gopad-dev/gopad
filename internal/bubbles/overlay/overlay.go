@@ -6,11 +6,11 @@ import (
 )
 
 func Open(overlay Overlay) tea.Cmd {
-	return func() tea.Msg {
+	return tea.Batch(func() tea.Msg {
 		return openMsg{
 			overlay: overlay,
 		}
-	}
+	}, TakeFocus)
 }
 
 func Close(id string) tea.Cmd {
@@ -26,6 +26,12 @@ func ResetFocus() tea.Msg {
 }
 
 type ResetFocusMsg struct{}
+
+func TakeFocus() tea.Msg {
+	return TakeFocusMsg{}
+}
+
+type TakeFocusMsg struct{}
 
 type openMsg struct {
 	overlay Overlay

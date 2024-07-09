@@ -29,62 +29,62 @@ base = "#1e1e2e"
 mantle = "#181825"
 crust = "#11111b"
 
-cursorline = "2a2b3c"
-secondary_cursor = "b5a6a8"
+cursorline = "#2a2b3c"
+secondary_cursor = "#b5a6a8"
 
 [icons]
-root_dir = 0xef81
-dir = 0xf024b
-open_dir = 0xf0770
-file = 0xea7b
+root_dir = { icon = 0xef81 }
+dir = { icon = 0xf024b }
+open_dir = { icon = 0xf0770 }
+file = { icon = 0xea7b }
 
-error = 0xea87
-warning = 0xf071
-information = 0xf05a
-hint = 0xf06e8
+error = { icon = 0xea87, style = { foreground = '$red' } }
+warning = { icon = 0xf071, style = { foreground = '$yellow' } }
+info = { icon = 0xf05a, style = { foreground = '$sky' } }
+hint = { icon = 0xf06e8, style = { foreground = '$teal' } }
 
 [icons.files]
-"go" = 0xe627
-"go-mod" = 0xe627
-"go-sum" = 0xe627
-"go-work" = 0xe627
-"go-template" = 0xe627
-"templ" = 0xe627
-"toml" = 0xe6b2
-"query" = 0xe21c
-"markdown" = 0xf0354
-"comment" = 0xf075
-"json" = 0xe60b
-"jsonc" = 0xe60b
-"json5" = 0xe60b
-"yaml" = 0xf0b20
-"gitignore" = 0xf05e
-"git-commit" = 0xf05e
-"git-config" = 0xf05e
-"git-rebase" = 0xf05e
-"gitattributes" = 0xf05e
-"hyprlang" = 0xf359
-"bash" = 0xf1183
-"css" = 0xe749
-"scss" = 0xe749
-"dockerfile" = 0xf0868
-"html" = 0xf031d
-"http" = 0xe749
-"java" = 0xf0b37
-"kotlin" = 0xf1219
-"nix" = 0xf1105
-"passwd" = 0xf4fc
-"properties" = 0xeb65
-"regex" = 0xf0451
-"sql" = 0xf01bc
-"sqlite" = 0xf01bc
-"sshd-config" = 0xf08c0
-"xml" = 0xf05c0
-"python" = 0xf0320
-"requirements" = 0xf0320
-"javascript" = 0xf031e
+"go" = { icon = 0xe627 }
+"go-mod" = { icon = 0xe627 }
+"go-sum" = { icon = 0xe627 }
+"go-work" = { icon = 0xe627 }
+"go-template" = { icon = 0xe627 }
+"templ" = { icon = 0xe627 }
+"toml" = { icon = 0xe6b2 }
+"query" = { icon = 0xe21c }
+"markdown" = { icon = 0xf0354 }
+"comment" = { icon = 0xf075 }
+"json" = { icon = 0xe60b }
+"jsonc" = { icon = 0xe60b }
+"json5" = { icon = 0xe60b }
+"yaml" = { icon = 0xf0b20 }
+"gitignore" = { icon = 0xf05e }
+"git-commit" = { icon = 0xf05e }
+"git-config" = { icon = 0xf05e }
+"git-rebase" = { icon = 0xf05e }
+"gitattributes" = { icon = 0xf05e }
+"hyprlang" = { icon = 0xf359 }
+"bash" = { icon = 0xf1183 }
+"css" = { icon = 0xe749 }
+"scss" = { icon = 0xe749 }
+"dockerfile" = { icon = 0xf0868 }
+"html" = { icon = 0xf031d }
+"http" = { icon = 0xe749 }
+"java" = { icon = 0xf0b37 }
+"kotlin" = { icon = 0xf1219 }
+"nix" = { icon = 0xf1105 }
+"passwd" = { icon = 0xf4fc }
+"properties" = { icon = 0xeb65 }
+"regex" = { icon = 0xf0451 }
+"sql" = { icon = 0xf01bc }
+"sqlite" = { icon = 0xf01bc }
+"sshd-config" = { icon = 0xf08c0 }
+"xml" = { icon = 0xf05c0 }
+"python" = { icon = 0xf0320 }
+"requirements" = { icon = 0xf0320 }
+"javascript" = { icon = 0xf031e }
 
-unknown_type = 0xeb63
+"unknown_type" = { icon = 0xeb63 }
 
 [icons.types]
 "text" = { icon = 0xeb8d, style = { foreground = '$text' } }
@@ -113,22 +113,23 @@ unknown_type = 0xeb63
 "operator" = { icon = 0xeb64, style = { foreground = '7' } }
 "type_parameter" = { icon = 0xea92, style = { foreground = '11' } }
 
+# UI Style configuration
 [ui]
 [ui.app_bar]
 style = { background = '$mantle', foreground = '$text' }
-title = { foreground = '$text' }
+title = { foreground = '$text', background = '$mantle' }
 
 [ui.app_bar.files]
 style = { background = '$mantle', foreground = '$text' }
-file = { foreground = '$text' }
+file = { background = '$mantle', foreground = '$text' }
 selected_file = { foreground = '$text', background = '$base' }
 
 [ui.code_bar]
 style = { background = '$mantle', foreground = '$text' }
 
 [ui.menu]
-style = { background = '$surface0', foreground = '$overlay2' }
-title = { foreground = '$text' }
+style = { border_foreground = '$overlay2' }
+title = { foreground = '$text', background = '$mantle' }
 content = { foreground = '$text' }
 
 entry = { foreground = '$text' }
@@ -136,8 +137,8 @@ selected_entry = { foreground = '$text', background = '$base' }
 selected_entry_unfocused = { foreground = '$text', background = '$base' }
 
 [ui.cursor]
-block = { foreground = '$text', background = '$text' }
-underline = { underline = true, underline_style = 'solid', underline_color = '$text' }
+block = { foreground = '$rosewater', reverse = true }
+underline = { underline = true, underline_style = 'solid', underline_color = '$rosewater' }
 
 [ui.file_tree]
 
@@ -170,6 +171,12 @@ info_char = { underline = true, underline_style = 'curly', underline_color = '$s
 
 hint = { foreground = '$teal', bold = true }
 hint_char = { underline = true, underline_style = 'curly', underline_color = '$teal' }
+
+deprecated = { foreground = '$overlay2', italic = true }
+deprecated_char = { strikethrough = true }
+
+unnecessary = { foreground = '$overlay2', italic = true }
+unnecessary_char = { underline = true, underline_style = 'curly', underline_color = '$overlay2' }
 
 # Code Style configuration
 [code_styles]

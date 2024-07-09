@@ -635,7 +635,18 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		for _, z := range zone.GetPrefix(ZoneFilePrefix) {
 			if z.InBounds(msg) {
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				e.SetFile(i)
+
+				switch {
+				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionRelease):
+					e.SetFile(i)
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonRight, tea.MouseActionRelease):
+					// TODO: open context menu?
+					return e, tea.Batch(cmds...)
+				case mouse.Matches(msg, "", tea.MouseButtonMiddle, tea.MouseActionRelease):
+					cmds = append(cmds, file.CloseFile(e.files[i].Name()))
+					return e, tea.Batch(cmds...)
+				}
 			}
 		}
 

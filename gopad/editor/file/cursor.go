@@ -351,6 +351,21 @@ func (f *File) MoveCursorWordDown() {
 func (f *File) refreshCursorViewOffset(width int, height int) {
 	cursorRow, cursorCol := f.Cursor()
 
+	// TODO: figure out how to handle inlay hints when scrolling horizontally
+	//if len(f.positions) > 0 {
+	//	i, ok := slices.BinarySearchFunc(f.positions[cursorRow], cursorCol, func(p pos, col int) int {
+	//		if p.col < col {
+	//			return -1
+	//		} else if p.col > col {
+	//			return 1
+	//		}
+	//		return 0
+	//	})
+	//	if ok {
+	//		cursorCol = i
+	//	}
+	//}
+
 	if cursorRow >= f.cursor.offsetRow+height {
 		f.cursor.offsetRow = cursorRow - height + 1
 	} else if cursorRow < f.cursor.offsetRow {

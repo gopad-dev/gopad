@@ -34,7 +34,7 @@
  (#match? @variable "^--"))
 
 (attribute_name) @attribute
-(class_name) @label
+(class_name) @tag
 (feature_name) @variable.other.member
 (function_name) @function
 (id_name) @label

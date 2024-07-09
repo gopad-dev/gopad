@@ -39,7 +39,7 @@ func (o outlineItem) FilterValue() string {
 	return o.rawTitle
 }
 
-func renderOutlineItem(file *file.File, selectedStyle lipgloss.Style, selected bool, item file.OutlineItem) outlineItem {
+func renderOutlineItem(file *file.File, itemStyle lipgloss.Style, item file.OutlineItem) outlineItem {
 	codeCharStyle := config.Theme.UI.FileView.LineCharStyle
 
 	var (
@@ -48,19 +48,13 @@ func renderOutlineItem(file *file.File, selectedStyle lipgloss.Style, selected b
 	)
 	for _, char := range item.Text {
 		if char.Pos == nil {
-			style := codeCharStyle
-			if selected {
-				style = style.Reverse(true)
-			}
-			title += style.Render(char.Char)
+			title += codeCharStyle.Copy().Inherit(itemStyle).Render(char.Char)
 			rawTitle += char.Char
 			continue
 		}
 
 		style := file.HighestMatchStyle(codeCharStyle, char.Pos.Row, char.Pos.Col)
-		if selected {
-			style = selectedStyle.Inline(true).Copy().Inherit(style)
-		}
+		style = style.Copy().Inherit(itemStyle)
 
 		title += style.Render(char.Char)
 		rawTitle += char.Char
@@ -113,7 +107,11 @@ func (o OutlineOverlay) Title() string {
 func (o *OutlineOverlay) renderOutlineItems() {
 	var out []outlineItem
 	for i, item := range o.items {
-		out = append(out, renderOutlineItem(o.f, o.l.Styles.ItemSelectedStyle, o.l.SelectedIndex() == i, item))
+		style := o.l.Styles.ItemStyle
+		if i == o.l.SelectedIndex() {
+			style = o.l.Styles.ItemSelectedStyle
+		}
+		out = append(out, renderOutlineItem(o.f, style, item))
 	}
 	o.l.SetItems(out)
 }

@@ -31,10 +31,10 @@ type IconStyles struct {
 	OpenDir lipgloss.Style
 	File    lipgloss.Style
 
-	Error       lipgloss.Style
-	Warning     lipgloss.Style
-	Information lipgloss.Style
-	Hint        lipgloss.Style
+	Error   lipgloss.Style
+	Warning lipgloss.Style
+	Info    lipgloss.Style
+	Hint    lipgloss.Style
 
 	Files map[string]lipgloss.Style
 
@@ -153,6 +153,12 @@ type DiagnosticStyles struct {
 
 	HintStyle     lipgloss.Style
 	HintCharStyle lipgloss.Style
+
+	DeprecatedStyle     lipgloss.Style
+	DeprecatedCharStyle lipgloss.Style
+
+	UnnecessaryStyle     lipgloss.Style
+	UnnecessaryCharStyle lipgloss.Style
 }
 
 type DocumentationStyles struct {

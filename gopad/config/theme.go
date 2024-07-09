@@ -1,6 +1,7 @@
 package config
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
@@ -57,7 +58,7 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				EntrySelectedUnfocusedStyle: c.UI.Menu.SelectedEntryUnfocused.Style(colors),
 			},
 			FileView: FileViewStyles{
-				Style:                  lipgloss.Style{},
+				Style:                  c.UI.FileView.Style.Style(colors),
 				EmptyStyle:             c.UI.FileView.Empty.Style(colors).Align(lipgloss.Center, lipgloss.Center),
 				BorderStyle:            c.UI.FileView.Border.Style(colors).Border(lipgloss.NormalBorder(), false, false, false, true),
 				LineStyle:              c.UI.FileView.Line.Style(colors),
@@ -134,26 +135,30 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				FullSeparator:  lipgloss.NewStyle(),
 			},
 			NotificationStyle: notifications.Styles{
-				Notification: c.UI.Menu.Style.Style(colors).Width(16).Border(lipgloss.RoundedBorder()).Padding(0, 1),
+				Notification: c.UI.Menu.Style.Style(colors).MaxWidth(32).Border(lipgloss.RoundedBorder()).Padding(0, 1),
 			},
 			List: list.Styles{
-				Style:             lipgloss.NewStyle().MarginLeft(1),
-				ItemStyle:         lipgloss.NewStyle().Padding(0, 1),
-				ItemSelectedStyle: lipgloss.NewStyle().Padding(0, 1),
+				Style:             c.UI.Menu.Style.Style(colors).MarginLeft(1),
+				ItemStyle:         c.UI.Menu.Entry.Style(colors).Padding(0, 1),
+				ItemSelectedStyle: c.UI.Menu.SelectedEntry.Style(colors).Padding(0, 1),
 
 				ItemDescriptionStyle: lipgloss.NewStyle(),
 			},
 		},
 
 		Diagnostic: DiagnosticStyles{
-			ErrorStyle:       c.Diagnostic.Error.Style(colors),
-			ErrorCharStyle:   c.Diagnostic.ErrorChar.Style(colors),
-			WarningStyle:     c.Diagnostic.Warning.Style(colors),
-			WarningCharStyle: c.Diagnostic.WarningChar.Style(colors),
-			InfoStyle:        c.Diagnostic.Info.Style(colors),
-			InfoCharStyle:    c.Diagnostic.InfoChar.Style(colors),
-			HintStyle:        c.Diagnostic.Hint.Style(colors),
-			HintCharStyle:    c.Diagnostic.HintChar.Style(colors),
+			ErrorStyle:           c.Diagnostic.Error.Style(colors),
+			ErrorCharStyle:       c.Diagnostic.ErrorChar.Style(colors),
+			WarningStyle:         c.Diagnostic.Warning.Style(colors),
+			WarningCharStyle:     c.Diagnostic.WarningChar.Style(colors),
+			InfoStyle:            c.Diagnostic.Info.Style(colors),
+			InfoCharStyle:        c.Diagnostic.InfoChar.Style(colors),
+			HintStyle:            c.Diagnostic.Hint.Style(colors),
+			HintCharStyle:        c.Diagnostic.HintChar.Style(colors),
+			DeprecatedStyle:      c.Diagnostic.Deprecated.Style(colors),
+			DeprecatedCharStyle:  c.Diagnostic.DeprecatedChar.Style(colors),
+			UnnecessaryStyle:     c.Diagnostic.Unnecessary.Style(colors),
+			UnnecessaryCharStyle: c.Diagnostic.UnnecessaryChar.Style(colors),
 		},
 		CodeStyles: c.CodeStyles.Styles(colors),
 	}
@@ -162,17 +167,17 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 type Colors map[string]lipgloss.Color
 
 type IconsConfig struct {
-	RootDir rune `toml:"root_dir"`
-	Dir     rune `toml:"dir"`
-	OpenDir rune `toml:"open_dir"`
-	File    rune `toml:"file"`
+	RootDir IconConfig `toml:"root_dir"`
+	Dir     IconConfig `toml:"dir"`
+	OpenDir IconConfig `toml:"open_dir"`
+	File    IconConfig `toml:"file"`
 
-	Error       rune `toml:"error"`
-	Warning     rune `toml:"warning"`
-	Information rune `toml:"information"`
-	Hint        rune `toml:"hint"`
+	Error   IconConfig `toml:"error"`
+	Warning IconConfig `toml:"warning"`
+	Info    IconConfig `toml:"info"`
+	Hint    IconConfig `toml:"hint"`
 
-	Files map[string]rune `toml:"files"`
+	Files map[string]IconConfig `toml:"files"`
 
 	UnknownType IconConfig            `toml:"unknown_type"`
 	Types       map[string]IconConfig `toml:"types"`
@@ -181,28 +186,28 @@ type IconsConfig struct {
 func (c IconsConfig) Styles(colors Colors) IconStyles {
 	files := make(map[string]lipgloss.Style, len(c.Files))
 	for k, v := range c.Files {
-		files[k] = lipgloss.NewStyle().SetString(string(v))
+		files[k] = v.IconStyle(colors)
 	}
 
 	types := make(map[string]lipgloss.Style, len(c.Types))
 	for k, v := range c.Types {
-		types[k] = v.Style.Style(colors).SetString(string(v.Icon))
+		types[k] = v.IconStyle(colors)
 	}
 
 	return IconStyles{
-		RootDir: lipgloss.NewStyle().SetString(string(c.RootDir)),
-		Dir:     lipgloss.NewStyle().SetString(string(c.Dir)),
-		OpenDir: lipgloss.NewStyle().SetString(string(c.OpenDir)),
-		File:    lipgloss.NewStyle().SetString(string(c.File)),
+		RootDir: c.RootDir.IconStyle(colors),
+		Dir:     c.Dir.IconStyle(colors),
+		OpenDir: c.OpenDir.IconStyle(colors),
+		File:    c.File.IconStyle(colors),
 
-		Error:       lipgloss.NewStyle().SetString(string(c.Error)),
-		Warning:     lipgloss.NewStyle().SetString(string(c.Warning)),
-		Information: lipgloss.NewStyle().SetString(string(c.Information)),
-		Hint:        lipgloss.NewStyle().SetString(string(c.Hint)),
+		Error:   c.Error.IconStyle(colors),
+		Warning: c.Warning.IconStyle(colors),
+		Info:    c.Info.IconStyle(colors),
+		Hint:    c.Hint.IconStyle(colors),
 
 		Files: files,
 
-		UnknownType: c.UnknownType.Style.Style(colors).SetString(string(c.UnknownType.Icon)),
+		UnknownType: c.UnknownType.IconStyle(colors),
 		Types:       types,
 	}
 }
@@ -210,6 +215,10 @@ func (c IconsConfig) Styles(colors Colors) IconStyles {
 type IconConfig struct {
 	Icon  rune  `toml:"icon"`
 	Style Style `toml:"style"`
+}
+
+func (c IconConfig) IconStyle(colors Colors) lipgloss.Style {
+	return c.Style.Style(colors).SetString(string(c.Icon))
 }
 
 type UIConfig struct {
@@ -287,6 +296,12 @@ type DiagnosticConfig struct {
 
 	Hint     Style `toml:"hint"`
 	HintChar Style `toml:"hint_char"`
+
+	Deprecated     Style `toml:"deprecated"`
+	DeprecatedChar Style `toml:"deprecated_char"`
+
+	Unnecessary     Style `toml:"unnecessary"`
+	UnnecessaryChar Style `toml:"unnecessary_char"`
 }
 
 type CodeStylesConfig map[string]Style
@@ -296,5 +311,8 @@ func (c CodeStylesConfig) Styles(colors Colors) map[string]lipgloss.Style {
 	for k, v := range c {
 		m[k] = v.Style(colors)
 	}
+
+	tea.HideCursor()
+
 	return m
 }

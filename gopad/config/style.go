@@ -7,17 +7,19 @@ import (
 )
 
 type Style struct {
-	Foreground     string `toml:"foreground"`
-	Background     string `toml:"background"`
-	Bold           bool   `toml:"bold"`
-	Italic         bool   `toml:"italic"`
-	Underline      bool   `toml:"underline"`
-	UnderlineColor string `toml:"underline_color"`
-	UnderlineStyle string `toml:"underline_style"`
-	Strikethrough  bool   `toml:"strikethrough"`
-	Reverse        bool   `toml:"reverse"`
-	Blink          bool   `toml:"blink"`
-	Faint          bool   `toml:"faint"`
+	Foreground       string `toml:"foreground"`
+	Background       string `toml:"background"`
+	Bold             bool   `toml:"bold"`
+	Italic           bool   `toml:"italic"`
+	Underline        bool   `toml:"underline"`
+	UnderlineColor   string `toml:"underline_color"`
+	UnderlineStyle   string `toml:"underline_style"`
+	Strikethrough    bool   `toml:"strikethrough"`
+	Reverse          bool   `toml:"reverse"`
+	Blink            bool   `toml:"blink"`
+	Faint            bool   `toml:"faint"`
+	BorderForeground string `toml:"border_foreground"`
+	BorderBackground string `toml:"border_background"`
 }
 
 func (s Style) Style(colors Colors) lipgloss.Style {
@@ -25,12 +27,18 @@ func (s Style) Style(colors Colors) lipgloss.Style {
 
 	if s.Foreground != "" {
 		style = style.Foreground(color(colors, s.Foreground))
-		style = style.BorderForeground(color(colors, s.Foreground))
 	}
 
 	if s.Background != "" {
 		style = style.Background(color(colors, s.Background))
-		style = style.BorderBackground(color(colors, s.Background))
+	}
+
+	if s.BorderForeground != "" {
+		style = style.BorderForeground(color(colors, s.BorderForeground))
+	}
+
+	if s.BorderBackground != "" {
+		style = style.BorderBackground(color(colors, s.BorderBackground))
 	}
 
 	style = style.Bold(s.Bold)

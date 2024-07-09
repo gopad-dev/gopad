@@ -451,6 +451,7 @@ func (f *File) ToggleLineComment() tea.Cmd {
 }
 
 func (f File) GetCursorForCharPos(row int, col int) (int, int) {
+	row = max(row-f.cursor.offsetRow, 0)
 	if row >= len(f.positions) {
 		return max(f.buffer.LinesLen()-1, 0), 0
 	}
@@ -532,13 +533,16 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		}
 
 		chars := line.RuneStrings()
+		var colOffset int
 		var codeLine []byte
 		// always draw one character off the screen to ensure the cursor is visible
 		for ii := range width - prefixLength + 1 {
 			col := ii + offsetCol
 
 			if col <= line.Len() {
-				linePositions = append(linePositions, pos{row: ln, col: col})
+				for len(linePositions) <= ii+colOffset {
+					linePositions = append(linePositions, pos{row: ln, col: col})
+				}
 			}
 
 			inSelection := selection != nil && selection.Contains(buffer.Position{Row: ln, Col: col})
@@ -586,6 +590,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 					label += paddingStyle.Render(" ")
 				}
 				codeLine = append(codeLine, label...)
+				colOffset += lipgloss.Width(label)
 			}
 		}
 
