@@ -65,10 +65,10 @@ var DefaultStyles = Styles{
 	ShortKey:       keyStyle,
 	ShortDesc:      descStyle,
 	ShortSeparator: sepStyle,
-	Ellipsis:       sepStyle.Copy(),
-	FullKey:        keyStyle.Copy(),
-	FullDesc:       descStyle.Copy(),
-	FullSeparator:  sepStyle.Copy(),
+	Ellipsis:       sepStyle,
+	FullKey:        keyStyle,
+	FullDesc:       descStyle,
+	FullSeparator:  sepStyle,
 }
 
 // Model contains the state of the help view.

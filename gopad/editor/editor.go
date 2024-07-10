@@ -320,11 +320,11 @@ func (e *Editor) ToggleTreeSitterDebug() {
 	e.treeSitterDebug = !e.treeSitterDebug
 }
 
-func (e Editor) Init() tea.Cmd {
+func (e Editor) Init(ctx tea.Context) tea.Cmd {
 	return tea.Sequence(e.init...)
 }
 
-func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
+func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	var cmds []tea.Cmd
 	var overwriteCursorBlink bool
 
@@ -509,7 +509,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	e.fileTree, cmd = e.fileTree.Update(msg)
+	e.fileTree, cmd = e.fileTree.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -517,7 +517,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	}
 
-	e.searchBar, cmd = e.searchBar.Update(msg)
+	e.searchBar, cmd = e.searchBar.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -532,6 +532,17 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	oldRow, oldCol := f.Cursor()
 
 	switch msg := msg.(type) {
+	case tea.PasteMsg:
+		s := f.Selection()
+		if s != nil {
+			log.Println("paste msg", msg)
+			f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, []byte(msg))
+			f.ResetMark()
+		} else {
+			f.Insert([]byte(msg))
+		}
+		return e, tea.Batch(cmds...)
+
 	case file.PasteMsg:
 		s := f.Selection()
 		if s != nil {
@@ -541,6 +552,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		} else {
 			f.Insert(msg)
 		}
+		return e, tea.Batch(cmds...)
 	case file.CutMsg:
 		s := buffer.Range(msg)
 		f.DeleteRange(s.Start, s.End)
@@ -590,85 +602,84 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		f.SetCursor(msg.ToRow, msg.ToCol)
 	case file.ScrollMsg:
 		f.SetCursor(msg.Row, msg.Col)
-	case tea.MouseMsg:
+	case tea.MouseDownMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
-			if z.InBounds(msg) {
-				row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), file.ZoneFileLinePrefix))
-				col, _ := z.Pos(msg)
-				row, col = f.GetCursorForCharPos(row, col)
-
-				switch {
-				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionRelease):
-					f.SetCursor(row, col)
-					if s := f.Selection(); s == nil || s.Zero() {
-						f.ResetMark()
-					}
-					cmds = append(cmds, f.Autocomplete().Update())
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionPress):
-					f.SetMark(row, col)
-					f.SetCursor(row, col)
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionMotion):
-					f.SetCursor(row, col)
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonWheelLeft), mouse.MatchesShift(msg, "", tea.MouseButtonWheelDown):
-					f.MoveCursorLeft(1)
-					cmds = append(cmds, f.Autocomplete().Update())
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonWheelRight), mouse.MatchesShift(msg, "", tea.MouseButtonWheelUp):
-					f.MoveCursorRight(1)
-					cmds = append(cmds, f.Autocomplete().Update())
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonWheelUp):
-					f.MoveCursorUp(1)
-					cmds = append(cmds, f.Autocomplete().Update())
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonWheelDown):
-					f.MoveCursorDown(1)
-					cmds = append(cmds, f.Autocomplete().Update())
-					return e, tea.Batch(cmds...)
-				}
+			switch {
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(msg, z)
+				f.SetMark(row, col)
+				f.SetCursor(row, col)
+				return e, tea.Batch(cmds...)
 			}
 		}
-
-		for _, z := range zone.GetPrefix(ZoneFilePrefix) {
-			if z.InBounds(msg) {
+	case tea.MouseUpMsg:
+		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
+			switch {
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(msg, z)
+				f.SetCursor(row, col)
+				if s := f.Selection(); s == nil || s.Zero() {
+					f.ResetMark()
+				}
+				cmds = append(cmds, f.Autocomplete().Update())
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
+				e.SetFile(i)
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseRight):
+				// TODO: open context menu?
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseMiddle):
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
+				cmds = append(cmds, file.CloseFile(e.files[i].Name()))
+				return e, tea.Batch(cmds...)
 
-				switch {
-				case mouse.Matches(msg, "", tea.MouseButtonLeft, tea.MouseActionRelease):
-					e.SetFile(i)
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonRight, tea.MouseActionRelease):
-					// TODO: open context menu?
-					return e, tea.Batch(cmds...)
-				case mouse.Matches(msg, "", tea.MouseButtonMiddle, tea.MouseActionRelease):
-					cmds = append(cmds, file.CloseFile(e.files[i].Name()))
-					return e, tea.Batch(cmds...)
-				}
+			case mouse.Matches(msg, ZoneFileLanguage, tea.MouseLeft):
+				cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
+				return e, tea.Batch(cmds...)
+			case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseLeft):
+				log.Println("file line ending zone")
+				// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
+				return e, tea.Batch(cmds...)
+			case mouse.Matches(msg, ZoneFileEncoding, tea.MouseLeft):
+				log.Println("file encoding zone")
+				// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
+				return e, tea.Batch(cmds...)
 			}
 		}
-
-		switch {
-		case mouse.Matches(msg, ZoneFileLanguage, tea.MouseButtonLeft, tea.MouseActionRelease):
-			cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
-			return e, tea.Batch(cmds...)
-		case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseButtonLeft, tea.MouseActionRelease):
-			log.Println("file line ending zone")
-			// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
-			return e, tea.Batch(cmds...)
-		case mouse.Matches(msg, ZoneFileEncoding, tea.MouseButtonLeft, tea.MouseActionRelease):
-			log.Println("file encoding zone")
-			// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
-			return e, tea.Batch(cmds...)
+	case tea.MouseMotionMsg:
+		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
+			switch {
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(msg, z)
+				f.SetCursor(row, col)
+				return e, tea.Batch(cmds...)
+			}
+		}
+	case tea.MouseWheelMsg:
+		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
+			switch {
+			case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.Shift):
+				f.MoveCursorLeft(1)
+				cmds = append(cmds, f.Autocomplete().Update())
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseWheelRight), mouse.MatchesZone(msg, z, tea.MouseWheelUp, tea.Shift):
+				f.MoveCursorRight(1)
+				cmds = append(cmds, f.Autocomplete().Update())
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseWheelUp):
+				f.MoveCursorUp(1)
+				cmds = append(cmds, f.Autocomplete().Update())
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
+				f.MoveCursorDown(1)
+				cmds = append(cmds, f.Autocomplete().Update())
+				return e, tea.Batch(cmds...)
+			}
 		}
 	case tea.KeyMsg:
 		if e.focus {
-			if msg.Paste {
-				log.Println("paste msg", string(msg.Runes))
-				return e, tea.Batch(cmds...)
-			}
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete):
 				row, col := f.Cursor()
@@ -926,27 +937,25 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				log.Println("DEBUG")
 
 			default:
-				if msg.Alt {
-					break
-				}
+				if msg.Mod == 0 {
+					text := []byte(string(msg.Rune))
+					if s := f.Selection(); s != nil {
+						cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
+						f.ResetMark()
+					} else {
+						cmds = append(cmds, f.Insert(text))
+					}
 
-				text := []byte(string(msg.Runes))
-				if s := f.Selection(); s != nil {
-					cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
-					f.ResetMark()
-				} else {
-					cmds = append(cmds, f.Insert(text))
-				}
+					cmds = append(cmds, f.Autocomplete().Update())
 
-				cmds = append(cmds, f.Autocomplete().Update())
-
-				// handle auto pairs
-				if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
-					for _, pair := range lang.Config.AutoPairs {
-						if string(msg.Runes) == pair.Open {
-							row, col := f.Cursor()
-							cmds = append(cmds, f.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
-							break
+					// handle auto pairs
+					if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
+						for _, pair := range lang.Config.AutoPairs {
+							if string(msg.Rune) == pair.Open {
+								row, col := f.Cursor()
+								cmds = append(cmds, f.InsertAt(row, col+runewidth.StringWidth(pair.Open), []byte(pair.Close)))
+								break
+							}
 						}
 					}
 				}
@@ -954,7 +963,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		}
 	}
 
-	if cmd = f.UpdateCursor(msg); cmd != nil {
+	if cmd = f.UpdateCursor(ctx, msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
@@ -967,7 +976,9 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	return e, tea.Batch(cmds...)
 }
 
-func (e *Editor) View(width int, height int) string {
+func (e *Editor) View(ctx tea.Context, height int) string {
+	width, _ := ctx.WindowSize()
+
 	var fileTree string
 	if e.fileTree.Visible() {
 		fileTree = e.fileTree.View(height)
@@ -993,11 +1004,11 @@ func (e *Editor) View(width int, height int) string {
 
 	var searchBar string
 	if e.searchBar.Visible() {
-		searchBar = e.searchBar.View()
+		searchBar = e.searchBar.View(ctx)
 		height -= lipgloss.Height(searchBar)
 	}
 
-	editor := f.View(width, height, e.fileTree.Visible(), e.treeSitterDebug)
+	editor := f.View(ctx, width, height, e.fileTree.Visible(), e.treeSitterDebug)
 
 	if searchBar != "" {
 		editor = lipgloss.JoinVertical(lipgloss.Left, searchBar, editor)

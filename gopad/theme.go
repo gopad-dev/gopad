@@ -45,11 +45,11 @@ func (s SetThemeOverlay) Title() string {
 	return "Set Theme"
 }
 
-func (s SetThemeOverlay) Init() tea.Cmd {
-	return textinput.Blink
+func (s SetThemeOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return s, textinput.Blink
 }
 
-func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (s SetThemeOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -67,7 +67,7 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	s.l, cmd = s.l.Update(msg)
+	s.l, cmd = s.l.Update(ctx, msg)
 
 	if s.l.Clicked() {
 		item := s.l.Selected()
@@ -81,9 +81,9 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return s, cmd
 }
 
-func (s SetThemeOverlay) View(width int, height int) string {
+func (s SetThemeOverlay) View(ctx tea.Context, width int, height int) string {
 	s.l.SetHeight(height)
 	s.l.SetWidth(width / 2)
 
-	return s.l.View()
+	return s.l.View(ctx)
 }

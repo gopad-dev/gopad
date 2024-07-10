@@ -3,7 +3,7 @@ package config
 import (
 	"slices"
 
-	"github.com/muesli/termenv"
+	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 )
@@ -80,7 +80,7 @@ func (c GrammarConfig) Hyperlink() string {
 	if c.Install == nil {
 		return c.Name
 	}
-	return termenv.Hyperlink(c.Install.Git, c.Name)
+	return lipgloss.Hyperlink(c.Install.Git, c.Name)
 }
 
 type GrammarInstallConfig struct {
@@ -94,9 +94,9 @@ type GrammarInstallConfig struct {
 func (c GrammarInstallConfig) Hyperlink() string {
 	switch c.RefType {
 	case RefTypeCommit:
-		return termenv.Hyperlink(c.Git+"/commit/"+c.Rev, c.Rev)
+		return lipgloss.Hyperlink(c.Git+"/commit/"+c.Rev, c.Rev)
 	case RefTypeTag:
-		return termenv.Hyperlink(c.Git+"/releases/tag/"+c.Ref, c.Ref)
+		return lipgloss.Hyperlink(c.Git+"/releases/tag/"+c.Ref, c.Ref)
 	}
 	return c.Ref
 }

@@ -18,12 +18,14 @@ import (
 type ThemeConfig struct {
 	Name string
 
-	Colors     Colors
+	Colors     ColorStyles
 	Icons      IconStyles
 	UI         UiStyles
 	Diagnostic DiagnosticStyles
 	CodeStyles map[string]lipgloss.Style
 }
+
+type ColorStyles map[string]lipgloss.TerminalColor
 
 type IconStyles struct {
 	RootDir lipgloss.Style

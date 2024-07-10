@@ -157,11 +157,11 @@ func (m *Model[T]) Clicked() bool {
 	return m.clicked
 }
 
-func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
+func (m Model[T]) Update(ctx tea.Context, msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		for i := range len(m.filteredItems()) {
-			if mouse.Matches(msg, m.zoneItemID(i), tea.MouseButtonLeft, tea.MouseActionRelease) {
+			if mouse.Matches(msg, m.zoneItemID(i), tea.MouseLeft /*, tea.MouseActionRelease*/) {
 				m.item = i
 				m.clicked = true
 				return m, nil
@@ -169,12 +169,12 @@ func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 		}
 
 		switch {
-		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelUp):
+		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelUp):
 			if m.item > 0 {
 				m.item--
 			}
 			return m, nil
-		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelDown):
+		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelDown):
 			if m.item < len(m.items)-1 {
 				m.item++
 			}
@@ -202,7 +202,7 @@ func (m Model[T]) Update(msg tea.Msg) (Model[T], tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	m.TextInput, cmd = m.TextInput.Update(msg)
+	m.TextInput, cmd = m.TextInput.Update(ctx, msg)
 
 	return m, cmd
 }
@@ -221,7 +221,7 @@ func (m *Model[T]) calculateOffset() {
 	}
 }
 
-func (m Model[T]) View() string {
+func (m Model[T]) View(ctx tea.Context) string {
 	m.calculateOffset()
 	var listWidth int
 	if m.width > 0 {
@@ -235,7 +235,7 @@ func (m Model[T]) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		m.TextInput.View(),
+		m.TextInput.View(ctx),
 		m.itemsView(listWidth, listHeight),
 	)
 }

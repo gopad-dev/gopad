@@ -97,7 +97,7 @@ func (m *Model) remove(id int) {
 	})
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case addMsg:
@@ -111,8 +111,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
-	height := lipgloss.Height(m.bg) - 1 - m.Margin
+func (m Model) View(ctx tea.Context) string {
+	_, height := ctx.WindowSize()
+	height = height - 1 - m.Margin
+
 	var str string
 	for i := len(m.notifications) - 1; i >= 0; i-- {
 		content := m.Styles.Notification.Render(m.notifications[i].Content)

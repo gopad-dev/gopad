@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -465,12 +466,24 @@ func (f File) GetCursorForCharPos(row int, col int) (int, int) {
 	return p.row, p.col
 }
 
+func (f File) GetFileZoneCursorPos(msg any, z *zone.ZoneInfo) (int, int) {
+	mouseMsg := tea.MouseEvent(msg)
+	if !ok {
+		log.Println("msg is not a mouse event")
+		return 0, 0
+	}
+	row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLinePrefix))
+	col, _ := z.Pos(mouseMsg)
+	row, col = f.GetCursorForCharPos(row, col)
+	return row, col
+}
+
 type pos struct {
 	row int
 	col int
 }
 
-func (f *File) View(width int, height int, border bool, debug bool) string {
+func (f *File) View(ctx tea.Context, width int, height int, border bool, debug bool) string {
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -518,7 +531,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 
 		var prefix string
 		if lineDiagnostic.Severity > 0 {
-			prefix = lineDiagnostic.Severity.Style().Render(lineDiagnostic.Severity.Icon())
+			prefix = lineDiagnostic.Severity.Style().Render(lineDiagnostic.Severity.Icon().Render())
 		} else {
 			prefix = " "
 		}
@@ -568,7 +581,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			if ln == cursorRow && ii == realCursorCol {
 				char = f.cursor.cursor.View(char, style)
 			} else if inSelection {
-				char = styles.FileView.SelectionStyle.Copy().Inherit(style).Render(char)
+				char = styles.FileView.SelectionStyle.Inherit(style).Render(char)
 			} else {
 				char = style.Render(char)
 			}
@@ -577,8 +590,8 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			paddingStyle := codeLineCharStyle
 			labelStyle := config.Theme.UI.FileView.InlayHintStyle
 			if inSelection {
-				paddingStyle = styles.FileView.SelectionStyle.Copy().Inherit(paddingStyle)
-				labelStyle = styles.FileView.SelectionStyle.Copy().Inherit(labelStyle)
+				paddingStyle = styles.FileView.SelectionStyle.Inherit(paddingStyle)
+				labelStyle = styles.FileView.SelectionStyle.Inherit(labelStyle)
 			}
 			for _, hint := range f.InlayHintsForLineCol(ln, col+1) {
 				var label string
@@ -599,7 +612,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
 			lineWidth := ansi.StringWidth(string(codeLine))
 			if lineWidth < width {
-				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.ShortView())...)
+				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.ShortView(codeLineStyle))...)
 			}
 		}
 
@@ -620,7 +633,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	if f.showCurrentDiagnostic {
 		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
 		if diagnostic.Severity > 0 {
-			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
+			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(ctx, width, height), editorCode,
 				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
 				overlay.WithMarginY(realCursorRow+1),
 			)
@@ -628,7 +641,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 			f.HideCurrentDiagnostic()
 		}
 	} else if f.autocomplete.Visible() {
-		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(width, height), editorCode,
+		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(ctx, width, height), editorCode,
 			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
 			overlay.WithMarginY(realCursorRow+1),
 		)

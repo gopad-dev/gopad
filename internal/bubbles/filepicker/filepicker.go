@@ -347,12 +347,12 @@ func (m *Model) refreshViewOffset(height int) {
 }
 
 // Init initializes the file picker model.
-func (m Model) Init() tea.Cmd {
+func (m Model) Init(ctx tea.Context) tea.Cmd {
 	return m.readDir(m.CurrentDirectory, m.ShowHidden)
 }
 
 // Update handles user interactions within the file picker model.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case readDirMsg:
 		if msg.id != m.id {

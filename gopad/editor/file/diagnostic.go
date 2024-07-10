@@ -86,7 +86,7 @@ func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col 
 		return style
 	}
 
-	return diagnostic.Severity.CharStyle().Copy().Inherit(style)
+	return diagnostic.Severity.CharStyle().Inherit(style)
 }
 
 func (f *File) ShowCurrentDiagnostic() {

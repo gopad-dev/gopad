@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -82,23 +83,26 @@ func Load(name string, defaultConfigs embed.FS) error {
 		return fmt.Errorf("error loading themes: %w", err)
 	}
 
-	var theme RawThemeConfig
-	for _, t := range themes {
-		theme = t
-		if t.Name == gopad.Theme {
-			break
-		}
-	}
-
 	Path = name
 	Gopad = gopad
 	Languages = languages.filter()
 	LanguageServers = languageServers.filter()
 	Keys = keymap.Keys()
 	Themes = themes
-	Theme = theme.Theme()
 
 	return nil
+}
+
+func InitTheme(ctx tea.Context) {
+	var theme RawThemeConfig
+	for _, t := range Themes {
+		theme = t
+		if t.Name == Gopad.Theme {
+			break
+		}
+	}
+
+	Theme = theme.Theme(ctx)
 }
 
 func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) {

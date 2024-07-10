@@ -68,9 +68,9 @@ func (f *File) SetCursor(row, col int) {
 	}
 }
 
-func (f *File) UpdateCursor(msg tea.Msg) tea.Cmd {
+func (f *File) UpdateCursor(ctx tea.Context, msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
-	f.cursor.cursor, cmd = f.cursor.cursor.Update(msg)
+	f.cursor.cursor, cmd = f.cursor.cursor.Update(ctx, msg)
 	return cmd
 }
 
@@ -352,7 +352,7 @@ func (f *File) refreshCursorViewOffset(width int, height int) {
 	cursorRow, cursorCol := f.Cursor()
 
 	// TODO: figure out how to handle inlay hints when scrolling horizontally
-	//if len(f.positions) > 0 {
+	// if len(f.positions) > 0 {
 	//	i, ok := slices.BinarySearchFunc(f.positions[cursorRow], cursorCol, func(p pos, col int) int {
 	//		if p.col < col {
 	//			return -1
@@ -364,7 +364,7 @@ func (f *File) refreshCursorViewOffset(width int, height int) {
 	//	if ok {
 	//		cursorCol = i
 	//	}
-	//}
+	// }
 
 	if cursorRow >= f.cursor.offsetRow+height {
 		f.cursor.offsetRow = cursorRow - height + 1

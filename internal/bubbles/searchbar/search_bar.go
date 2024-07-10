@@ -122,7 +122,7 @@ func (s *Model) Blur() {
 	s.TextInput.Blur()
 }
 
-func (s Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (s Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -169,7 +169,7 @@ func (s Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if s.focus {
 		previousValue := s.TextInput.Value()
 		var cmd tea.Cmd
-		s.TextInput, cmd = s.TextInput.Update(msg)
+		s.TextInput, cmd = s.TextInput.Update(ctx, msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
@@ -182,14 +182,14 @@ func (s Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return s, tea.Batch(cmds...)
 }
 
-func (s Model) View() string {
+func (s Model) View(ctx tea.Context) string {
 	results := "0 results"
 	if len(s.results) > 0 {
 		results = fmt.Sprintf(" %d/%d 🠅🠇", s.resultIndex+1, len(s.results))
 	}
 
 	return s.Styles.Style.Render(lipgloss.JoinHorizontal(lipgloss.Center,
-		s.TextInput.View(),
+		s.TextInput.View(ctx),
 		s.Styles.ResultStyle.Render(results),
 	))
 }

@@ -1,78 +1,46 @@
 package mouse
 
 import (
-	"slices"
-
 	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/input"
 	"github.com/lrstanley/bubblezone"
 )
 
-func Matches(msg tea.MouseMsg, id string, button tea.MouseButton, actions ...tea.MouseAction) bool {
+func Matches(msg any, id string, button input.MouseButton, keyMod ...tea.KeyMod) bool {
+	var z *zone.ZoneInfo
 	if id != "" {
-		z := zone.Get(id)
-		if !z.InBounds(msg) {
+		z = zone.Get(id)
+	}
+
+	return MatchesZone(msg, z, button, keyMod...)
+}
+
+func MatchesZone(msg any, zone *zone.ZoneInfo, button input.MouseButton, keyMod ...tea.KeyMod) bool {
+	mouseMsg, ok := msg.(tea.MouseEvent)
+	if !ok {
+		return false
+	}
+
+	if zone != nil {
+		if !zone.InBounds(mouseMsg) {
 			return false
 		}
 	}
 
-	if msg.Button != button {
+	if mouseMsg.Button != button {
 		return false
 	}
 
-	if len(actions) == 0 {
-		return true
+	if len(keyMod) > 0 {
+		var allKeyMods tea.KeyMod
+		for _, mod := range keyMod {
+			allKeyMods |= mod
+		}
+
+		if mouseMsg.Mod != allKeyMods {
+			return false
+		}
 	}
 
-	return slices.Contains(actions, msg.Action)
-}
-
-func MatchesCtrl(msg tea.MouseMsg, id string, button tea.MouseButton, actions ...tea.MouseAction) bool {
-	z := zone.Get(id)
-	if !z.InBounds(msg) {
-		return false
-	}
-
-	if msg.Button != button {
-		return false
-	}
-
-	if len(actions) > 0 && !slices.Contains(actions, msg.Action) {
-		return false
-	}
-
-	return msg.Ctrl
-}
-
-func MatchesShift(msg tea.MouseMsg, id string, button tea.MouseButton, actions ...tea.MouseAction) bool {
-	z := zone.Get(id)
-	if !z.InBounds(msg) {
-		return false
-	}
-
-	if msg.Button != button {
-		return false
-	}
-
-	if len(actions) > 0 && !slices.Contains(actions, msg.Action) {
-		return false
-	}
-
-	return msg.Shift
-}
-
-func MatchesAlt(msg tea.MouseMsg, id string, button tea.MouseButton, actions ...tea.MouseAction) bool {
-	z := zone.Get(id)
-	if !z.InBounds(msg) {
-		return false
-	}
-
-	if msg.Button != button {
-		return false
-	}
-
-	if len(actions) > 0 && !slices.Contains(actions, msg.Action) {
-		return false
-	}
-
-	return msg.Alt
+	return true
 }

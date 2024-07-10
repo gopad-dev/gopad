@@ -91,13 +91,13 @@ func (l *Client) updateSupportedServers(name string, msg tea.Msg) []tea.Cmd {
 }
 
 func (l *Client) Filter(_ tea.Model, msg tea.Msg) tea.Msg {
-	if cmd := l.update(msg); cmd != nil {
+	if cmd := l.Update(msg); cmd != nil {
 		return cmd()
 	}
 	return msg
 }
 
-func (l *Client) update(msg tea.Msg) tea.Cmd {
+func (l *Client) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {

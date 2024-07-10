@@ -364,7 +364,7 @@ func (m Model) zoneID() string {
 	return fmt.Sprintf("file_tree:%s", m.zonePrefix)
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -373,8 +373,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, notifications.Add("Error updating file tree: "+err.Error()))
 		}
 		return m, tea.Batch(cmds...)
-	case tea.MouseMsg:
-		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease {
+	case tea.MouseEvent:
+		if msg.Button == tea.MouseLeft /*&& msg.Action == tea.MouseActionRelease*/ {
 			zonePrefix := fmt.Sprintf("file_tree:%s:", m.zonePrefix)
 			for _, z := range zone.GetPrefix(zonePrefix) {
 				if z.InBounds(msg) {
@@ -393,10 +393,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 		switch {
-		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelUp):
+		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelUp):
 			m.SelectPrev()
 			return m, nil
-		case mouse.Matches(msg, m.zoneID(), tea.MouseButtonWheelDown):
+		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelDown):
 			m.SelectNext()
 			return m, nil
 		}

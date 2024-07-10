@@ -45,11 +45,11 @@ func (o NewOverlay) Title() string {
 	return "New File"
 }
 
-func (o NewOverlay) Init() tea.Cmd {
-	return textinput.Blink
+func (o NewOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return o, textinput.Blink
 }
 
-func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (o NewOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -66,7 +66,7 @@ func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	o.fileName, cmd = o.fileName.Update(msg)
+	o.fileName, cmd = o.fileName.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -74,7 +74,7 @@ func (o NewOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return o, tea.Batch(cmds...)
 }
 
-func (o NewOverlay) View(width int, height int) string {
+func (o NewOverlay) View(ctx tea.Context, width int, height int) string {
 	style := config.Theme.UI.Overlay.Styles.Style
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
@@ -82,5 +82,5 @@ func (o NewOverlay) View(width int, height int) string {
 		o.fileName.Width = width - 4
 	}
 
-	return o.fileName.View()
+	return o.fileName.View(ctx)
 }

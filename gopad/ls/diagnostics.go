@@ -55,18 +55,18 @@ func (d DiagnosticSeverity) String() string {
 	return "Unknown"
 }
 
-func (d DiagnosticSeverity) Icon() string {
+func (d DiagnosticSeverity) Icon() lipgloss.Style {
 	switch d {
 	case DiagnosticSeverityError:
-		return config.Theme.Icons.Error.Render()
+		return config.Theme.Icons.Error
 	case DiagnosticSeverityWarning:
-		return config.Theme.Icons.Warning.Render()
+		return config.Theme.Icons.Warning
 	case DiagnosticSeverityInfo:
-		return config.Theme.Icons.Info.Render()
+		return config.Theme.Icons.Info
 	case DiagnosticSeverityHint:
-		return config.Theme.Icons.Hint.Render()
+		return config.Theme.Icons.Hint
 	}
-	return " "
+	return lipgloss.NewStyle().SetString(" ")
 }
 
 func (d DiagnosticSeverity) Style() lipgloss.Style {
@@ -127,15 +127,15 @@ type Diagnostic struct {
 	Priority        int
 }
 
-func (d Diagnostic) ShortView() string {
-	return d.Severity.Style().Render(fmt.Sprintf("%s %s", d.Severity.Icon(), strings.SplitN(d.Message, "\n", 2)[0]))
+func (d Diagnostic) ShortView(style lipgloss.Style) string {
+	return d.Severity.Icon().Inherit(style).Render() + d.Severity.Style().PaddingLeft(1).Inherit(style).Render(strings.SplitN(d.Message, "\n", 2)[0])
 }
 
-func (d Diagnostic) View(width int, height int) string {
+func (d Diagnostic) View(ctx tea.Context, width int, height int) string {
 	width = min(width, 60)
 	height = max(height-2, 0)
 
-	message := fmt.Sprintf("%s%s\n\n%s: %s", d.Severity.Style().Render(d.Severity.Icon()), config.Theme.UI.Documentation.Style.Inline(true).Render(" "+d.Message), d.Type, d.Name)
+	message := fmt.Sprintf("%s%s\n\n%s: %s", d.Severity.Icon(), config.Theme.UI.Documentation.Style.Inline(true).Render(" "+d.Message), d.Type, d.Name)
 	if d.Source != "" {
 		message += fmt.Sprintf(" - %s", d.Source)
 	}

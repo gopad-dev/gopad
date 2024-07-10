@@ -2,25 +2,20 @@ module go.gopad.dev/gopad
 
 go 1.22
 
-replace (
-	github.com/charmbracelet/lipgloss => github.com/gopad-dev/lipgloss v0.0.0-20240422161526-eea0119313bc
-	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240705195549-e9b758108f05
-	github.com/muesli/termenv => github.com/gopad-dev/termenv v0.0.0-20240413225005-5f4a43fcdd7b
-	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240529205148-623e5abff393
-)
+replace go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240529205148-623e5abff393
 
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/charmbracelet/bubbles v0.18.0
-	github.com/charmbracelet/bubbletea v0.26.6
-	github.com/charmbracelet/lipgloss v0.11.0
+	github.com/charmbracelet/bubbletea v0.26.5-0.20240605151746-bca513b1982b
+	github.com/charmbracelet/lipgloss v0.11.1-0.20240605151253-a724723338e3
 	github.com/charmbracelet/x/ansi v0.1.2
+	github.com/charmbracelet/x/input v0.1.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/reflow v0.3.0
-	github.com/muesli/termenv v0.15.2
 	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/rivo/uniseg v0.4.7
 	github.com/spf13/cobra v1.8.1
@@ -33,9 +28,6 @@ require (
 )
 
 require (
-	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/x/exp/term v0.0.0-20240625164403-2627ec16405d // indirect
-	github.com/charmbracelet/x/input v0.1.2 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -43,8 +35,6 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

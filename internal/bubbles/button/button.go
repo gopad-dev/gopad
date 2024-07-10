@@ -23,8 +23,8 @@ type Styles struct {
 }
 
 var DefaultStyles = Styles{
-	Default: lipgloss.NewStyle().Padding(0, 1).Margin(0, 1).Copy().Reverse(true),
-	Focus:   lipgloss.NewStyle().Padding(0, 1).Margin(0, 1).Copy().Foreground(lipgloss.ANSIColor(13)).Reverse(true),
+	Default: lipgloss.NewStyle().Padding(0, 1).Margin(0, 1).Reverse(true),
+	Focus:   lipgloss.NewStyle().Padding(0, 1).Margin(0, 1).Foreground(lipgloss.ANSIColor(13)).Reverse(true),
 }
 
 func New(label string, onclick func() tea.Cmd) Model {
@@ -59,7 +59,7 @@ func (m *Model) Blur() {
 	m.focus = false
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
@@ -76,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m Model) View(ctx tea.Context) string {
 	if m.focus {
 		return m.Styles.Focus.Render(m.Label)
 	}

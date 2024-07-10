@@ -39,11 +39,11 @@ func (q KeyMapperOverlay) Title() string {
 	return "Key Mapper"
 }
 
-func (q KeyMapperOverlay) Init() tea.Cmd {
-	return nil
+func (q KeyMapperOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return q, nil
 }
 
-func (q KeyMapperOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (q KeyMapperOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -58,7 +58,7 @@ func (q KeyMapperOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return q, nil
 }
 
-func (q KeyMapperOverlay) View(width int, height int) string {
+func (q KeyMapperOverlay) View(ctx tea.Context, width int, height int) string {
 	if q.key == "" {
 		return fmt.Sprintf("Press a key to see its name.\nPress %s to close.", config.Keys.Cancel.Help().Key)
 	}

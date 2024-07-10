@@ -53,11 +53,11 @@ func (o OpenOverlay) Title() string {
 	return s
 }
 
-func (o OpenOverlay) Init() tea.Cmd {
-	return o.filePicker.Init()
+func (o OpenOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return o, o.filePicker.Init(ctx)
 }
 
-func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (o OpenOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -69,7 +69,7 @@ func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	o.filePicker, cmd = o.filePicker.Update(msg)
+	o.filePicker, cmd = o.filePicker.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -90,7 +90,7 @@ func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return o, tea.Batch(cmds...)
 }
 
-func (o OpenOverlay) View(_ int, height int) string {
+func (o OpenOverlay) View(ctx tea.Context, _ int, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		o.filePicker.View(height-config.Theme.UI.Overlay.Styles.Style.GetVerticalFrameSize()-4),
 		"Press [esc] to cancel or [enter] to open.",

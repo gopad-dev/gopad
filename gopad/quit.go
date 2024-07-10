@@ -57,11 +57,11 @@ func (q QuitOverlay) Title() string {
 	return "Quit"
 }
 
-func (q QuitOverlay) Init() tea.Cmd {
-	return nil
+func (q QuitOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return q, nil
 }
 
-func (q QuitOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (q QuitOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -83,12 +83,12 @@ func (q QuitOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	q.buttonOK, cmd = q.buttonOK.Update(msg)
+	q.buttonOK, cmd = q.buttonOK.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	q.buttonCancel, cmd = q.buttonCancel.Update(msg)
+	q.buttonCancel, cmd = q.buttonCancel.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -96,9 +96,9 @@ func (q QuitOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return q, tea.Batch(cmds...)
 }
 
-func (q QuitOverlay) View(width int, height int) string {
+func (q QuitOverlay) View(ctx tea.Context, width int, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.NewStyle().MarginBottom(1).Render("You have unsaved changes. Are you sure you want to quit?"),
-		lipgloss.JoinHorizontal(lipgloss.Center, q.buttonOK.View(), q.buttonCancel.View()),
+		lipgloss.JoinHorizontal(lipgloss.Center, q.buttonOK.View(ctx), q.buttonCancel.View(ctx)),
 	)
 }

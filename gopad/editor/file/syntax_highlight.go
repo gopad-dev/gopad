@@ -64,11 +64,11 @@ func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipglos
 	}
 
 	if referenceStyle != nil {
-		return style.Copy().Inherit(*referenceStyle)
+		return style.Inherit(*referenceStyle)
 	}
 
 	if currentStyle != nil {
-		return style.Copy().Inherit(*currentStyle)
+		return style.Inherit(*currentStyle)
 	}
 
 	return style

@@ -47,9 +47,9 @@ type Overlay interface {
 	Margin() (int, int)
 	Title() string
 
-	Init() tea.Cmd
-	Update(msg tea.Msg) (Overlay, tea.Cmd)
-	View(width int, height int) string
+	Init(ctx tea.Context) (Overlay, tea.Cmd)
+	Update(ctx tea.Context, msg tea.Msg) (Overlay, tea.Cmd)
+	View(ctx tea.Context, width int, height int) string
 }
 
 func Render() {

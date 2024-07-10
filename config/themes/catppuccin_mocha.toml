@@ -1,36 +1,36 @@
-name = 'catppuccin mocha'
+name = 'catppuccin-mocha'
 
 # Color configuration
 [colors]
-rosewater = "#f5e0dc"
-flamingo = "#f2cdcd"
-pink = "#f5c2e7"
-mauve = "#cba6f7"
-red = "#f38ba8"
-maroon = "#eba0ac"
-peach = "#fab387"
-yellow = "#f9e2af"
-green = "#a6e3a1"
-teal = "#94e2d5"
-sky = "#89dceb"
-sapphire = "#74c7ec"
-blue = "#89b4fa"
-lavender = "#b4befe"
-text = "#cdd6f4"
-subtext1 = "#bac2de"
-subtext0 = "#a6adc8"
-overlay2 = "#9399b2"
-overlay1 = "#7f849c"
-overlay0 = "#6c7086"
-surface2 = "#585b70"
-surface1 = "#45475a"
-surface0 = "#313244"
-base = "#1e1e2e"
-mantle = "#181825"
-crust = "#11111b"
+rosewater = '#f5e0dc'
+flamingo = '#f2cdcd'
+pink = '#f5c2e7'
+mauve = '#cba6f7'
+red = '#f38ba8'
+maroon = '#eba0ac'
+peach = '#fab387'
+yellow = '#f9e2af'
+green = '#a6e3a1'
+teal = '#94e2d5'
+sky = '#89dceb'
+sapphire = '#74c7ec'
+blue = '#89b4fa'
+lavender = '#b4befe'
+text = '#cdd6f4'
+subtext1 = '#bac2de'
+subtext0 = '#a6adc8'
+overlay2 = '#9399b2'
+overlay1 = '#7f849c'
+overlay0 = '#6c7086'
+surface2 = '#585b70'
+surface1 = '#45475a'
+surface0 = '#313244'
+base = '#1e1e2e'
+mantle = '#181825'
+crust = '#11111b'
 
-cursorline = "#2a2b3c"
-secondary_cursor = "#b5a6a8"
+cursorline = '#2a2b3c'
+secondary_cursor = '#b5a6a8'
 
 [icons]
 root_dir = { icon = 0xef81 }
@@ -128,24 +128,27 @@ selected_file = { foreground = '$text', background = '$base' }
 style = { background = '$mantle', foreground = '$text' }
 
 [ui.menu]
-style = { border_foreground = '$overlay2' }
+style = { border_foreground = '$overlay2', baclground = '$surface0' }
 title = { foreground = '$text', background = '$mantle' }
 content = { foreground = '$text' }
 
 entry = { foreground = '$text' }
-selected_entry = { foreground = '$text', background = '$base' }
-selected_entry_unfocused = { foreground = '$text', background = '$base' }
+selected_entry = { foreground = '$text', background = '$surface1' }
+selected_entry_unfocused = { foreground = '$text', background = '$surface2' }
+
+[ui.overlay]
+style = { background = '$surface2' }
 
 [ui.cursor]
 block = { foreground = '$rosewater', reverse = true }
-underline = { underline = true, underline_style = 'solid', underline_color = '$rosewater' }
+underline = { underline = true, underline_color = '$rosewater' }
 
 [ui.file_tree]
 
 [ui.file_view]
 style = { background = '$base', foreground = '$text' }
 empty = { foreground = '$subtext1' }
-border = { foreground = '$overlay2' }
+border = { foreground = '$surface2' }
 
 line = { }
 line_prefix = { foreground = '$overlay2' }
@@ -161,22 +164,22 @@ inlay_hint = { foreground = '$subtext0', background = '$surface1', italic = true
 # Diagnostic Style configuration
 [diagnostic]
 error = { foreground = '$red', bold = true }
-error_char = { underline = true, underline_style = 'curly', underline_color = '$red' }
+error_char = { curly_underline = true, underline_color = '$red' }
 
 warning = { foreground = '$yellow', bold = true }
-warning_char = { underline = true, underline_style = 'curly', underline_color = '$yellow' }
+warning_char = { curly_underline = true, underline_color = '$yellow' }
 
 info = { foreground = '$sky', bold = true }
-info_char = { underline = true, underline_style = 'curly', underline_color = '$sky' }
+info_char = { curly_underline = true, underline_color = '$sky' }
 
 hint = { foreground = '$teal', bold = true }
-hint_char = { underline = true, underline_style = 'curly', underline_color = '$teal' }
+hint_char = { curly_underline = true, underline_color = '$teal' }
 
 deprecated = { foreground = '$overlay2', italic = true }
 deprecated_char = { strikethrough = true }
 
 unnecessary = { foreground = '$overlay2', italic = true }
-unnecessary_char = { underline = true, underline_style = 'curly', underline_color = '$overlay2' }
+unnecessary_char = { curly_underline = true, underline_color = '$overlay2' }
 
 # Code Style configuration
 [code_styles]

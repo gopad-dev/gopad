@@ -444,7 +444,7 @@ func (m Model) echoTransform(v string) string {
 }
 
 // Update is the Bubble Tea update loop.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
@@ -488,8 +488,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Paste):
 			return m, Paste
 		default:
-			// Input one or more regular characters.
-			m.insertRunesFromUserInput(msg.Runes)
+			if msg.Mod == 0 {
+				// Input character
+				m.insertRunesFromUserInput([]rune{msg.Rune})
+			}
 		}
 
 	case pasteMsg:
@@ -502,7 +504,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
-	m.Cursor, cmd = m.Cursor.Update(msg)
+	m.Cursor, cmd = m.Cursor.Update(ctx, msg)
 	cmds = append(cmds, cmd)
 
 	if oldPos != m.pos && m.Cursor.Mode() == cursor.ModeBlink {
@@ -515,7 +517,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 // View renders the textinput in its current state.
-func (m Model) View() string {
+func (m Model) View(ctx tea.Context) string {
 	// Placeholder text
 	if len(m.value) == 0 && m.Placeholder != "" {
 		return m.placeholderView()

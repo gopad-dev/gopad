@@ -66,11 +66,11 @@ func (c CloseOverlay) Title() string {
 	return "Close File"
 }
 
-func (c CloseOverlay) Init() tea.Cmd {
-	return nil
+func (c CloseOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+	return c, nil
 }
 
-func (c CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (c CloseOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -92,12 +92,12 @@ func (c CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	c.buttonOK, cmd = c.buttonOK.Update(msg)
+	c.buttonOK, cmd = c.buttonOK.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	c.buttonCancel, cmd = c.buttonCancel.Update(msg)
+	c.buttonCancel, cmd = c.buttonCancel.Update(ctx, msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -105,7 +105,7 @@ func (c CloseOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	return c, tea.Batch(cmds...)
 }
 
-func (c CloseOverlay) View(width int, height int) string {
+func (c CloseOverlay) View(ctx tea.Context, width int, height int) string {
 	msg := "You have unsaved changes. Are you sure you want to close?"
 	if len(c.files) > 1 {
 		msg = fmt.Sprintf("You have unsaved changes in %d files. Are you sure you want to close?", len(c.files))
@@ -113,6 +113,6 @@ func (c CloseOverlay) View(width int, height int) string {
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.NewStyle().MarginBottom(1).Render(msg),
-		lipgloss.JoinHorizontal(lipgloss.Center, c.buttonOK.View(), c.buttonCancel.View()),
+		lipgloss.JoinHorizontal(lipgloss.Center, c.buttonOK.View(ctx), c.buttonCancel.View(ctx)),
 	)
 }

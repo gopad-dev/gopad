@@ -22,7 +22,8 @@ bright_white = "15"
 gray = "248"
 
 background = ""
-subbackground = "235"
+overlay0 = "235"
+overlay1 = "234"
 
 text = "7"
 subtext = "8"
@@ -40,7 +41,7 @@ file = { icon = 0xea7b }
 error = { icon = 0xea87, style = { foreground = '$red' } }
 warning = { icon = 0xf071, style = { foreground = '$yellow' } }
 info = { icon = 0xf05a, style = { foreground = '$green' } }
-hint = { icon = 0xf06e8, style = { foreground = 'gray' } }
+hint = { icon = 0xf06e8, style = { foreground = '$cyan' } }
 
 unknown_type = { icon = 0xeb63 }
 
@@ -84,7 +85,6 @@ unknown_type = { icon = 0xeb63 }
 "python" = { icon = 0xf0320 }
 "requirements" = { icon = 0xf0320 }
 "javascript" = { icon = 0xf031e }
-
 
 [icons.types]
 "text" = { icon = 0xeb8d, style = { foreground = '$bright_green' } }
@@ -136,9 +136,12 @@ entry = { foreground = '$text' }
 selected_entry = { foreground = '$primary_selected', reverse = true }
 selected_entry_unfocused = { foreground = '$primary', reverse = true }
 
+[ui.overlay]
+style = { background = '$surface0' }
+
 [ui.cursor]
 block = { foreground = '$red', reverse = true }
-underline = { underline = true, underline_style = 'solid', underline_color = '$rosewater' }
+underline = { underline = true, underline_color = '$red' }
 
 [ui.file_tree]
 
@@ -148,35 +151,35 @@ empty = { foreground = '$subtext' }
 border = { border_foreground = '$primary' }
 
 line = { }
-line_prefix = { foreground = '$overlay2' }
+line_prefix = { foreground = '$gray' }
 line_char = { }
 
-current_line = { background = '$subbackground' }
-current_line_prefix = { background = '$subbackground' }
-current_line_char = { background = '$subbackground' }
+current_line = { background = '$overlay0' }
+current_line_prefix = { background = '$overlay0' }
+current_line_char = { background = '$overlay0' }
 
 selection = { reverse = true }
-inlay_hint = { foreground = '$subtext', background = '$subbackground', italic = true, bold = true }
+inlay_hint = { foreground = '$subtext', background = '$overlay0', italic = true, bold = true }
 
 # Diagnostic Style configuration
 [diagnostic]
 error = { foreground = '$red', bold = true }
-error_char = { underline = true, underline_style = 'curly', underline_color = '$red' }
+error_char = { curly_underline = true, underline_color = '$red' }
 
 warning = { foreground = '$yellow', bold = true }
-warning_char = { underline = true, underline_style = 'curly', underline_color = '$yellow' }
+warning_char = { curly_underline = true, underline_color = '$yellow' }
 
 info = { foreground = '$green', bold = true }
-info_char = { underline = true, underline_style = 'curly', underline_color = '$green' }
+info_char = { curly_underline = true, underline_color = '$green' }
 
-hint = { foreground = 'gray', bold = true }
-hint_char = { underline = true, underline_style = 'curly', underline_color = 'gray' }
+hint = { foreground = '$cyan', bold = true }
+hint_char = { curly_underline = true, underline_color = '$cyan' }
 
-deprecated = { foreground = 'gray', italic = true }
-deprecated_char = { strikethrough = true }
+deprecated = { foreground = '$gray', italic = true }
+deprecated_char = { foreground = '$gray', strikethrough = true }
 
-unnecessary = { foreground = 'gray', italic = true }
-unnecessary_char = { underline = true, underline_style = 'curly', underline_color = 'gray' }
+unnecessary = { foreground = '$red', italic = true }
+unnecessary_char = { curly_underline = true, underline_color = '$red' }
 
 # Code styles
 [code_styles]

@@ -57,11 +57,12 @@ func (m *Model) remove(id string) {
 	})
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case openMsg:
-		m.add(msg.overlay)
-		return m, msg.overlay.Init()
+		overlay, cmd := msg.overlay.Init(ctx)
+		m.add(overlay)
+		return m, cmd
 	case closeMsg:
 		m.remove(msg.id)
 		return m, nil
@@ -73,11 +74,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	overlayIndex := len(m.overlays) - 1
 	var cmd tea.Cmd
-	m.overlays[overlayIndex], cmd = m.overlays[overlayIndex].Update(msg)
+	m.overlays[overlayIndex], cmd = m.overlays[overlayIndex].Update(ctx, msg)
 	return m, cmd
 }
 
-func (m Model) View(background string, width int, height int) string {
+func (m Model) View(ctx tea.Context, background string) string {
+	_, height := ctx.WindowSize()
+	width := lipgloss.Width(background)
+
 	for _, overlay := range m.overlays {
 		x, y := overlay.Position()
 		marginX, marginY := overlay.Margin()
@@ -89,7 +93,7 @@ func (m Model) View(background string, width int, height int) string {
 		}
 
 		background = PlacePosition(x, y,
-			m.renderWithTitle(overlay.Title(), overlay.View(overlayWidth, overlayHeight)),
+			m.renderWithTitle(overlay.Title(), overlay.View(ctx, overlayWidth, overlayHeight)),
 			background,
 			WithMarginX(marginX),
 			WithMarginY(marginY),

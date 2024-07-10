@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/bubbletea"
-	zone "github.com/lrstanley/bubblezone"
+	"github.com/lrstanley/bubblezone"
 	"github.com/spf13/cobra"
 
 	"go.gopad.dev/gopad/gopad"
@@ -77,22 +77,18 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			}
 
 			loadConfig(configDir, defaultConfigs)
-
 			if err := file.LoadLanguages(defaultConfigs); err != nil {
-				log.Panicln("failed to load languages:", err)
+				return err
 			}
 
 			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
-			e, err := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
-			if err != nil {
-				log.Panicln("failed to start gopad:", err)
-			}
+			e := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
 
 			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithFilter(lsClient.Filter))
 			lsClient.SetProgram(p)
 			log.Println("running gopad")
-			if _, err = p.Run(); err != nil {
-				log.Panicln("error while running gopad:", err)
+			if _, err := p.Run(); err != nil {
+				return err
 			}
 
 			return nil

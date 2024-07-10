@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/muesli/termenv"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"go.gopad.dev/gopad/gopad/config"
@@ -117,7 +117,7 @@ func checkUpdatedGrammarCommit(ctx context.Context, grammar config.GrammarConfig
 	if rev != grammar.Install.Rev {
 		return &refs{
 			rev:    grammar.Install.Hyperlink(),
-			newRev: termenv.Hyperlink(grammar.Install.Git+"/commit/"+rev, rev),
+			newRev: lipgloss.Hyperlink(grammar.Install.Git+"/commit/"+rev, rev),
 		}, errors.New("outdated")
 	}
 
@@ -169,7 +169,7 @@ func checkUpdatedGrammarTag(ctx context.Context, grammar config.GrammarConfig) (
 	if rev != grammar.Install.Rev || ref != grammar.Install.Ref {
 		return &refs{
 			rev:    grammar.Install.Hyperlink(),
-			newRev: termenv.Hyperlink(grammar.Install.Git+"/releases/tag/"+ref, ref),
+			newRev: lipgloss.Hyperlink(grammar.Install.Git+"/releases/tag/"+ref, ref),
 		}, errors.New("outdated")
 	}
 
