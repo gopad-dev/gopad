@@ -9,7 +9,19 @@ func IsInputMsg(msg tea.Msg) bool {
 		return true
 	}
 
-	if _, ok := msg.(tea.MouseMsg); ok {
+	if _, ok := msg.(tea.MouseDownMsg); ok {
+		return true
+	}
+
+	if _, ok := msg.(tea.MouseUpMsg); ok {
+		return true
+	}
+
+	if _, ok := msg.(tea.MouseWheelMsg); ok {
+		return true
+	}
+
+	if _, ok := msg.(tea.MouseMotionMsg); ok {
 		return true
 	}
 

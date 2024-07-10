@@ -10,13 +10,14 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -79,15 +80,16 @@ func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
 		g.editor.Blur()
 		return g, tea.Batch(cmds...)
 
-	case tea.MouseEvent, tea.MouseDownMsg, tea.MouseUpMsg, tea.MouseMotionMsg:
+	case tea.MouseEvent, tea.MouseDownMsg, tea.MouseMotionMsg:
 		log.Printf("MouseMsg: %#v\n", msg)
 
-	//case tea.MouseEvent:
-	//	switch {
-	//	case mouse.Matches(msg, ZoneTheme, tea.MouseLeft /*tea.MouseActionRelease*/):
-	//		cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
-	//		return g, tea.Batch(cmds...)
-	//	}
+	case tea.MouseUpMsg:
+		log.Printf("MouseMsg: %#v\n", msg)
+		switch {
+		case mouse.Matches(tea.MouseEvent(msg), ZoneTheme, tea.MouseLeft):
+			cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
+			return g, tea.Batch(cmds...)
+		}
 
 	case tea.KeyMsg:
 		log.Printf("KeyMsg: %#v\n", msg)

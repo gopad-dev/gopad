@@ -1,9 +1,14 @@
 package button
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lrstanley/bubblezone"
+
+	"go.gopad.dev/gopad/internal/bubbles/mouse"
 )
 
 type KeyMap struct {
@@ -32,8 +37,9 @@ func New(label string, onclick func() tea.Cmd) Model {
 		Label:   label,
 		OnClick: onclick,
 
-		Styles: DefaultStyles,
-		KeyMap: DefaultKeyMap,
+		Styles:     DefaultStyles,
+		KeyMap:     DefaultKeyMap,
+		zonePrefix: zone.NewPrefix(),
 	}
 }
 
@@ -44,7 +50,8 @@ type Model struct {
 	Styles Styles
 	KeyMap KeyMap
 
-	focus bool
+	focus      bool
+	zonePrefix string
 }
 
 func (m *Model) Focused() bool {
@@ -59,17 +66,26 @@ func (m *Model) Blur() {
 	m.focus = false
 }
 
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
-	if !m.focus {
-		return m, nil
-	}
-	var cmds []tea.Cmd
+func (m Model) zoneID() string {
+	return fmt.Sprintf("button:%s", m.zonePrefix)
+}
 
+func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.MouseUpMsg:
 		switch {
-		case key.Matches(msg, m.KeyMap.OK):
+		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseLeft):
 			cmds = append(cmds, m.OnClick())
+			return m, tea.Batch(cmds...)
+		}
+	case tea.KeyMsg:
+		if m.focus {
+			switch {
+			case key.Matches(msg, m.KeyMap.OK):
+				cmds = append(cmds, m.OnClick())
+				return m, tea.Batch(cmds...)
+			}
 		}
 	}
 
@@ -78,8 +94,8 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View(ctx tea.Context) string {
 	if m.focus {
-		return m.Styles.Focus.Render(m.Label)
+		return zone.Mark(m.zoneID(), m.Styles.Focus.Render(m.Label))
 	}
 
-	return m.Styles.Default.Render(m.Label)
+	return zone.Mark(m.zoneID(), m.Styles.Default.Render(m.Label))
 }

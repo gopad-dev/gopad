@@ -104,8 +104,8 @@ func (c RawThemeConfig) Theme(ctx tea.Context) ThemeConfig {
 				PlaceholderStyle:   ctx.NewStyle(),
 			},
 			Button: button.Styles{
-				Default: ctx.NewStyle().Padding(0, 1).Margin(0, 1),
-				Focus:   ctx.NewStyle().Padding(0, 1).Margin(0, 1),
+				Default: c.UI.Menu.Entry.Style(ctx, colors).Padding(0, 1).Margin(0, 1),
+				Focus:   c.UI.Menu.SelectedEntry.Style(ctx, colors).Padding(0, 1).Margin(0, 1),
 			},
 			FilePicker: filepicker.Styles{
 				DisabledCursor:   ctx.NewStyle(),

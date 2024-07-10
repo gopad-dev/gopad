@@ -71,11 +71,6 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Println("pprof enabled")
 			}
 
-			if mouse {
-				zone.NewGlobal()
-				defer zone.Close()
-			}
-
 			loadConfig(configDir, defaultConfigs)
 			if err := file.LoadLanguages(defaultConfigs); err != nil {
 				return err
@@ -84,7 +79,16 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
 			e := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
 
-			p := tea.NewProgram(e, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithFilter(lsClient.Filter))
+			opts := []tea.ProgramOption{
+				tea.WithAltScreen(),
+				tea.WithFilter(lsClient.Filter),
+			}
+			if mouse {
+				zone.NewGlobal()
+				defer zone.Close()
+				opts = append(opts, tea.WithMouseCellMotion())
+			}
+			p := tea.NewProgram(e, opts...)
 			lsClient.SetProgram(p)
 			log.Println("running gopad")
 			if _, err := p.Run(); err != nil {

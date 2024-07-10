@@ -6,7 +6,7 @@ import (
 	"github.com/lrstanley/bubblezone"
 )
 
-func Matches(msg any, id string, button input.MouseButton, keyMod ...tea.KeyMod) bool {
+func Matches(msg tea.MouseEvent, id string, button input.MouseButton, keyMod ...tea.KeyMod) bool {
 	var z *zone.ZoneInfo
 	if id != "" {
 		z = zone.Get(id)
@@ -15,19 +15,14 @@ func Matches(msg any, id string, button input.MouseButton, keyMod ...tea.KeyMod)
 	return MatchesZone(msg, z, button, keyMod...)
 }
 
-func MatchesZone(msg any, zone *zone.ZoneInfo, button input.MouseButton, keyMod ...tea.KeyMod) bool {
-	mouseMsg, ok := msg.(tea.MouseEvent)
-	if !ok {
-		return false
-	}
-
+func MatchesZone(msg tea.MouseEvent, zone *zone.ZoneInfo, button input.MouseButton, keyMod ...tea.KeyMod) bool {
 	if zone != nil {
-		if !zone.InBounds(mouseMsg) {
+		if !zone.InBounds(msg) {
 			return false
 		}
 	}
 
-	if mouseMsg.Button != button {
+	if msg.Button != button {
 		return false
 	}
 
@@ -37,7 +32,7 @@ func MatchesZone(msg any, zone *zone.ZoneInfo, button input.MouseButton, keyMod 
 			allKeyMods |= mod
 		}
 
-		if mouseMsg.Mod != allKeyMods {
+		if msg.Mod != allKeyMods {
 			return false
 		}
 	}

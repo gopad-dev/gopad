@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	"github.com/lrstanley/bubblezone"
 	"github.com/mattn/go-runewidth"
 
 	"go.gopad.dev/gopad/internal/bubbles/help"
@@ -373,30 +373,29 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, notifications.Add("Error updating file tree: "+err.Error()))
 		}
 		return m, tea.Batch(cmds...)
-	case tea.MouseEvent:
-		if msg.Button == tea.MouseLeft /*&& msg.Action == tea.MouseActionRelease*/ {
-			zonePrefix := fmt.Sprintf("file_tree:%s:", m.zonePrefix)
-			for _, z := range zone.GetPrefix(zonePrefix) {
-				if z.InBounds(msg) {
-					i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zonePrefix))
-					entry := m.selectIndex(i)
+	case tea.MouseUpMsg:
+		zonePrefix := fmt.Sprintf("file_tree:%s:", m.zonePrefix)
+		for _, z := range zone.GetPrefix(zonePrefix) {
+			switch {
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zonePrefix))
+				entry := m.selectIndex(i)
 
-					if entry.IsDir {
-						entry.Open = !entry.Open
-					} else {
-						cmds = append(cmds, m.OpenFile(entry.Path))
-					}
-
-					return m, tea.Batch(cmds...)
+				if entry.IsDir {
+					entry.Open = !entry.Open
+				} else {
+					cmds = append(cmds, m.OpenFile(entry.Path))
 				}
+
+				return m, tea.Batch(cmds...)
 			}
 		}
-
+	case tea.MouseWheelMsg:
 		switch {
-		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelUp):
+		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelUp):
 			m.SelectPrev()
 			return m, nil
-		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelDown):
+		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelDown):
 			m.SelectNext()
 			return m, nil
 		}

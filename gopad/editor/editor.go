@@ -605,8 +605,8 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.MouseDownMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(msg, z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(msg, z)
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
 				f.SetMark(row, col)
 				f.SetCursor(row, col)
 				return e, tea.Batch(cmds...)
@@ -615,34 +615,34 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.MouseUpMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(msg, z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(msg, z)
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
 				f.SetCursor(row, col)
 				if s := f.Selection(); s == nil || s.Zero() {
 					f.ResetMark()
 				}
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
 				e.SetFile(i)
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseRight):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseRight):
 				// TODO: open context menu?
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseMiddle):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseMiddle):
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
 				cmds = append(cmds, file.CloseFile(e.files[i].Name()))
 				return e, tea.Batch(cmds...)
 
-			case mouse.Matches(msg, ZoneFileLanguage, tea.MouseLeft):
+			case mouse.Matches(tea.MouseEvent(msg), ZoneFileLanguage, tea.MouseLeft):
 				cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
 				return e, tea.Batch(cmds...)
-			case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseLeft):
+			case mouse.Matches(tea.MouseEvent(msg), ZoneFileLineEnding, tea.MouseLeft):
 				log.Println("file line ending zone")
 				// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
 				return e, tea.Batch(cmds...)
-			case mouse.Matches(msg, ZoneFileEncoding, tea.MouseLeft):
+			case mouse.Matches(tea.MouseEvent(msg), ZoneFileEncoding, tea.MouseLeft):
 				log.Println("file encoding zone")
 				// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
 				return e, tea.Batch(cmds...)
@@ -651,8 +651,8 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.MouseMotionMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(msg, z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(msg, z)
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
 				f.SetCursor(row, col)
 				return e, tea.Batch(cmds...)
 			}
@@ -660,19 +660,19 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.Shift):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelLeft), mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelDown, tea.Shift):
 				f.MoveCursorLeft(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseWheelRight), mouse.MatchesZone(msg, z, tea.MouseWheelUp, tea.Shift):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelRight), mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelUp, tea.Shift):
 				f.MoveCursorRight(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseWheelUp):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelUp):
 				f.MoveCursorUp(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelDown):
 				f.MoveCursorDown(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)

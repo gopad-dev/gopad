@@ -2,7 +2,12 @@ module go.gopad.dev/gopad
 
 go 1.22
 
-replace go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240529205148-623e5abff393
+replace (
+	github.com/charmbracelet/bubbletea => github.com/gopad-dev/bubbletea v0.0.0-20240710221044-5b61a3ed2acc
+	github.com/charmbracelet/lipgloss => github.com/gopad-dev/lipgloss v0.0.0-20240710213804-a96d334a0998
+	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240710213337-e95605959844
+	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240529205148-623e5abff393
+)
 
 require (
 	github.com/atotto/clipboard v0.1.4
@@ -10,7 +15,7 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.5-0.20240605151746-bca513b1982b
 	github.com/charmbracelet/lipgloss v0.11.1-0.20240605151253-a724723338e3
-	github.com/charmbracelet/x/ansi v0.1.2
+	github.com/charmbracelet/x/ansi v0.1.3
 	github.com/charmbracelet/x/input v0.1.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
@@ -45,6 +50,6 @@ require (
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
+	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -161,7 +161,7 @@ func (m Model[T]) Update(ctx tea.Context, msg tea.Msg) (Model[T], tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		for i := range len(m.filteredItems()) {
-			if mouse.Matches(msg, m.zoneItemID(i), tea.MouseLeft /*, tea.MouseActionRelease*/) {
+			if mouse.Matches(tea.MouseEvent(msg), m.zoneItemID(i), tea.MouseLeft /*, tea.MouseActionRelease*/) {
 				m.item = i
 				m.clicked = true
 				return m, nil
@@ -169,12 +169,12 @@ func (m Model[T]) Update(ctx tea.Context, msg tea.Msg) (Model[T], tea.Cmd) {
 		}
 
 		switch {
-		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelUp):
+		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelUp):
 			if m.item > 0 {
 				m.item--
 			}
 			return m, nil
-		case mouse.Matches(msg, m.zoneID(), tea.MouseWheelDown):
+		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelDown):
 			if m.item < len(m.items)-1 {
 				m.item++
 			}

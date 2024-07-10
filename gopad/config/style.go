@@ -71,7 +71,6 @@ func color(colors ColorStyles, color string) lipgloss.TerminalColor {
 		if c, ok := colors[colorRef]; ok {
 			return c
 		}
-
 	}
 
 	return parseColor(color)
@@ -88,5 +87,4 @@ func parseColor(color string) lipgloss.TerminalColor {
 	}
 
 	return lipgloss.ANSIColor(i)
-
 }

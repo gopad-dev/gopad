@@ -2,7 +2,6 @@ package file
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -466,14 +465,9 @@ func (f File) GetCursorForCharPos(row int, col int) (int, int) {
 	return p.row, p.col
 }
 
-func (f File) GetFileZoneCursorPos(msg any, z *zone.ZoneInfo) (int, int) {
-	mouseMsg := tea.MouseEvent(msg)
-	if !ok {
-		log.Println("msg is not a mouse event")
-		return 0, 0
-	}
+func (f File) GetFileZoneCursorPos(msg tea.MouseEvent, z *zone.ZoneInfo) (int, int) {
 	row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLinePrefix))
-	col, _ := z.Pos(mouseMsg)
+	col, _ := z.Pos(msg)
 	row, col = f.GetCursorForCharPos(row, col)
 	return row, col
 }
