@@ -103,6 +103,7 @@ type EditorKeyMap struct {
 	DebugTreeSitterNodes   key.Binding
 	ShowCurrentDiagnostic  key.Binding
 	ShowDefinitions        key.Binding
+	ShowDeclaration        key.Binding
 
 	CharacterLeft  key.Binding
 	CharacterRight key.Binding
@@ -283,6 +284,7 @@ func DefaultKeyMapConfig() KeyMapConfig {
 			DebugTreeSitterNodes:   "f3",
 			ShowCurrentDiagnostic:  "ctrl+j",
 			ShowDefinitions:        "alt+.",
+			ShowDeclaration:        "ctrl+.",
 
 			CharacterLeft:  "left",
 			CharacterRight: "right",
@@ -470,6 +472,7 @@ type EditorKeyConfig struct {
 	DebugTreeSitterNodes   string `toml:"debug_tree_sitter_nodes"`
 	ShowCurrentDiagnostic  string `toml:"show_current_diagnostic"`
 	ShowDefinitions        string `toml:"show_definitions"`
+	ShowDeclaration        string `toml:"show_declaration"`
 
 	CharacterLeft  string `toml:"character_left"`
 	CharacterRight string `toml:"character_right"`
@@ -610,6 +613,10 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 		ShowDefinitions: key.NewBinding(
 			key.WithKeys(k.ShowDefinitions),
 			key.WithHelp(k.ShowDefinitions, "show definitions"),
+		),
+		ShowDeclaration: key.NewBinding(
+			key.WithKeys(k.ShowDeclaration),
+			key.WithHelp(k.ShowDeclaration, "show declaration"),
 		),
 
 		CharacterLeft: key.NewBinding(

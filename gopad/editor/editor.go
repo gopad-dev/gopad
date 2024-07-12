@@ -609,7 +609,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
 				f.SetMark(row, col)
 				f.SetCursor(row, col)
-				return e, tea.Batch(cmds...)
+				overwriteCursorBlink = true
 			}
 		}
 	case tea.MouseUpMsg:
@@ -623,18 +623,9 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				}
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				e.SetFile(i)
-				return e, tea.Batch(cmds...)
 			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseRight):
 				// TODO: open context menu?
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseMiddle):
-				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				cmds = append(cmds, file.CloseFile(e.files[i].Name()))
-				return e, tea.Batch(cmds...)
-
 			case mouse.Matches(tea.MouseEvent(msg), ZoneFileLanguage, tea.MouseLeft):
 				cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
 				return e, tea.Batch(cmds...)
@@ -647,6 +638,36 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
 				return e, tea.Batch(cmds...)
 			}
+		}
+
+		for _, z := range zone.GetPrefix(ZoneFilePrefix) {
+			switch {
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
+				e.SetFile(i)
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseRight):
+				// TODO: open context menu?
+				return e, tea.Batch(cmds...)
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseMiddle):
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
+				cmds = append(cmds, file.CloseFile(e.files[i].Name()))
+				return e, tea.Batch(cmds...)
+			}
+		}
+
+		switch {
+		case mouse.Matches(tea.MouseEvent(msg), ZoneFileLanguage, tea.MouseLeft):
+			cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
+			return e, tea.Batch(cmds...)
+		case mouse.Matches(tea.MouseEvent(msg), ZoneFileLineEnding, tea.MouseLeft):
+			log.Println("file line ending zone")
+			// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
+			return e, tea.Batch(cmds...)
+		case mouse.Matches(tea.MouseEvent(msg), ZoneFileEncoding, tea.MouseLeft):
+			log.Println("file encoding zone")
+			// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
+			return e, tea.Batch(cmds...)
 		}
 	case tea.MouseMotionMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
