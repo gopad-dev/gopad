@@ -503,7 +503,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				}
 			}
 			return e, tea.Batch(cmds...)
-		case key.Matches(msg, config.Keys.Editor.NewFile) && e.focus:
+		case key.Matches(msg, config.Keys.Editor.File.New) && e.focus:
 			return e, overlay.Open(NewNewOverlay())
 		}
 	}
@@ -702,17 +702,17 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.KeyMsg:
 		if e.focus {
 			switch {
-			case key.Matches(msg, config.Keys.Editor.Autocomplete):
+			case key.Matches(msg, config.Keys.Editor.Autocomplete.Show):
 				row, col := f.Cursor()
 				cmds = append(cmds, ls.GetAutocompletion(f.Name(), row, col))
 				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Cancel) && f.Autocomplete().Visible():
 				f.Autocomplete().ClearCompletions()
-			case key.Matches(msg, config.Keys.Editor.NextCompletion) && f.Autocomplete().Visible():
+			case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && f.Autocomplete().Visible():
 				f.Autocomplete().Next()
-			case key.Matches(msg, config.Keys.Editor.PrevCompletion) && f.Autocomplete().Visible():
+			case key.Matches(msg, config.Keys.Editor.Autocomplete.Prev) && f.Autocomplete().Visible():
 				f.Autocomplete().Previous()
-			case key.Matches(msg, config.Keys.Editor.ApplyCompletion) && f.Autocomplete().Visible():
+			case key.Matches(msg, config.Keys.Editor.Autocomplete.Apply) && f.Autocomplete().Visible():
 				completion := f.Autocomplete().Selected()
 				if completion != nil {
 					if completion.Text != "" {
@@ -752,11 +752,24 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 				e.files = append(e.files, debugFile)
 				e.activeFile = len(e.files) - 1
-			case key.Matches(msg, config.Keys.Editor.ShowCurrentDiagnostic):
+			case key.Matches(msg, config.Keys.Editor.Diagnostic.Show):
 				f.ShowCurrentDiagnostic()
-			case key.Matches(msg, config.Keys.Editor.ShowDefinitions):
+
+			case key.Matches(msg, config.Keys.Editor.Code.ShowDeclaration):
+				cmds = append(cmds, f.ShowDeclaration())
+				return e, tea.Batch(cmds...)
+			case key.Matches(msg, config.Keys.Editor.Code.ShowDefinitions):
 				cmds = append(cmds, f.ShowDefinitions())
 				return e, tea.Batch(cmds...)
+			case key.Matches(msg, config.Keys.Editor.Code.ShowTypeDefinition):
+				cmds = append(cmds, f.ShowTypeDefinitions())
+				return e, tea.Batch(cmds...)
+			case key.Matches(msg, config.Keys.Editor.Code.ShowImplementation):
+				//cmds = append(cmds, f.ShowImplementations())
+				//return e, tea.Batch(cmds...)
+			case key.Matches(msg, config.Keys.Editor.Code.ShowReferences):
+				//cmds = append(cmds, f.ShowReferences())
+				//return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.OpenOutline):
 				cmds = append(cmds, overlay.Open(NewOutlineOverlay(f)))
 			case key.Matches(msg, config.Keys.Editor.Search):
@@ -766,96 +779,96 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 					cmds = append(cmds, e.searchBar.Focus())
 				}
 				return e, tea.Batch(cmds...)
-			case key.Matches(msg, config.Keys.Editor.NextFile):
+			case key.Matches(msg, config.Keys.Editor.File.Next):
 				if e.activeFile < len(e.files)-1 {
 					e.activeFile++
 					f.Blur()
 					cmds = append(cmds, e.files[e.activeFile].Focus())
 				}
-			case key.Matches(msg, config.Keys.Editor.PrevFile):
+			case key.Matches(msg, config.Keys.Editor.File.Prev):
 				if e.activeFile > 0 {
 					e.activeFile--
 					f.Blur()
 					cmds = append(cmds, e.files[e.activeFile].Focus())
 				}
-			case key.Matches(msg, config.Keys.Editor.CloseFile):
+			case key.Matches(msg, config.Keys.Editor.File.Close):
 				cmds = append(cmds, file.Close)
 
-			case key.Matches(msg, config.Keys.Editor.DeleteFile):
+			case key.Matches(msg, config.Keys.Editor.File.Delete):
 				cmds = append(cmds, overlay.Open(NewDeleteOverlay()))
-			case key.Matches(msg, config.Keys.Editor.RenameFile):
+			case key.Matches(msg, config.Keys.Editor.File.Rename):
 				cmds = append(cmds, overlay.Open(NewRenameOverlay(f.Name())))
-			case key.Matches(msg, config.Keys.Editor.LineUp):
+			case key.Matches(msg, config.Keys.Editor.Navigation.LineUp):
 				f.MoveCursorUp(moveSize)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.LineDown):
+			case key.Matches(msg, config.Keys.Editor.Navigation.LineDown):
 				f.MoveCursorDown(moveSize)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.CharacterLeft):
+			case key.Matches(msg, config.Keys.Editor.Navigation.CharacterLeft):
 				f.MoveCursorLeft(moveSize)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.CharacterRight):
+			case key.Matches(msg, config.Keys.Editor.Navigation.CharacterRight):
 				f.MoveCursorRight(moveSize)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.WordUp):
+			case key.Matches(msg, config.Keys.Editor.Navigation.WordUp):
 				f.MoveCursorWordUp()
-			case key.Matches(msg, config.Keys.Editor.WordDown):
+			case key.Matches(msg, config.Keys.Editor.Navigation.WordDown):
 				f.MoveCursorWordDown()
-			case key.Matches(msg, config.Keys.Editor.WordLeft):
+			case key.Matches(msg, config.Keys.Editor.Navigation.WordLeft):
 				f.SetCursor(f.NextWordLeft())
-			case key.Matches(msg, config.Keys.Editor.WordRight):
+			case key.Matches(msg, config.Keys.Editor.Navigation.WordRight):
 				f.SetCursor(f.NextWordRight())
-			case key.Matches(msg, config.Keys.Editor.PageUp):
+			case key.Matches(msg, config.Keys.Editor.Navigation.PageUp):
 				f.MoveCursorUp(pageSize)
-			case key.Matches(msg, config.Keys.Editor.PageDown):
+			case key.Matches(msg, config.Keys.Editor.Navigation.PageDown):
 				f.MoveCursorDown(pageSize)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.LineStart):
+			case key.Matches(msg, config.Keys.Editor.Navigation.LineStart):
 				f.SetCursor(-1, 0)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.LineEnd):
+			case key.Matches(msg, config.Keys.Editor.Navigation.LineEnd):
 				cursorRow, _ := f.Cursor()
 				f.SetCursor(-1, f.Buffer().LineLen(cursorRow))
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.FileStart):
+			case key.Matches(msg, config.Keys.Editor.Navigation.FileStart):
 				f.SetCursor(0, -1)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.FileEnd):
+			case key.Matches(msg, config.Keys.Editor.Navigation.FileEnd):
 				f.SetCursor(f.Buffer().LinesLen(), -1)
 				cmds = append(cmds, f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.Copy):
+			case key.Matches(msg, config.Keys.Editor.Edit.Copy):
 				selBytes := f.SelectionBytes()
 				if len(selBytes) > 0 {
 					cmds = append(cmds, file.Copy(selBytes))
 				}
-			case key.Matches(msg, config.Keys.Editor.Paste):
+			case key.Matches(msg, config.Keys.Editor.Edit.Paste):
 				cmds = append(cmds, file.Paste)
-			case key.Matches(msg, config.Keys.Editor.Cut):
+			case key.Matches(msg, config.Keys.Editor.Edit.Cut):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, file.Cut(*s, f.SelectionBytes()))
 				}
-			case key.Matches(msg, config.Keys.Editor.SelectLeft):
+			case key.Matches(msg, config.Keys.Editor.Selection.SelectLeft):
 				f.SelectLeft(moveSize)
-			case key.Matches(msg, config.Keys.Editor.SelectRight):
+			case key.Matches(msg, config.Keys.Editor.Selection.SelectRight):
 				f.SelectRight(moveSize)
-			case key.Matches(msg, config.Keys.Editor.SelectUp):
+			case key.Matches(msg, config.Keys.Editor.Selection.SelectUp):
 				f.SelectUp(moveSize)
-			case key.Matches(msg, config.Keys.Editor.SelectDown):
+			case key.Matches(msg, config.Keys.Editor.Selection.SelectDown):
 				f.SelectDown(moveSize)
-			case key.Matches(msg, config.Keys.Editor.SelectAll):
+			case key.Matches(msg, config.Keys.Editor.Selection.SelectAll):
 				f.SelectAll()
 
-			case key.Matches(msg, config.Keys.Editor.SaveFile):
+			case key.Matches(msg, config.Keys.Editor.File.Save):
 				cmds = append(cmds, file.SaveFile(f.Name()))
-			case key.Matches(msg, config.Keys.Editor.Tab):
+			case key.Matches(msg, config.Keys.Editor.Edit.Tab):
 				cmds = append(cmds, f.InsertRunes([]rune{'\t'}))
-			case key.Matches(msg, config.Keys.Editor.RemoveTab):
+			case key.Matches(msg, config.Keys.Editor.Edit.RemoveTab):
 				cmds = append(cmds, f.RemoveTab())
-			case key.Matches(msg, config.Keys.Editor.Newline):
+			case key.Matches(msg, config.Keys.Editor.Edit.Newline):
 				f.ResetMark()
 				cmds = append(cmds, f.InsertNewLine(), f.Autocomplete().Update())
-			case key.Matches(msg, config.Keys.Editor.DeleteRight):
+			case key.Matches(msg, config.Keys.Editor.Edit.DeleteRight):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
@@ -863,7 +876,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				} else {
 					cmds = append(cmds, f.DeleteAfter(1))
 				}
-			case key.Matches(msg, config.Keys.Editor.DeleteLeft):
+			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLeft):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
@@ -919,7 +932,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 						}
 					}
 				}
-			case key.Matches(msg, config.Keys.Editor.DuplicateLine):
+			case key.Matches(msg, config.Keys.Editor.Edit.DuplicateLine):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.Insert(f.SelectionBytes()))
@@ -927,7 +940,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				} else {
 					cmds = append(cmds, f.DuplicateLine())
 				}
-			case key.Matches(msg, config.Keys.Editor.DeleteWordLeft):
+			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordLeft):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
@@ -935,7 +948,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				} else {
 					cmds = append(cmds, f.DeleteWordLeft())
 				}
-			case key.Matches(msg, config.Keys.Editor.DeleteWordRight):
+			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordRight):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
@@ -943,7 +956,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				} else {
 					cmds = append(cmds, f.DeleteWordRight())
 				}
-			case key.Matches(msg, config.Keys.Editor.DeleteLine):
+			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLine):
 				s := f.Selection()
 				if s != nil {
 					cmds = append(cmds, f.DeleteRange(s.Start, s.End))
@@ -951,7 +964,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				} else {
 					cmds = append(cmds, f.DeleteLine())
 				}
-			case key.Matches(msg, config.Keys.Editor.ToggleComment):
+			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				cmds = append(cmds, f.ToggleComment())
 				overwriteCursorBlink = true
 			case key.Matches(msg, config.Keys.Debug):
@@ -1014,7 +1027,7 @@ func (e *Editor) View(ctx tea.Context, height int) string {
 		code := config.Theme.UI.FileView.EmptyStyle.
 			Width(width).
 			Height(height).
-			Render(fmt.Sprintf("No file open.\n\nPress '%s' to open a file.", config.Keys.Editor.OpenFile.Help().Key))
+			Render(fmt.Sprintf("No file open.\n\nPress '%s' to open a file.", config.Keys.Editor.File.Open.Help().Key))
 
 		if fileTree == "" {
 			return code

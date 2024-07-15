@@ -4,12 +4,6 @@ import (
 	"slices"
 )
 
-func DefaultLanguageServerConfigs() LanguageServerConfigs {
-	return LanguageServerConfigs{
-		LanguageServers: make(map[string]LanguageServerConfig),
-	}
-}
-
 type LanguageServerConfigs struct {
 	UseServers Use `toml:"use_servers"`
 

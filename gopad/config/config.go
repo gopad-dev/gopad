@@ -28,7 +28,7 @@ const (
 var (
 	Path            string
 	Gopad           GopadConfig
-	Languages       LanguagesConfig
+	Languages       LanguageConfigs
 	LanguageServers LanguageServerConfigs
 	Keys            KeyMap
 	Theme           ThemeConfig
@@ -57,25 +57,24 @@ func FindHome() (string, error) {
 }
 
 func Load(name string, defaultConfigs embed.FS) error {
-	gopad := DefaultGopadConfig()
-	keymap := DefaultKeyMapConfig()
-	languages := DefaultLanguageConfigs()
-	languageServers := DefaultLanguageServerConfigs()
+	var (
+		gopad           GopadConfig
+		keymap          KeyMapConfig
+		languages       LanguageConfigs
+		languageServers LanguageServerConfigs
+	)
 
 	if err := readTOMLFile(name, gopadConfig, defaultConfigs, &gopad); err != nil {
 		return fmt.Errorf("error reading gopad config: %w", err)
 	}
-
 	if err := readTOMLFile(name, keymapConfig, defaultConfigs, &keymap); err != nil {
 		return fmt.Errorf("error reading keymap config: %w", err)
 	}
-
 	if err := readTOMLFile(name, languagesConfig, defaultConfigs, &languages); err != nil {
 		return fmt.Errorf("error reading languages config: %w", err)
 	}
-
 	if err := readTOMLFile(name, languageServersConfig, defaultConfigs, &languageServers); err != nil {
-		return fmt.Errorf("error reading LanguageServers config: %w", err)
+		return fmt.Errorf("error reading language servers config: %w", err)
 	}
 
 	themes, err := loadThemes(name, defaultConfigs)

@@ -76,7 +76,7 @@ func (c CloseOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Editor.CloseFile):
+		case key.Matches(msg, config.Keys.Editor.File.Close):
 			return c, c.buttonOK.OnClick()
 		case key.Matches(msg, config.Keys.Cancel):
 			return c, overlay.Close(CloseOverlayID)

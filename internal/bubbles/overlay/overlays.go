@@ -79,8 +79,8 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View(ctx tea.Context, background string) string {
-	_, height := ctx.WindowSize()
-	width := lipgloss.Width(background)
+	width, height := ctx.WindowSize()
+	//width := lipgloss.Width(background)
 
 	for _, overlay := range m.overlays {
 		x, y := overlay.Position()

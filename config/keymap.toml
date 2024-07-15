@@ -15,63 +15,94 @@ debug = 'f12'
 
 # Editor key bindings configuration
 [editor]
-open_file = 'ctrl+o'
-open_folder = 'alt+o'
-save_file = 'ctrl+s'
-close_file = 'ctrl+w'
-new_file = 'ctrl+n'
-rename_file = 'ctrl+r'
-delete_file = 'ctrl+g'
-search = 'ctrl+f'
-open_outline = 'alt+7'
 toggle_file_tree = 'ctrl+b'
 focus_file_tree = 'alt+b'
-next_file = 'alt+right'
-prev_file = 'alt+left'
-autocomplete = 'ctrl+space'
-next_completion = 'down'
-prev_completion = 'up'
-apply_completion = 'enter'
+search = 'ctrl+f'
+open_outline = 'alt+7'
+
 refresh_syntax_highlight = 'f1'
 toggle_tree_sitter_debug = 'f2'
 debug_tree_sitter_nodes = 'f3'
-show_current_diagnostic = 'ctrl+j'
-show_definitions = 'alt+.'
-show_declaration = 'ctrl+.'
+
+[editor.file]
+open = 'ctrl+o'
+open_folder = 'alt+o'
+close = 'ctrl+w'
+
+new = 'ctrl+n'
+rename = 'ctrl+r'
+save = 'ctrl+s'
+delete = 'ctrl+g'
+
+next_file = 'alt+right'
+prev_file = 'alt+left'
+
+[editor.navigation]
 character_left = 'left'
 character_right = 'right'
 word_left = 'ctrl+left'
 word_right = 'ctrl+right'
+
 line_up = 'up'
 line_down = 'down'
 word_up = 'ctrl+up'
 word_down = 'ctrl+down'
 page_up = 'pgup'
 page_down = 'pgdown'
+
 line_start = 'home'
 line_end = 'end'
 file_start = 'ctrl+home'
 file_end = 'ctrl+end'
+
+[editor.selection]
 select_left = 'shift+left'
 select_right = 'shift+right'
 select_up = 'shift+up'
 select_down = 'shift+down'
+
 select_all = 'ctrl+a'
-cut = 'ctrl+x'
-copy = 'ctrl+c'
-paste = 'ctrl+v'
-undo = 'ctrl+z'
-redo = 'ctrl+y'
+
+[editor.edit]
 tab = 'tab'
 remove_tab = 'shift+tab'
-newline = 'enter'
+
+paste = 'ctrl+v'
+copy = 'ctrl+c'
+cut = 'ctrl+x'
+
+undo = 'ctrl+z'
+redo = 'ctrl+y'
+
 delete_left = 'backspace'
 delete_right = 'delete'
 delete_word_left = 'ctrl+backspace'
 delete_word_right = 'ctrl+delete'
+
 duplicate_line = 'ctrl+d'
 delete_line = 'alt+backspace'
+
 toggle_comment = 'ctrl+_'
+
+[editor.code]
+show_declaration = 'alt+,'
+show_definitions = 'alt+.'
+show_type_definition = 'alt+>'
+show_implementation = 'alt+<'
+show_references = 'alt+;'
+
+# Autocomplete key bindings configuration
+[editor.autocomplete]
+show = 'ctrl+space'
+next = 'down'
+prev = 'up'
+apply = 'enter'
+
+# Diagnostic key bindings configuration
+[editor.diagnostic]
+show = 'ctrl+j'
+next = 'down'
+prev = 'up'
 
 # File tree key bindings configuration
 [editor.file_tree]

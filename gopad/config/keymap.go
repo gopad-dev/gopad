@@ -78,33 +78,103 @@ func (k KeyMap) List() list.KeyMap {
 }
 
 type EditorKeyMap struct {
-	OpenFile   key.Binding
-	OpenFolder key.Binding
-	SaveFile   key.Binding
-	CloseFile  key.Binding
-	NewFile    key.Binding
-	RenameFile key.Binding
-	DeleteFile key.Binding
-
-	Search         key.Binding
-	OpenOutline    key.Binding
 	ToggleFileTree key.Binding
 	FocusFileTree  key.Binding
-	NextFile       key.Binding
-	PrevFile       key.Binding
-
-	Autocomplete    key.Binding
-	NextCompletion  key.Binding
-	PrevCompletion  key.Binding
-	ApplyCompletion key.Binding
+	Search         key.Binding
+	OpenOutline    key.Binding
 
 	RefreshSyntaxHighlight key.Binding
 	ToggleTreeSitterDebug  key.Binding
 	DebugTreeSitterNodes   key.Binding
-	ShowCurrentDiagnostic  key.Binding
-	ShowDefinitions        key.Binding
-	ShowDeclaration        key.Binding
 
+	File         EditorFileKeyMap
+	Navigation   EditorNavigationKeyMap
+	Selection    EditorSelectionKeyMap
+	Edit         EditorEditKeyMap
+	Code         EditorCodeKeyMap
+	Autocomplete EditorAutocompleteKeyMap
+	Diagnostic   EditorDiagnosticKeyMap
+
+	FileTree  filetree.KeyMap
+	SearchBar searchbar.KeyMap
+}
+
+func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
+	binds := []help.KeyMapCategory{
+		{
+			Category: "Editor",
+			Keys: []key.Binding{
+				k.ToggleFileTree,
+				k.FocusFileTree,
+				k.Search,
+				k.OpenOutline,
+				emptyKeyBind,
+				k.RefreshSyntaxHighlight,
+				k.ToggleTreeSitterDebug,
+				k.DebugTreeSitterNodes,
+			},
+		},
+		k.File.HelpView(),
+		k.Navigation.HelpView(),
+		k.Selection.HelpView(),
+		k.Edit.HelpView(),
+		k.Code.HelpView(),
+		k.Autocomplete.HelpView(),
+		k.Diagnostic.HelpView(),
+	}
+	binds = append(binds, k.FileTree.FullHelpView()...)
+	binds = append(binds, k.SearchBar.FullHelpView()...)
+	return binds
+}
+
+func (k EditorKeyMap) TextInputKeyMap() textinput.KeyMap {
+	return textinput.KeyMap{
+		CharacterLeft:  k.Navigation.CharacterLeft,
+		CharacterRight: k.Navigation.CharacterRight,
+		WordLeft:       k.Navigation.WordLeft,
+		WordRight:      k.Navigation.WordRight,
+		LineStart:      k.Navigation.LineStart,
+		LineEnd:        k.Navigation.LineEnd,
+		DeleteLeft:     k.Edit.DeleteLeft,
+		DeleteRight:    k.Edit.DeleteRight,
+		Paste:          k.Edit.Paste,
+	}
+}
+
+type EditorFileKeyMap struct {
+	Open       key.Binding
+	OpenFolder key.Binding
+	Close      key.Binding
+
+	New    key.Binding
+	Rename key.Binding
+	Save   key.Binding
+	Delete key.Binding
+
+	Next key.Binding
+	Prev key.Binding
+}
+
+func (k EditorFileKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor File",
+		Keys: []key.Binding{
+			k.Open,
+			k.OpenFolder,
+			k.Close,
+			emptyKeyBind,
+			k.New,
+			k.Rename,
+			k.Save,
+			k.Delete,
+			emptyKeyBind,
+			k.Next,
+			k.Prev,
+		},
+	}
+}
+
+type EditorNavigationKeyMap struct {
 	CharacterLeft  key.Binding
 	CharacterRight key.Binding
 	WordLeft       key.Binding
@@ -121,12 +191,58 @@ type EditorKeyMap struct {
 	LineEnd   key.Binding
 	FileStart key.Binding
 	FileEnd   key.Binding
+}
 
+func (k EditorNavigationKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Navigation",
+		Keys: []key.Binding{
+			k.CharacterLeft,
+			k.CharacterRight,
+			k.WordLeft,
+			k.WordRight,
+			emptyKeyBind,
+			k.LineUp,
+			k.LineDown,
+			k.WordUp,
+			k.WordDown,
+			k.PageUp,
+			k.PageDown,
+			emptyKeyBind,
+			k.LineStart,
+			k.LineEnd,
+			k.FileStart,
+			k.FileEnd,
+		},
+	}
+}
+
+type EditorSelectionKeyMap struct {
 	SelectLeft  key.Binding
 	SelectRight key.Binding
 	SelectUp    key.Binding
 	SelectDown  key.Binding
-	SelectAll   key.Binding
+
+	SelectAll key.Binding
+}
+
+func (k EditorSelectionKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Selection",
+		Keys: []key.Binding{
+			k.SelectLeft,
+			k.SelectRight,
+			k.SelectUp,
+			k.SelectDown,
+			emptyKeyBind,
+			k.SelectAll,
+		},
+	}
+}
+
+type EditorEditKeyMap struct {
+	Tab       key.Binding
+	RemoveTab key.Binding
 
 	Paste key.Binding
 	Copy  key.Binding
@@ -135,230 +251,99 @@ type EditorKeyMap struct {
 	Undo key.Binding
 	Redo key.Binding
 
-	Tab             key.Binding
-	RemoveTab       key.Binding
-	Newline         key.Binding
 	DeleteLeft      key.Binding
 	DeleteRight     key.Binding
 	DeleteWordLeft  key.Binding
 	DeleteWordRight key.Binding
-	DuplicateLine   key.Binding
-	DeleteLine      key.Binding
+
+	DuplicateLine key.Binding
+	Newline       key.Binding
+	DeleteLine    key.Binding
 
 	ToggleComment key.Binding
-
-	FileTree  filetree.KeyMap
-	SearchBar searchbar.KeyMap
 }
 
-func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
-	binds := []help.KeyMapCategory{
-		{
-			Category: "Editor",
-			Keys: []key.Binding{
-				k.OpenFile,
-				k.OpenFolder,
-				k.SaveFile,
-				k.CloseFile,
-				k.NewFile,
-				k.RenameFile,
-				k.DeleteFile,
-				emptyKeyBind,
-				k.Autocomplete,
-				k.NextCompletion,
-				k.PrevCompletion,
-				k.ApplyCompletion,
-				emptyKeyBind,
-				k.ToggleFileTree,
-				k.Search,
-				k.OpenOutline,
-				k.RefreshSyntaxHighlight,
-				k.ToggleTreeSitterDebug,
-				k.DebugTreeSitterNodes,
-				emptyKeyBind,
-				k.Cut,
-				k.Copy,
-				k.Paste,
-				emptyKeyBind,
-				k.Undo,
-				k.Redo,
-				emptyKeyBind,
-				k.Tab,
-				k.RemoveTab,
-				k.Newline,
-				k.DeleteLeft,
-				k.DeleteRight,
-				k.DeleteWordLeft,
-				k.DeleteWordRight,
-				k.DuplicateLine,
-				k.DeleteLine,
-				emptyKeyBind,
-				k.ToggleComment,
-			},
+func (k EditorEditKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Edit",
+		Keys: []key.Binding{
+			k.Tab,
+			k.RemoveTab,
+			emptyKeyBind,
+			k.Cut,
+			k.Copy,
+			k.Paste,
+			emptyKeyBind,
+			k.Undo,
+			k.Redo,
+			emptyKeyBind,
+			k.DeleteLeft,
+			k.DeleteRight,
+			k.DeleteWordLeft,
+			k.DeleteWordRight,
+			emptyKeyBind,
+			k.DuplicateLine,
+			k.DeleteLine,
+			emptyKeyBind,
+			k.ToggleComment,
 		},
-		{
-			Category: "Editor Navigation",
-			Keys: []key.Binding{
-				k.NextFile,
-				k.PrevFile,
-				emptyKeyBind,
-				k.CharacterLeft,
-				k.CharacterRight,
-				k.WordLeft,
-				k.WordRight,
-				emptyKeyBind,
-				k.LineUp,
-				k.LineDown,
-				k.WordUp,
-				k.WordDown,
-				k.PageUp,
-				k.PageDown,
-				emptyKeyBind,
-				k.LineStart,
-				k.LineEnd,
-				k.FileStart,
-				k.FileEnd,
-				emptyKeyBind,
-				k.SelectLeft,
-				k.SelectRight,
-				k.SelectUp,
-				k.SelectDown,
-				k.SelectAll,
-			},
-		},
-	}
-	binds = append(binds, k.FileTree.FullHelpView()...)
-	binds = append(binds, k.SearchBar.FullHelpView()...)
-	return binds
-}
-
-func (k EditorKeyMap) TextInputKeyMap() textinput.KeyMap {
-	return textinput.KeyMap{
-		CharacterLeft:  k.CharacterLeft,
-		CharacterRight: k.CharacterRight,
-		WordLeft:       k.WordLeft,
-		WordRight:      k.WordRight,
-		DeleteLeft:     k.DeleteLeft,
-		DeleteRight:    k.DeleteRight,
-		LineStart:      k.LineStart,
-		LineEnd:        k.LineEnd,
-		Paste:          k.Paste,
 	}
 }
 
-func DefaultKeyMapConfig() KeyMapConfig {
-	return KeyMapConfig{
-		Quit:   "ctrl+q",
-		Help:   "ctrl+h",
-		OK:     "enter",
-		Cancel: "esc",
-		Left:   "left",
-		Right:  "right",
-		Up:     "up",
-		Down:   "down",
-		Start:  "home",
-		End:    "end",
-		Editor: EditorKeyConfig{
-			OpenFile:   "ctrl+o",
-			OpenFolder: "alt+o",
-			SaveFile:   "ctrl+s",
-			CloseFile:  "ctrl+w",
-			NewFile:    "ctrl+n",
-			RenameFile: "ctrl+r",
-			DeleteFile: "ctrl+g",
+type EditorCodeKeyMap struct {
+	ShowDeclaration    key.Binding
+	ShowDefinitions    key.Binding
+	ShowTypeDefinition key.Binding
+	ShowImplementation key.Binding
+	ShowReferences     key.Binding
+}
 
-			Search:         "ctrl+f",
-			OpenOutline:    "alt+7",
-			ToggleFileTree: "ctrl+b",
-			FocusFileTree:  "alt+b",
-			NextFile:       "alt+right",
-			PrevFile:       "alt+left",
-
-			Autocomplete:    "ctrl+@",
-			NextCompletion:  "down",
-			PrevCompletion:  "up",
-			ApplyCompletion: "enter",
-
-			RefreshSyntaxHighlight: "f1",
-			ToggleTreeSitterDebug:  "f2",
-			DebugTreeSitterNodes:   "f3",
-			ShowCurrentDiagnostic:  "ctrl+j",
-			ShowDefinitions:        "alt+.",
-			ShowDeclaration:        "ctrl+.",
-
-			CharacterLeft:  "left",
-			CharacterRight: "right",
-			WordLeft:       "ctrl+left",
-			WordRight:      "ctrl+right",
-
-			LineUp:   "up",
-			LineDown: "down",
-			WordUp:   "ctrl+up",
-			WordDown: "ctrl+down",
-			PageUp:   "pgup",
-			PageDown: "pgdown",
-
-			LineStart: "home",
-			LineEnd:   "end",
-			FileStart: "ctrl+home",
-			FileEnd:   "ctrl+end",
-
-			SelectLeft:  "shift+left",
-			SelectRight: "shift+right",
-			SelectUp:    "shift+up",
-			SelectDown:  "shift+down",
-			SelectAll:   "ctrl+a",
-
-			Cut:   "ctrl+x",
-			Copy:  "ctrl+c",
-			Paste: "ctrl+v",
-
-			Undo: "ctrl+z",
-			Redo: "ctrl+y",
-
-			Tab:             "tab",
-			RemoveTab:       "shift+tab",
-			Newline:         "enter",
-			DeleteLeft:      "backspace",
-			DeleteRight:     "delete",
-			DeleteWordLeft:  "ctrl+backspace",
-			DeleteWordRight: "ctrl+delete",
-			DuplicateLine:   "ctrl+d",
-			DeleteLine:      "alt+backspace",
-
-			ToggleComment: "ctrl+_",
-			Debug:         "f12",
-
-			FileTree: FileTreeKeyConfig{
-				SelectPrev:  "up",
-				SelectNext:  "down",
-				ExpandWidth: "ctrl+right",
-				ShrinkWidth: "ctrl+left",
-				Open:        "enter",
-				Refresh:     "ctrl+r",
-			},
-			SearchBar: SearchBarKeyConfig{
-				SelectPrev:   "up",
-				SelectNext:   "down",
-				SelectResult: "enter",
-				Close:        "esc",
-			},
+func (k EditorCodeKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Code",
+		Keys: []key.Binding{
+			k.ShowDeclaration,
+			k.ShowDefinitions,
+			k.ShowTypeDefinition,
+			k.ShowImplementation,
+			k.ShowReferences,
 		},
-		FilePicker: FilePickerKeyConfig{
-			GoToTop:  "home",
-			GoToEnd:  "end",
-			Up:       "up",
-			Down:     "down",
-			PageUp:   "pgup",
-			PageDown: "pgdown",
-			Back:     "left",
-			Open:     "right",
-			Select:   "enter",
+	}
+}
+
+type EditorAutocompleteKeyMap struct {
+	Show  key.Binding
+	Next  key.Binding
+	Prev  key.Binding
+	Apply key.Binding
+}
+
+func (k EditorAutocompleteKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Show",
+		Keys: []key.Binding{
+			k.Show,
+			k.Next,
+			k.Prev,
+			k.Apply,
 		},
-		Run:       "ctrl+k",
-		Terminal:  "ctrl+t",
-		KeyMapper: "f4",
-		Debug:     "f12",
+	}
+}
+
+type EditorDiagnosticKeyMap struct {
+	Show key.Binding
+	Next key.Binding
+	Prev key.Binding
+}
+
+func (k EditorDiagnosticKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor Diagnostic",
+		Keys: []key.Binding{
+			k.Show,
+			k.Next,
+			k.Prev,
+		},
 	}
 }
 
@@ -447,75 +432,99 @@ func (k KeyMapConfig) Keys() KeyMap {
 }
 
 type EditorKeyConfig struct {
-	OpenFile   string `toml:"open_file"`
-	OpenFolder string `toml:"open_folder"`
-	SaveFile   string `toml:"save_file"`
-	CloseFile  string `toml:"close_file"`
-	NewFile    string `toml:"new_file"`
-	RenameFile string `toml:"rename_file"`
-	DeleteFile string `toml:"delete_file"`
-
-	Search         string `toml:"search"`
-	OpenOutline    string `toml:"open_outline"`
 	ToggleFileTree string `toml:"toggle_file_tree"`
 	FocusFileTree  string `toml:"focus_file_tree"`
-	NextFile       string `toml:"next_file"`
-	PrevFile       string `toml:"prev_file"`
-
-	Autocomplete    string `toml:"autocomplete"`
-	NextCompletion  string `toml:"next_completion"`
-	PrevCompletion  string `toml:"prev_completion"`
-	ApplyCompletion string `toml:"apply_completion"`
+	Search         string `toml:"search"`
+	OpenOutline    string `toml:"open_outline"`
 
 	RefreshSyntaxHighlight string `toml:"refresh_syntax_highlight"`
 	ToggleTreeSitterDebug  string `toml:"toggle_tree_sitter_debug"`
 	DebugTreeSitterNodes   string `toml:"debug_tree_sitter_nodes"`
-	ShowCurrentDiagnostic  string `toml:"show_current_diagnostic"`
-	ShowDefinitions        string `toml:"show_definitions"`
-	ShowDeclaration        string `toml:"show_declaration"`
 
-	CharacterLeft  string `toml:"character_left"`
-	CharacterRight string `toml:"character_right"`
-	WordLeft       string `toml:"word_left"`
-	WordRight      string `toml:"word_right"`
+	File struct {
+		Open       string `toml:"open"`
+		OpenFolder string `toml:"open_folder"`
+		Close      string `toml:"close"`
 
-	LineUp   string `toml:"line_up"`
-	LineDown string `toml:"line_down"`
-	WordUp   string `toml:"word_up"`
-	WordDown string `toml:"word_down"`
-	PageUp   string `toml:"page_up"`
-	PageDown string `toml:"page_down"`
+		New    string `toml:"new"`
+		Rename string `toml:"rename"`
+		Save   string `toml:"save"`
+		Delete string `toml:"delete"`
 
-	LineStart string `toml:"line_start"`
-	LineEnd   string `toml:"line_end"`
-	FileStart string `toml:"file_start"`
-	FileEnd   string `toml:"file_end"`
+		Next string `toml:"next"`
+		Prev string `toml:"prev"`
+	} `toml:"file"`
 
-	SelectLeft  string `toml:"select_left"`
-	SelectRight string `toml:"select_right"`
-	SelectUp    string `toml:"select_up"`
-	SelectDown  string `toml:"select_down"`
-	SelectAll   string `toml:"select_all"`
+	Navigation struct {
+		CharacterLeft  string `toml:"character_left"`
+		CharacterRight string `toml:"character_right"`
+		WordLeft       string `toml:"word_left"`
+		WordRight      string `toml:"word_right"`
 
-	Cut   string `toml:"cut"`
-	Copy  string `toml:"copy"`
-	Paste string `toml:"paste"`
+		LineUp   string `toml:"line_up"`
+		LineDown string `toml:"line_down"`
+		WordUp   string `toml:"word_up"`
+		WordDown string `toml:"word_down"`
+		PageUp   string `toml:"page_up"`
+		PageDown string `toml:"page_down"`
 
-	Undo string `toml:"undo"`
-	Redo string `toml:"redo"`
+		LineStart string `toml:"line_start"`
+		LineEnd   string `toml:"line_end"`
+		FileStart string `toml:"file_start"`
+		FileEnd   string `toml:"file_end"`
+	} `toml:"navigation"`
 
-	Tab             string `toml:"tab"`
-	RemoveTab       string `toml:"remove_tab"`
-	Newline         string `toml:"newline"`
-	DeleteLeft      string `toml:"delete_left"`
-	DeleteRight     string `toml:"delete_right"`
-	DeleteWordLeft  string `toml:"delete_word_left"`
-	DeleteWordRight string `toml:"delete_word_right"`
-	DuplicateLine   string `toml:"duplicate_line"`
-	DeleteLine      string `toml:"delete_line"`
+	Selection struct {
+		SelectLeft  string `toml:"select_left"`
+		SelectRight string `toml:"select_right"`
+		SelectUp    string `toml:"select_up"`
+		SelectDown  string `toml:"select_down"`
 
-	ToggleComment string `toml:"toggle_comment"`
-	Debug         string `toml:"debug"`
+		SelectAll string `toml:"select_all"`
+	} `toml:"selection"`
+
+	Edit struct {
+		Tab       string `toml:"tab"`
+		RemoveTab string `toml:"remove_tab"`
+
+		Paste string `toml:"paste"`
+		Copy  string `toml:"copy"`
+		Cut   string `toml:"cut"`
+
+		Undo string `toml:"undo"`
+		Redo string `toml:"redo"`
+
+		DeleteLeft      string `toml:"delete_left"`
+		DeleteRight     string `toml:"delete_right"`
+		DeleteWordLeft  string `toml:"delete_word_left"`
+		DeleteWordRight string `toml:"delete_word_right"`
+
+		DuplicateLine string `toml:"duplicate_line"`
+		DeleteLine    string `toml:"delete_line"`
+
+		ToggleComment string `toml:"toggle_comment"`
+	} `toml:"edit"`
+
+	Code struct {
+		ShowDeclaration    string `toml:"show_declaration"`
+		ShowDefinitions    string `toml:"show_definitions"`
+		ShowTypeDefinition string `toml:"show_type_definition"`
+		ShowImplementation string `toml:"show_implementation"`
+		ShowReferences     string `toml:"show_references"`
+	} `toml:"code"`
+
+	Autocomplete struct {
+		Show  string `toml:"show"`
+		Next  string `toml:"next"`
+		Prev  string `toml:"prev"`
+		Apply string `toml:"apply"`
+	} `toml:"autocomplete"`
+
+	Diagnostic struct {
+		Show string `toml:"show"`
+		Next string `toml:"next"`
+		Prev string `toml:"prev"`
+	} `toml:"diagnostic"`
 
 	FileTree  FileTreeKeyConfig  `toml:"file_tree"`
 	SearchBar SearchBarKeyConfig `toml:"search_bar"`
@@ -523,43 +532,6 @@ type EditorKeyConfig struct {
 
 func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 	return EditorKeyMap{
-		OpenFile: key.NewBinding(
-			key.WithKeys(k.OpenFile),
-			key.WithHelp(k.OpenFile, "open file"),
-		),
-		OpenFolder: key.NewBinding(
-			key.WithKeys(k.OpenFolder),
-			key.WithHelp(k.OpenFolder, "open folder"),
-		),
-		SaveFile: key.NewBinding(
-			key.WithKeys(k.SaveFile),
-			key.WithHelp(k.SaveFile, "save file"),
-		),
-		CloseFile: key.NewBinding(
-			key.WithKeys(k.CloseFile),
-			key.WithHelp(k.CloseFile, "close file"),
-		),
-		NewFile: key.NewBinding(
-			key.WithKeys(k.NewFile),
-			key.WithHelp(k.NewFile, "new file"),
-		),
-		RenameFile: key.NewBinding(
-			key.WithKeys(k.RenameFile),
-			key.WithHelp(k.RenameFile, "rename file"),
-		),
-		DeleteFile: key.NewBinding(
-			key.WithKeys(k.DeleteFile),
-			key.WithHelp(k.DeleteFile, "delete file"),
-		),
-
-		Search: key.NewBinding(
-			key.WithKeys(k.Search),
-			key.WithHelp(k.Search, "search in file"),
-		),
-		OpenOutline: key.NewBinding(
-			key.WithKeys(k.OpenOutline),
-			key.WithHelp(k.OpenOutline, "open outline"),
-		),
 		ToggleFileTree: key.NewBinding(
 			key.WithKeys(k.ToggleFileTree),
 			key.WithHelp(k.ToggleFileTree, "toggle file tree"),
@@ -568,30 +540,13 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			key.WithKeys(k.FocusFileTree),
 			key.WithHelp(k.FocusFileTree, "focus file tree"),
 		),
-		NextFile: key.NewBinding(
-			key.WithKeys(k.NextFile),
-			key.WithHelp(k.NextFile, "next file"),
+		Search: key.NewBinding(
+			key.WithKeys(k.Search),
+			key.WithHelp(k.Search, "search in file"),
 		),
-		PrevFile: key.NewBinding(
-			key.WithKeys(k.PrevFile),
-			key.WithHelp(k.PrevFile, "prev file"),
-		),
-
-		Autocomplete: key.NewBinding(
-			key.WithKeys(k.Autocomplete),
-			key.WithHelp(k.Autocomplete, "autocomplete"),
-		),
-		NextCompletion: key.NewBinding(
-			key.WithKeys(k.NextCompletion),
-			key.WithHelp(k.NextCompletion, "next completion"),
-		),
-		PrevCompletion: key.NewBinding(
-			key.WithKeys(k.PrevCompletion),
-			key.WithHelp(k.PrevCompletion, "prev completion"),
-		),
-		ApplyCompletion: key.NewBinding(
-			key.WithKeys(k.ApplyCompletion),
-			key.WithHelp(k.ApplyCompletion, "apply completion"),
+		OpenOutline: key.NewBinding(
+			key.WithKeys(k.OpenOutline),
+			key.WithHelp(k.OpenOutline, "open outline"),
 		),
 
 		RefreshSyntaxHighlight: key.NewBinding(
@@ -606,153 +561,251 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			key.WithKeys(k.DebugTreeSitterNodes),
 			key.WithHelp(k.DebugTreeSitterNodes, "debug tree-sitter nodes"),
 		),
-		ShowCurrentDiagnostic: key.NewBinding(
-			key.WithKeys(k.ShowCurrentDiagnostic),
-			key.WithHelp(k.ShowCurrentDiagnostic, "show current diagnostic"),
-		),
-		ShowDefinitions: key.NewBinding(
-			key.WithKeys(k.ShowDefinitions),
-			key.WithHelp(k.ShowDefinitions, "show definitions"),
-		),
-		ShowDeclaration: key.NewBinding(
-			key.WithKeys(k.ShowDeclaration),
-			key.WithHelp(k.ShowDeclaration, "show declaration"),
-		),
 
-		CharacterLeft: key.NewBinding(
-			key.WithKeys(k.CharacterLeft),
-			key.WithHelp(k.CharacterLeft, "character left"),
-		),
-		CharacterRight: key.NewBinding(
-			key.WithKeys(k.CharacterRight),
-			key.WithHelp(k.CharacterRight, "character right"),
-		),
-		WordLeft: key.NewBinding(
-			key.WithKeys(k.WordLeft),
-			key.WithHelp(k.WordLeft, "word left"),
-		),
-		WordRight: key.NewBinding(
-			key.WithKeys(k.WordRight),
-			key.WithHelp(k.WordRight, "word right"),
-		),
+		File: EditorFileKeyMap{
+			Open: key.NewBinding(
+				key.WithKeys(k.File.Open),
+				key.WithHelp(k.File.Open, "open file"),
+			),
+			OpenFolder: key.NewBinding(
+				key.WithKeys(k.File.OpenFolder),
+				key.WithHelp(k.File.OpenFolder, "open folder"),
+			),
+			Close: key.NewBinding(
+				key.WithKeys(k.File.Close),
+				key.WithHelp(k.File.Close, "close file"),
+			),
 
-		LineUp: key.NewBinding(
-			key.WithKeys(k.LineUp),
-			key.WithHelp(k.LineUp, "line up"),
-		),
-		LineDown: key.NewBinding(
-			key.WithKeys(k.LineDown),
-			key.WithHelp(k.LineDown, "line down"),
-		),
-		WordUp: key.NewBinding(
-			key.WithKeys(k.WordUp),
-			key.WithHelp(k.WordUp, "word up"),
-		),
-		WordDown: key.NewBinding(
-			key.WithKeys(k.WordDown),
-			key.WithHelp(k.WordDown, "word down"),
-		),
-		PageDown: key.NewBinding(
-			key.WithKeys(k.PageDown),
-			key.WithHelp(k.PageDown, "page down"),
-		),
-		PageUp: key.NewBinding(
-			key.WithKeys(k.PageUp),
-			key.WithHelp(k.PageUp, "page up"),
-		),
+			New: key.NewBinding(
+				key.WithKeys(k.File.New),
+				key.WithHelp(k.File.New, "new file"),
+			),
+			Rename: key.NewBinding(
+				key.WithKeys(k.File.Rename),
+				key.WithHelp(k.File.Rename, "rename file"),
+			),
+			Save: key.NewBinding(
+				key.WithKeys(k.File.Save),
+				key.WithHelp(k.File.Save, "save file"),
+			),
+			Delete: key.NewBinding(
+				key.WithKeys(k.File.Delete),
+				key.WithHelp(k.File.Delete, "delete file"),
+			),
 
-		LineStart: key.NewBinding(
-			key.WithKeys(k.LineStart),
-			key.WithHelp(k.LineStart, "line start"),
-		),
-		LineEnd: key.NewBinding(
-			key.WithKeys(k.LineEnd),
-			key.WithHelp(k.LineEnd, "line end"),
-		),
-		FileStart: key.NewBinding(
-			key.WithKeys(k.FileStart),
-			key.WithHelp(k.FileStart, "file start"),
-		),
-		FileEnd: key.NewBinding(
-			key.WithKeys(k.FileEnd),
-			key.WithHelp(k.FileEnd, "file end"),
-		),
+			Next: key.NewBinding(
+				key.WithKeys(k.File.Next),
+				key.WithHelp(k.File.Next, "next file"),
+			),
+			Prev: key.NewBinding(
+				key.WithKeys(k.File.Prev),
+				key.WithHelp(k.File.Prev, "prev file"),
+			),
+		},
+		Navigation: EditorNavigationKeyMap{
+			CharacterLeft: key.NewBinding(
+				key.WithKeys(k.Navigation.CharacterLeft),
+				key.WithHelp(k.Navigation.CharacterLeft, "character left"),
+			),
+			CharacterRight: key.NewBinding(
+				key.WithKeys(k.Navigation.CharacterRight),
+				key.WithHelp(k.Navigation.CharacterRight, "character right"),
+			),
+			WordLeft: key.NewBinding(
+				key.WithKeys(k.Navigation.WordLeft),
+				key.WithHelp(k.Navigation.WordLeft, "word left"),
+			),
+			WordRight: key.NewBinding(
+				key.WithKeys(k.Navigation.WordRight),
+				key.WithHelp(k.Navigation.WordRight, "word right"),
+			),
 
-		SelectLeft: key.NewBinding(
-			key.WithKeys(k.SelectLeft),
-			key.WithHelp(k.SelectLeft, "select left"),
-		),
-		SelectRight: key.NewBinding(
-			key.WithKeys(k.SelectRight),
-			key.WithHelp(k.SelectRight, "select right"),
-		),
-		SelectUp: key.NewBinding(
-			key.WithKeys(k.SelectUp),
-			key.WithHelp(k.SelectUp, "select up"),
-		),
-		SelectDown: key.NewBinding(
-			key.WithKeys(k.SelectDown),
-			key.WithHelp(k.SelectDown, "select down"),
-		),
-		SelectAll: key.NewBinding(
-			key.WithKeys(k.SelectAll),
-			key.WithHelp(k.SelectAll, "select all"),
-		),
+			LineUp: key.NewBinding(
+				key.WithKeys(k.Navigation.LineUp),
+				key.WithHelp(k.Navigation.LineUp, "line up"),
+			),
+			LineDown: key.NewBinding(
+				key.WithKeys(k.Navigation.LineDown),
+				key.WithHelp(k.Navigation.LineDown, "line down"),
+			),
+			WordUp: key.NewBinding(
+				key.WithKeys(k.Navigation.WordUp),
+				key.WithHelp(k.Navigation.WordUp, "word up"),
+			),
+			WordDown: key.NewBinding(
+				key.WithKeys(k.Navigation.WordDown),
+				key.WithHelp(k.Navigation.WordDown, "word down"),
+			),
+			PageDown: key.NewBinding(
+				key.WithKeys(k.Navigation.PageDown),
+				key.WithHelp(k.Navigation.PageDown, "page down"),
+			),
+			PageUp: key.NewBinding(
+				key.WithKeys(k.Navigation.PageUp),
+				key.WithHelp(k.Navigation.PageUp, "page up"),
+			),
 
-		Cut: key.NewBinding(
-			key.WithKeys(k.Cut),
-			key.WithHelp(k.Cut, "cut"),
-		),
-		Copy: key.NewBinding(
-			key.WithKeys(k.Copy),
-			key.WithHelp(k.Copy, "copy"),
-		),
-		Paste: key.NewBinding(
-			key.WithKeys(k.Paste),
-			key.WithHelp(k.Paste, "paste"),
-		),
+			LineStart: key.NewBinding(
+				key.WithKeys(k.Navigation.LineStart),
+				key.WithHelp(k.Navigation.LineStart, "line start"),
+			),
+			LineEnd: key.NewBinding(
+				key.WithKeys(k.Navigation.LineEnd),
+				key.WithHelp(k.Navigation.LineEnd, "line end"),
+			),
+			FileStart: key.NewBinding(
+				key.WithKeys(k.Navigation.FileStart),
+				key.WithHelp(k.Navigation.FileStart, "file start"),
+			),
+			FileEnd: key.NewBinding(
+				key.WithKeys(k.Navigation.FileEnd),
+				key.WithHelp(k.Navigation.FileEnd, "file end"),
+			),
+		},
+		Selection: EditorSelectionKeyMap{
+			SelectLeft: key.NewBinding(
+				key.WithKeys(k.Selection.SelectLeft),
+				key.WithHelp(k.Selection.SelectLeft, "select left"),
+			),
+			SelectRight: key.NewBinding(
+				key.WithKeys(k.Selection.SelectRight),
+				key.WithHelp(k.Selection.SelectRight, "select right"),
+			),
+			SelectUp: key.NewBinding(
+				key.WithKeys(k.Selection.SelectUp),
+				key.WithHelp(k.Selection.SelectUp, "select up"),
+			),
+			SelectDown: key.NewBinding(
+				key.WithKeys(k.Selection.SelectDown),
+				key.WithHelp(k.Selection.SelectDown, "select down"),
+			),
 
-		Undo: key.NewBinding(
-			key.WithKeys(k.Undo),
-			key.WithHelp(k.Undo, "undo"),
-		),
-		Redo: key.NewBinding(
-			key.WithKeys(k.Redo),
-			key.WithHelp(k.Redo, "redo"),
-		),
+			SelectAll: key.NewBinding(
+				key.WithKeys(k.Selection.SelectAll),
+				key.WithHelp(k.Selection.SelectAll, "select all"),
+			),
+		},
+		Edit: EditorEditKeyMap{
+			Tab: key.NewBinding(
+				key.WithKeys(k.Edit.Tab),
+				key.WithHelp(k.Edit.Tab, "add tab"),
+			),
+			RemoveTab: key.NewBinding(
+				key.WithKeys(k.Edit.RemoveTab),
+				key.WithHelp(k.Edit.RemoveTab, "remove tab"),
+			),
 
-		Tab: key.NewBinding(
-			key.WithKeys(k.Tab),
-			key.WithHelp(k.Tab, "add tab"),
-		),
-		RemoveTab: key.NewBinding(
-			key.WithKeys(k.RemoveTab),
-			key.WithHelp(k.RemoveTab, "remove tab"),
-		),
-		Newline: key.NewBinding(
-			key.WithKeys(k.Newline),
-			key.WithHelp(k.Newline, "newline"),
-		),
-		DeleteLeft: key.NewBinding(
-			key.WithKeys(k.DeleteLeft),
-			key.WithHelp(k.DeleteLeft, "backspace"),
-		),
-		DeleteRight: key.NewBinding(
-			key.WithKeys(k.DeleteRight),
-			key.WithHelp(k.DeleteRight, "delete"),
-		),
-		DuplicateLine: key.NewBinding(
-			key.WithKeys(k.DuplicateLine),
-			key.WithHelp(k.DuplicateLine, "duplicate line"),
-		),
-		DeleteLine: key.NewBinding(
-			key.WithKeys(k.DeleteLine),
-			key.WithHelp(k.DeleteLine, "delete line"),
-		),
-		ToggleComment: key.NewBinding(
-			key.WithKeys(k.ToggleComment),
-			key.WithHelp(k.ToggleComment, "toggle comment"),
-		),
+			Paste: key.NewBinding(
+				key.WithKeys(k.Edit.Paste),
+				key.WithHelp(k.Edit.Paste, "paste"),
+			),
+			Copy: key.NewBinding(
+				key.WithKeys(k.Edit.Copy),
+				key.WithHelp(k.Edit.Copy, "copy"),
+			),
+			Cut: key.NewBinding(
+				key.WithKeys(k.Edit.Cut),
+				key.WithHelp(k.Edit.Cut, "cut"),
+			),
+
+			Undo: key.NewBinding(
+				key.WithKeys(k.Edit.Undo),
+				key.WithHelp(k.Edit.Undo, "undo"),
+			),
+			Redo: key.NewBinding(
+				key.WithKeys(k.Edit.Redo),
+				key.WithHelp(k.Edit.Redo, "redo"),
+			),
+
+			DeleteLeft: key.NewBinding(
+				key.WithKeys(k.Edit.DeleteLeft),
+				key.WithHelp(k.Edit.DeleteLeft, "delete before cursor"),
+			),
+			DeleteRight: key.NewBinding(
+				key.WithKeys(k.Edit.DeleteRight),
+				key.WithHelp(k.Edit.DeleteRight, "delete after cursor"),
+			),
+			DeleteWordLeft: key.NewBinding(
+				key.WithKeys(k.Edit.DeleteLeft),
+				key.WithHelp(k.Edit.DeleteLeft, "delete word before cursor"),
+			),
+			DeleteWordRight: key.NewBinding(
+				key.WithKeys(k.Edit.DeleteRight),
+				key.WithHelp(k.Edit.DeleteRight, "delete word after cursor"),
+			),
+
+			DuplicateLine: key.NewBinding(
+				key.WithKeys(k.Edit.DuplicateLine),
+				key.WithHelp(k.Edit.DuplicateLine, "duplicate line"),
+			),
+			Newline: key.NewBinding(
+				key.WithKeys("enter"),
+				key.WithHelp("enter", "newline"),
+			),
+			DeleteLine: key.NewBinding(
+				key.WithKeys(k.Edit.DeleteLine),
+				key.WithHelp(k.Edit.DeleteLine, "delete line"),
+			),
+			ToggleComment: key.NewBinding(
+				key.WithKeys(k.Edit.ToggleComment),
+				key.WithHelp(k.Edit.ToggleComment, "toggle comment"),
+			),
+		},
+		Code: EditorCodeKeyMap{
+			ShowDeclaration: key.NewBinding(
+				key.WithKeys(k.Code.ShowDeclaration),
+				key.WithHelp(k.Code.ShowDeclaration, "show declaration"),
+			),
+			ShowDefinitions: key.NewBinding(
+				key.WithKeys(k.Code.ShowDefinitions),
+				key.WithHelp(k.Code.ShowDefinitions, "show definitions"),
+			),
+			ShowTypeDefinition: key.NewBinding(
+				key.WithKeys(k.Code.ShowTypeDefinition),
+				key.WithHelp(k.Code.ShowTypeDefinition, "show type definition"),
+			),
+			ShowImplementation: key.NewBinding(
+				key.WithKeys(k.Code.ShowImplementation),
+				key.WithHelp(k.Code.ShowImplementation, "show implementation"),
+			),
+			ShowReferences: key.NewBinding(
+				key.WithKeys(k.Code.ShowReferences),
+				key.WithHelp(k.Code.ShowReferences, "show references"),
+			),
+		},
+		Autocomplete: EditorAutocompleteKeyMap{
+			Show: key.NewBinding(
+				key.WithKeys(k.Autocomplete.Show),
+				key.WithHelp(k.Autocomplete.Show, "show autocomplete"),
+			),
+			Next: key.NewBinding(
+				key.WithKeys(k.Autocomplete.Next),
+				key.WithHelp(k.Autocomplete.Next, "next completion"),
+			),
+			Prev: key.NewBinding(
+				key.WithKeys(k.Autocomplete.Prev),
+				key.WithHelp(k.Autocomplete.Prev, "prev completion"),
+			),
+			Apply: key.NewBinding(
+				key.WithKeys(k.Autocomplete.Apply),
+				key.WithHelp(k.Autocomplete.Apply, "apply completion"),
+			),
+		},
+		Diagnostic: EditorDiagnosticKeyMap{
+			Show: key.NewBinding(
+				key.WithKeys(k.Diagnostic.Show),
+				key.WithHelp(k.Diagnostic.Show, "show current diagnostic"),
+			),
+			Next: key.NewBinding(
+				key.WithKeys(k.Diagnostic.Next),
+				key.WithHelp(k.Diagnostic.Next, "show next diagnostic"),
+			),
+			Prev: key.NewBinding(
+				key.WithKeys(k.Diagnostic.Prev),
+				key.WithHelp(k.Diagnostic.Prev, "show prev diagnostic"),
+			),
+		},
+
 		FileTree:  k.FileTree.KeyMap(),
 		SearchBar: k.SearchBar.KeyMap(),
 	}

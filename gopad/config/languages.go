@@ -13,15 +13,7 @@ type Use struct {
 	Except []string `toml:"except"`
 }
 
-func DefaultLanguageConfigs() LanguagesConfig {
-	return LanguagesConfig{
-		GrammarDir: "grammars",
-		QueriesDir: "queries",
-		Languages:  make(map[string]LanguageConfig),
-	}
-}
-
-type LanguagesConfig struct {
+type LanguageConfigs struct {
 	GrammarDir  string `toml:"grammar_dir"`
 	QueriesDir  string `toml:"queries_dir"`
 	UseGrammars Use    `toml:"use_grammars"`
@@ -29,7 +21,7 @@ type LanguagesConfig struct {
 	Languages map[string]LanguageConfig `toml:"languages"`
 }
 
-func (l LanguagesConfig) filter() LanguagesConfig {
+func (l LanguageConfigs) filter() LanguageConfigs {
 	languages := make(map[string]LanguageConfig)
 	for name, language := range l.Languages {
 		if len(l.UseGrammars.Only) > 0 {
@@ -45,7 +37,7 @@ func (l LanguagesConfig) filter() LanguagesConfig {
 		languages[name] = language
 	}
 
-	return LanguagesConfig{
+	return LanguageConfigs{
 		GrammarDir:  l.GrammarDir,
 		UseGrammars: l.UseGrammars,
 		Languages:   languages,

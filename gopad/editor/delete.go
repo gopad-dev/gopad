@@ -62,7 +62,7 @@ func (d DeleteOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, te
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Editor.DeleteFile):
+		case key.Matches(msg, config.Keys.Editor.File.Delete):
 			return d, d.buttonOK.OnClick()
 		case key.Matches(msg, config.Keys.Cancel):
 			return d, d.buttonCancel.OnClick()

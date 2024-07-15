@@ -13,34 +13,6 @@ type GopadConfig struct {
 	FileTree FileTreeConfig `toml:"file_tree"`
 }
 
-func DefaultGopadConfig() GopadConfig {
-	return GopadConfig{
-		Theme: "dark",
-		Editor: EditorConfig{
-			TabSize:                4,
-			IndentSize:             4,
-			EndOfLine:              "lf",
-			Charset:                "utf-8",
-			TrimTrailingWhitespace: true,
-			InsertFinalNewline:     true,
-			Theme:                  "default",
-			Cursor: CursorConfig{
-				Mode:          cursor.ModeBlink,
-				BlinkInterval: Duration(cursor.DefaultBlinkInterval),
-				Shape:         cursor.ShapeBlock,
-			},
-		},
-		FileView: FileViewConfig{
-			OpenFilesWrap:   false,
-			ShowLineNumbers: true,
-			WordWrap:        false,
-		},
-		FileTree: FileTreeConfig{
-			Ignored: nil,
-		},
-	}
-}
-
 type EditorConfig struct {
 	TabSize                int          `toml:"tab_size"`
 	IndentSize             int          `toml:"indent_size"`

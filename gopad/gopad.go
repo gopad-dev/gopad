@@ -121,7 +121,7 @@ func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
 				if !g.overlays.Has(KeyMapperOverlayID) {
 					cmds = append(cmds, overlay.Open(NewKeyMapperOverlay()))
 				}
-			case key.Matches(msg, config.Keys.Editor.OpenFile):
+			case key.Matches(msg, config.Keys.Editor.File.Open):
 				if !g.overlays.Has(editor.OpenOverlayID) {
 					path, err := os.Getwd()
 					if err != nil {
@@ -130,7 +130,7 @@ func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					cmds = append(cmds, overlay.Open(editor.NewOpenOverlay(path, true, false)))
 				}
-			case key.Matches(msg, config.Keys.Editor.OpenFolder):
+			case key.Matches(msg, config.Keys.Editor.File.OpenFolder):
 				if !g.overlays.Has(editor.OpenOverlayID) {
 					path, err := os.Getwd()
 					if err != nil {

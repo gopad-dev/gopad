@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.5-0.20240605151746-bca513b1982b
 	github.com/charmbracelet/lipgloss v0.11.1-0.20240605151253-a724723338e3
-	github.com/charmbracelet/x/ansi v0.1.3
+	github.com/charmbracelet/x/ansi v0.1.4
 	github.com/charmbracelet/x/input v0.1.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c

@@ -62,5 +62,5 @@ func (q KeyMapperOverlay) View(ctx tea.Context, width int, height int) string {
 	if q.key == "" {
 		return fmt.Sprintf("Press a key to see its name.\nPress %s to close.", config.Keys.Cancel.Help().Key)
 	}
-	return fmt.Sprintf("You pressed: %s.\nPress %s to close.", q.key, config.Keys.Cancel.Help().Key)
+	return fmt.Sprintf("You pressed: \"%s\".\nPress %s to close.", q.key, config.Keys.Cancel.Help().Key)
 }

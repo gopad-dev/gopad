@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
@@ -87,7 +87,7 @@ func NewFileTree(openFile func(name string) tea.Cmd, languageIconFunc func(name 
 	ft := filetree.New()
 	ft.Styles = Theme.UI.FileTree
 	ft.KeyMap = Keys.Editor.FileTree
-	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.OpenFolder.Help().Key)
+	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.File.OpenFolder.Help().Key)
 	ft.OpenFile = openFile
 	ft.Icons = filetree.Icons{
 		RootDir:          Theme.Icons.RootDir,

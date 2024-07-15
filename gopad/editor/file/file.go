@@ -100,6 +100,7 @@ type File struct {
 	matches            [][]*Match
 	changes            []Change
 	definitions        []ls.Definition
+	typeDefinitions    []ls.TypeDefinition
 	definitionsIndex   int
 	positions          [][]pos
 }
