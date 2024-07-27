@@ -48,6 +48,7 @@ func (h HelpOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
 
 func (h HelpOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -60,5 +61,5 @@ func (h HelpOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.
 }
 
 func (h HelpOverlay) View(ctx tea.Context, width int, height int) string {
-	return h.help.View(width, height, config.Keys)
+	return h.help.View(config.Keys, width, height)
 }

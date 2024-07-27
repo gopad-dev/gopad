@@ -7,7 +7,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -49,13 +48,12 @@ func (c RawThemeConfig) Theme(ctx tea.Context) ThemeConfig {
 					SelectedFileStyle: c.UI.AppBar.Files.SelectedFile.Style(ctx, colors).Padding(0, 1, 0, 2),
 				},
 			},
-			FileTree: filetree.Styles{
-				Style:                       ctx.NewStyle(),
-				EmptyStyle:                  ctx.NewStyle().Align(lipgloss.Center, lipgloss.Center),
-				EntryPrefixStyle:            ctx.NewStyle().Faint(true),
-				EntryStyle:                  c.UI.Menu.Entry.Style(ctx, colors),
-				EntrySelectedStyle:          c.UI.Menu.SelectedEntry.Style(ctx, colors),
-				EntrySelectedUnfocusedStyle: c.UI.Menu.SelectedEntryUnfocused.Style(ctx, colors),
+			FileTree: FileTreeStyles{
+				Style:                       c.UI.FileTree.Style.Style(ctx, colors),
+				EmptyStyle:                  c.UI.FileTree.Empty.Style(ctx, colors).Align(lipgloss.Center, lipgloss.Center),
+				EntryStyle:                  c.UI.FileTree.Entry.Style(ctx, colors),
+				EntrySelectedStyle:          c.UI.FileTree.SelectedEntry.Style(ctx, colors),
+				EntrySelectedUnfocusedStyle: c.UI.FileTree.SelectedEntryUnfocused.Style(ctx, colors),
 			},
 			FileView: FileViewStyles{
 				Style:                  c.UI.FileView.Style.Style(ctx, colors),
@@ -98,44 +96,45 @@ func (c RawThemeConfig) Theme(ctx tea.Context) ThemeConfig {
 			},
 
 			TextInput: textinput.Styles{
-				PromptStyle:        ctx.NewStyle(),
-				FocusedPromptStyle: ctx.NewStyle(),
-				TextStyle:          ctx.NewStyle(),
-				PlaceholderStyle:   ctx.NewStyle(),
+				PromptCharacter:    c.UI.TextInput.PromptChar,
+				EchoCharacter:      c.UI.TextInput.EchoChar,
+				PromptStyle:        c.UI.TextInput.Prompt.Style(ctx, colors),
+				FocusedPromptStyle: c.UI.TextInput.FocusedPrompt.Style(ctx, colors),
+				TextStyle:          c.UI.TextInput.Text.Style(ctx, colors),
+				PlaceholderStyle:   c.UI.TextInput.Placeholder.Style(ctx, colors),
 			},
 			Button: button.Styles{
 				Default: c.UI.Menu.Entry.Style(ctx, colors).Padding(0, 1).Margin(0, 1),
 				Focus:   c.UI.Menu.SelectedEntry.Style(ctx, colors).Padding(0, 1).Margin(0, 1),
 			},
 			FilePicker: filepicker.Styles{
-				DisabledCursor:   ctx.NewStyle(),
-				Cursor:           ctx.NewStyle().Bold(true),
-				Symlink:          ctx.NewStyle(),
-				Directory:        ctx.NewStyle(),
-				File:             ctx.NewStyle(),
-				DisabledFile:     ctx.NewStyle(),
-				DisabledSelected: ctx.NewStyle(),
-				Permission:       ctx.NewStyle(),
-				Selected:         ctx.NewStyle().Bold(true),
-				FileSize:         ctx.NewStyle().Width(7).Align(lipgloss.Right),
-				EmptyDirectory:   ctx.NewStyle().PaddingLeft(2),
+				Selected:         c.UI.FilePicker.Selected.Style(ctx, colors).Bold(true),
+				DisabledSelected: c.UI.FilePicker.DisabledSelected.Style(ctx, colors),
+
+				Symlink:        c.UI.FilePicker.Symlink.Style(ctx, colors),
+				Directory:      c.UI.FilePicker.Directory.Style(ctx, colors),
+				EmptyDirectory: c.UI.FilePicker.EmptyDirectory.Style(ctx, colors),
+
+				File:         c.UI.FilePicker.File.Style(ctx, colors),
+				DisabledFile: c.UI.FilePicker.DisabledFile.Style(ctx, colors),
+				FileSize:     c.UI.FilePicker.FileSize.Style(ctx, colors).Width(7).Align(lipgloss.Right),
+
+				Permission: c.UI.FilePicker.Permission.Style(ctx, colors),
 			},
 			Cursor: cursor.Styles{
 				BlockCursor:     c.UI.Cursor.Block.Style(ctx, colors),
 				UnderlineCursor: c.UI.Cursor.Underline.Style(ctx, colors).Underline(true),
 			},
 			Help: help.Styles{
-				Ellipsis:       ctx.NewStyle(),
-				Header:         ctx.NewStyle().AlignHorizontal(lipgloss.Center),
-				ShortKey:       ctx.NewStyle(),
-				ShortDesc:      ctx.NewStyle(),
-				ShortSeparator: ctx.NewStyle(),
-				FullKey:        ctx.NewStyle(),
-				FullDesc:       ctx.NewStyle(),
-				FullSeparator:  ctx.NewStyle(),
+				Ellipsis:  ctx.NewStyle(),
+				Group:     ctx.NewStyle().Margin(0, 1, 1, 1),
+				Header:    c.UI.Menu.Title.Style(ctx, colors).AlignHorizontal(lipgloss.Center),
+				Key:       c.UI.Text.Style(ctx, colors),
+				Desc:      c.UI.SubText.Style(ctx, colors),
+				Separator: ctx.NewStyle(),
 			},
 			NotificationStyle: notifications.Styles{
-				Notification: c.UI.Menu.Style.Style(ctx, colors).MaxWidth(32).Border(lipgloss.RoundedBorder()).Padding(0, 1),
+				Notification: c.UI.Menu.Style.Style(ctx, colors).Border(lipgloss.RoundedBorder()).Padding(0, 1),
 			},
 			List: list.Styles{
 				Style:             c.UI.Menu.Style.Style(ctx, colors).MarginLeft(1),
@@ -230,6 +229,9 @@ func (c IconConfig) IconStyle(ctx tea.Context, colors ColorStyles) lipgloss.Styl
 }
 
 type UIConfig struct {
+	Text    Style `toml:"text"`
+	SubText Style `toml:"subtext"`
+
 	AppBar  AppBarUIConfig  `toml:"app_bar"`
 	CodeBar CodeBarUIConfig `toml:"code_bar"`
 
@@ -237,8 +239,10 @@ type UIConfig struct {
 	Overlay OverlayUIConfig `toml:"overlay"`
 	Cursor  CursorUIConfig  `toml:"cursor"`
 
-	FileTree FileTreeUIConfig `toml:"file_tree"`
-	FileView FileViewUIConfig `toml:"file_view"`
+	FileTree   FileTreeUIConfig   `toml:"file_tree"`
+	FileView   FileViewUIConfig   `toml:"file_view"`
+	FilePicker FilePickerUIConfig `toml:"file_picker"`
+	TextInput  TextInputUIConfig  `toml:"text_input"`
 }
 
 type AppBarUIConfig struct {
@@ -278,6 +282,11 @@ type CursorUIConfig struct {
 }
 
 type FileTreeUIConfig struct {
+	Style                  Style `toml:"style"`
+	Empty                  Style `toml:"empty"`
+	Entry                  Style `toml:"entry"`
+	SelectedEntry          Style `toml:"selected_entry"`
+	SelectedEntryUnfocused Style `toml:"selected_entry_unfocused"`
 }
 
 type FileViewUIConfig struct {
@@ -295,6 +304,30 @@ type FileViewUIConfig struct {
 
 	Selection Style `toml:"selection"`
 	InlayHint Style `toml:"inlay_hint"`
+}
+
+type FilePickerUIConfig struct {
+	Selected         Style `toml:"selected"`
+	DisabledSelected Style `toml:"disabled_selected"`
+
+	Symlink        Style `toml:"symlink"`
+	Directory      Style `toml:"directory"`
+	EmptyDirectory Style `toml:"empty_directory"`
+
+	File         Style `toml:"file"`
+	DisabledFile Style `toml:"disabled_file"`
+	FileSize     Style `toml:"file_size"`
+
+	Permission Style `toml:"permission"`
+}
+
+type TextInputUIConfig struct {
+	PromptChar    string `toml:"prompt_char"`
+	EchoChar      string `toml:"echo_char"`
+	Prompt        Style  `toml:"prompt"`
+	FocusedPrompt Style  `toml:"focused_prompt"`
+	Text          Style  `toml:"text"`
+	Placeholder   Style  `toml:"placeholder"`
 }
 
 type DiagnosticConfig struct {

@@ -247,6 +247,11 @@ func (m *Model) Blur() {
 	m.Blink = true
 }
 
+// Focused returns whether the cursor is focused.
+func (m Model) Focused() bool {
+	return m.focus
+}
+
 // View displays the cursor.
 func (m Model) View(char string, textStyle lipgloss.Style) string {
 	if m.Blink {

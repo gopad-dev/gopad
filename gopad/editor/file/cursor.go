@@ -38,6 +38,10 @@ func (f *File) Blur() {
 	f.cursor.cursor.Blur()
 }
 
+func (f *File) Focused() bool {
+	return f.cursor.cursor.Focused()
+}
+
 func (f *File) Cursor() (int, int) {
 	if f.cursor.start {
 		return 0, 0

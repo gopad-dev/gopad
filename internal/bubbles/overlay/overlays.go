@@ -80,20 +80,19 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View(ctx tea.Context, background string) string {
 	width, height := ctx.WindowSize()
-	//width := lipgloss.Width(background)
 
 	for _, overlay := range m.overlays {
 		x, y := overlay.Position()
 		marginX, marginY := overlay.Margin()
 
-		overlayWidth := width - marginX*2 - m.Styles.Style.GetHorizontalFrameSize() - m.Styles.ContentStyle.GetHorizontalFrameSize()
-		overlayHeight := height - marginY*2 - m.Styles.Style.GetVerticalFrameSize() - m.Styles.ContentStyle.GetVerticalFrameSize()
+		maxOverlayWidth := width - marginX*2 - m.Styles.Style.GetHorizontalFrameSize() - m.Styles.ContentStyle.GetHorizontalFrameSize()
+		maxOverlayHeight := height - marginY*2 - m.Styles.Style.GetVerticalFrameSize() - m.Styles.ContentStyle.GetVerticalFrameSize()
 		if overlay.Title() != "" {
-			overlayHeight -= m.Styles.TitleStyle.GetVerticalFrameSize() + 1
+			maxOverlayHeight -= m.Styles.TitleStyle.GetVerticalFrameSize() + 1
 		}
 
 		background = PlacePosition(x, y,
-			m.renderWithTitle(overlay.Title(), overlay.View(ctx, overlayWidth, overlayHeight)),
+			m.renderWithTitle(overlay.Title(), overlay.View(ctx, maxOverlayWidth, maxOverlayHeight)),
 			background,
 			WithMarginX(marginX),
 			WithMarginY(marginY),

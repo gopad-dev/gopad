@@ -204,10 +204,10 @@ func (g Gopad) CodeBar(ctx tea.Context) string {
 
 	if file != nil {
 		if s := file.Selection(); s != nil {
-			infoLine += fmt.Sprintf("%d [%d:%d-%d:%d] | ", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1)
+			infoLine += zone.Mark(editor.ZoneFileGoTo, fmt.Sprintf("%d lines | [%d:%d-%d:%d] | ", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1))
 		} else {
 			cursorRow, cursorCol := file.Cursor()
-			infoLine += fmt.Sprintf("[%d:%d] | ", cursorRow+1, cursorCol+1)
+			infoLine += zone.Mark(editor.ZoneFileGoTo, fmt.Sprintf("[%d:%d] | ", cursorRow+1, cursorCol+1))
 		}
 
 		if servers := g.lsClient.SupportedServers(file.Name()); len(servers) > 0 {

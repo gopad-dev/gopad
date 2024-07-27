@@ -5,7 +5,6 @@ import (
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/searchbar"
@@ -41,7 +40,7 @@ func (k KeyMap) ButtonKeyMap() button.KeyMap {
 	}
 }
 
-func (k KeyMap) FullHelpView() []help.KeyMapCategory {
+func (k KeyMap) HelpView() []help.KeyMapCategory {
 	binds := []help.KeyMapCategory{
 		{
 			Category: "General",
@@ -63,8 +62,8 @@ func (k KeyMap) FullHelpView() []help.KeyMapCategory {
 			},
 		},
 	}
-	binds = append(binds, k.Editor.FullHelpView()...)
-	binds = append(binds, k.FilePicker.FullHelpView()...)
+	binds = append(binds, k.Editor.HelpView()...)
+	binds = append(binds, k.FilePicker.HelpView()...)
 	return binds
 }
 
@@ -95,11 +94,11 @@ type EditorKeyMap struct {
 	Autocomplete EditorAutocompleteKeyMap
 	Diagnostic   EditorDiagnosticKeyMap
 
-	FileTree  filetree.KeyMap
+	FileTree  FileTreeKeyMap
 	SearchBar searchbar.KeyMap
 }
 
-func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
+func (k EditorKeyMap) HelpView() []help.KeyMapCategory {
 	binds := []help.KeyMapCategory{
 		{
 			Category: "Editor",
@@ -121,9 +120,10 @@ func (k EditorKeyMap) FullHelpView() []help.KeyMapCategory {
 		k.Code.HelpView(),
 		k.Autocomplete.HelpView(),
 		k.Diagnostic.HelpView(),
+		k.FileTree.HelpView(),
 	}
-	binds = append(binds, k.FileTree.FullHelpView()...)
-	binds = append(binds, k.SearchBar.FullHelpView()...)
+	binds = append(binds)
+	binds = append(binds, k.SearchBar.HelpView()...)
 	return binds
 }
 
@@ -191,6 +191,8 @@ type EditorNavigationKeyMap struct {
 	LineEnd   key.Binding
 	FileStart key.Binding
 	FileEnd   key.Binding
+
+	GoTo key.Binding
 }
 
 func (k EditorNavigationKeyMap) HelpView() help.KeyMapCategory {
@@ -213,6 +215,8 @@ func (k EditorNavigationKeyMap) HelpView() help.KeyMapCategory {
 			k.LineEnd,
 			k.FileStart,
 			k.FileEnd,
+			emptyKeyBind,
+			k.GoTo,
 		},
 	}
 }
@@ -347,6 +351,31 @@ func (k EditorDiagnosticKeyMap) HelpView() help.KeyMapCategory {
 	}
 }
 
+type FileTreeKeyMap struct {
+	SelectPrev  key.Binding
+	SelectNext  key.Binding
+	ExpandWidth key.Binding
+	ShrinkWidth key.Binding
+	Open        key.Binding
+	Refresh     key.Binding
+}
+
+func (k FileTreeKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Editor File Tree",
+		Keys: []key.Binding{
+			k.SelectPrev,
+			k.SelectNext,
+			emptyKeyBind,
+			k.ExpandWidth,
+			k.ShrinkWidth,
+			emptyKeyBind,
+			k.Open,
+			k.Refresh,
+		},
+	}
+}
+
 type KeyMapConfig struct {
 	Quit   string `toml:"quit"`
 	Help   string `toml:"help"`
@@ -472,6 +501,8 @@ type EditorKeyConfig struct {
 		LineEnd   string `toml:"line_end"`
 		FileStart string `toml:"file_start"`
 		FileEnd   string `toml:"file_end"`
+
+		GoTo string `toml:"go_to"`
 	} `toml:"navigation"`
 
 	Selection struct {
@@ -661,6 +692,11 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 				key.WithKeys(k.Navigation.FileEnd),
 				key.WithHelp(k.Navigation.FileEnd, "file end"),
 			),
+
+			GoTo: key.NewBinding(
+				key.WithKeys(k.Navigation.GoTo),
+				key.WithHelp(k.Navigation.GoTo, "go to"),
+			),
 		},
 		Selection: EditorSelectionKeyMap{
 			SelectLeft: key.NewBinding(
@@ -806,7 +842,32 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			),
 		},
 
-		FileTree:  k.FileTree.KeyMap(),
+		FileTree: FileTreeKeyMap{
+			SelectPrev: key.NewBinding(
+				key.WithKeys(k.FileTree.SelectPrev),
+				key.WithHelp(k.FileTree.SelectPrev, "select prev"),
+			),
+			SelectNext: key.NewBinding(
+				key.WithKeys(k.FileTree.SelectNext),
+				key.WithHelp(k.FileTree.SelectNext, "select next"),
+			),
+			ExpandWidth: key.NewBinding(
+				key.WithKeys(k.FileTree.ExpandWidth),
+				key.WithHelp(k.FileTree.ExpandWidth, "expand width"),
+			),
+			ShrinkWidth: key.NewBinding(
+				key.WithKeys(k.FileTree.ShrinkWidth),
+				key.WithHelp(k.FileTree.ShrinkWidth, "shrink width"),
+			),
+			Open: key.NewBinding(
+				key.WithKeys(k.FileTree.Open),
+				key.WithHelp(k.FileTree.Open, "open file or directory"),
+			),
+			Refresh: key.NewBinding(
+				key.WithKeys(k.FileTree.Refresh),
+				key.WithHelp(k.FileTree.Refresh, "refresh file tree"),
+			),
+		},
 		SearchBar: k.SearchBar.KeyMap(),
 	}
 }
@@ -818,35 +879,6 @@ type FileTreeKeyConfig struct {
 	ShrinkWidth string `toml:"shrink_width"`
 	Open        string `toml:"open"`
 	Refresh     string `toml:"refresh"`
-}
-
-func (k FileTreeKeyConfig) KeyMap() filetree.KeyMap {
-	return filetree.KeyMap{
-		SelectPrev: key.NewBinding(
-			key.WithKeys(k.SelectPrev),
-			key.WithHelp(k.SelectPrev, "select prev"),
-		),
-		SelectNext: key.NewBinding(
-			key.WithKeys(k.SelectNext),
-			key.WithHelp(k.SelectNext, "select next"),
-		),
-		ExpandWidth: key.NewBinding(
-			key.WithKeys(k.ExpandWidth),
-			key.WithHelp(k.ExpandWidth, "expand width"),
-		),
-		ShrinkWidth: key.NewBinding(
-			key.WithKeys(k.ShrinkWidth),
-			key.WithHelp(k.ShrinkWidth, "shrink width"),
-		),
-		Open: key.NewBinding(
-			key.WithKeys(k.Open),
-			key.WithHelp(k.Open, "open file or directory"),
-		),
-		Refresh: key.NewBinding(
-			key.WithKeys(k.Refresh),
-			key.WithHelp(k.Refresh, "refresh file tree"),
-		),
-	}
 }
 
 type SearchBarKeyConfig struct {

@@ -29,7 +29,33 @@ const (
 	ModeWrite
 )
 
-const ZoneFileLinePrefix = "file.line:"
+const (
+	ZoneFileLineEmptyPrefix      = "file.line.empty:"
+	ZoneFileLinePrefix           = "file.line:"
+	ZoneFileLineNumberPrefix     = "file.line.number:"
+	ZoneFileDiagnosticPrefix     = "file.diagnostic:"
+	ZoneFileLineDiagnosticPrefix = "file.line.diagnostic:"
+)
+
+func zoneFileLineEmptyID(line int) string {
+	return fmt.Sprintf("%s%s", ZoneFileLineEmptyPrefix, strconv.Itoa(line))
+}
+
+func zoneFileLineID(line int) string {
+	return fmt.Sprintf("%s%s", ZoneFileLinePrefix, strconv.Itoa(line))
+}
+
+func zoneFileLineNumberID(line int) string {
+	return fmt.Sprintf("%s%s", ZoneFileLineNumberPrefix, strconv.Itoa(line))
+}
+
+func zoneFileDiagnosticID(id int) string {
+	return fmt.Sprintf("%s%s", ZoneFileDiagnosticPrefix, strconv.Itoa(id))
+}
+
+func zoneFileLineDiagnosticID(id int) string {
+	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
+}
 
 type Change struct {
 	StartIndex  uint32
@@ -485,8 +511,8 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		borderStyle = styles.FileView.BorderStyle.Render
 	}
 
-	prefixLength := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
-	width -= prefixLength + styles.FileView.BorderStyle.GetHorizontalFrameSize() + 1
+	prefixWidth := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
+	width -= prefixWidth + styles.FileView.BorderStyle.GetHorizontalFrameSize() + 3
 
 	// debug takes up 4 lines
 	if debug {
@@ -518,21 +544,21 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		}
 
 		if ln >= f.buffer.LinesLen() {
-			editorCode += borderStyle(codeLineStyle.Render(codePrefixStyle.Render(strings.Repeat(" ", prefixLength)))) + "\n"
+			editorCode += borderStyle(zone.Mark(zoneFileLineEmptyID(ln), codeLineStyle.Render(codePrefixStyle.Render(strings.Repeat(" ", width))))) + "\n"
 			continue
 		}
 
-		lineDiagnostic := f.HighestLineDiagnostic(ln)
+		lineDiagnostic, lineDiagnosticIndex := f.HighestLineDiagnostic(ln)
 
 		var prefix string
 		if lineDiagnostic.Severity > 0 {
-			prefix = lineDiagnostic.Severity.Style().Render(lineDiagnostic.Severity.Icon().Render())
+			prefix = zone.Mark(zoneFileLineDiagnosticID(lineDiagnosticIndex), lineDiagnostic.Severity.Icon().Render())
 		} else {
 			prefix = " "
 		}
 
 		prefixLn := strconv.Itoa(ln + 1)
-		prefix += codePrefixStyle.Render(strings.Repeat(" ", prefixLength-lipgloss.Width(prefixLn)) + prefixLn)
+		prefix += zone.Mark(zoneFileLineNumberID(ln), codePrefixStyle.Render(strings.Repeat(" ", prefixWidth-lipgloss.Width(prefixLn))+prefixLn))
 
 		line := f.buffer.Line(ln)
 		if line.Len() < offsetCol {
@@ -544,7 +570,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		var colOffset int
 		var codeLine []byte
 		// always draw one character off the screen to ensure the cursor is visible
-		for ii := range width - prefixLength + 1 {
+		for ii := range width - prefixWidth + 1 {
 			col := ii + offsetCol
 
 			if col <= line.Len() {
@@ -607,7 +633,8 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
 			lineWidth := ansi.StringWidth(string(codeLine))
 			if lineWidth < width {
-				codeLine = append(codeLine, codeLineCharStyle.Render(lineDiagnostic.ShortView(codeLineStyle))...)
+				diagnosticLine := zone.Mark(zoneFileDiagnosticID(lineDiagnosticIndex), codeLineCharStyle.Render(lineDiagnostic.ShortView(codeLineStyle)))
+				codeLine = append(codeLine, diagnosticLine...)
 			}
 		}
 
@@ -616,9 +643,9 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 			codeLine = append(codeLine, codeLineCharStyle.Render(strings.Repeat(" ", width-lineWidth))...)
 		}
 
-		editorCodeLine := zone.Mark(fmt.Sprintf("%s%d", ZoneFileLinePrefix, ln), string(codeLine))
+		editorCodeLine := zone.Mark(zoneFileLineID(ln), string(codeLine))
 
-		editorCode += borderStyle(codeLineStyle.Render(prefix+editorCodeLine)) + "\n"
+		editorCode += borderStyle(codeLineStyle.Render(prefix+ansi.Truncate(editorCodeLine, width, ""))) + "\n"
 	}
 
 	f.positions = positions
@@ -629,7 +656,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
 		if diagnostic.Severity > 0 {
 			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(ctx, width, height), editorCode,
-				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
+				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+cursorCol),
 				overlay.WithMarginY(realCursorRow+1),
 			)
 		} else {
@@ -637,7 +664,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 		}
 	} else if f.autocomplete.Visible() {
 		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(ctx, width, height), editorCode,
-			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixLength+1+cursorCol),
+			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+cursorCol),
 			overlay.WithMarginY(realCursorRow+1),
 		)
 	}

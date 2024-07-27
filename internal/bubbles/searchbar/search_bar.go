@@ -36,7 +36,7 @@ type KeyMap struct {
 	Close        key.Binding
 }
 
-func (m KeyMap) FullHelpView() []help.KeyMapCategory {
+func (m KeyMap) HelpView() []help.KeyMapCategory {
 	return []help.KeyMapCategory{
 		{
 			Category: "Search",

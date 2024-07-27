@@ -109,6 +109,12 @@ var Actions = []Action{
 			return overlay.Open(NewKeyMapperOverlay())
 		},
 	},
+	{
+		Name: "Go To",
+		Run: func() tea.Cmd {
+			return file.GoTo
+		},
+	},
 }
 
 type Action struct {

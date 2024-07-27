@@ -128,7 +128,9 @@ type Diagnostic struct {
 }
 
 func (d Diagnostic) ShortView(style lipgloss.Style) string {
-	return d.Severity.Icon().Inherit(style).Render() + d.Severity.Style().PaddingLeft(1).Inherit(style).Render(strings.SplitN(d.Message, "\n", 2)[0])
+	msg := strings.SplitN(d.Message, "\n", 2)[0]
+
+	return d.Severity.Icon().Inherit(style).Render() + d.Severity.Style().PaddingLeft(1).Inherit(style).Render(msg)
 }
 
 func (d Diagnostic) View(ctx tea.Context, width int, height int) string {

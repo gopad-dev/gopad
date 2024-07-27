@@ -1,11 +1,9 @@
 package filepicker
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -43,7 +41,7 @@ type KeyMap struct {
 	Select   key.Binding
 }
 
-func (m KeyMap) FullHelpView() []help.KeyMapCategory {
+func (m KeyMap) HelpView() []help.KeyMapCategory {
 	return []help.KeyMapCategory{
 		{
 			Category: "File Picker",
@@ -104,32 +102,31 @@ var DefaultKeyMap = KeyMap{
 
 // Styles defines the possible customizations for styles in the file picker.
 type Styles struct {
-	DisabledCursor   lipgloss.Style
-	Cursor           lipgloss.Style
-	Symlink          lipgloss.Style
-	Directory        lipgloss.Style
-	File             lipgloss.Style
-	DisabledFile     lipgloss.Style
-	Permission       lipgloss.Style
 	Selected         lipgloss.Style
 	DisabledSelected lipgloss.Style
-	FileSize         lipgloss.Style
-	EmptyDirectory   lipgloss.Style
+
+	Symlink        lipgloss.Style
+	Directory      lipgloss.Style
+	EmptyDirectory lipgloss.Style
+
+	File         lipgloss.Style
+	DisabledFile lipgloss.Style
+	FileSize     lipgloss.Style
+
+	Permission lipgloss.Style
 }
 
 // DefaultStyles defines the default styling for the file picker.
 var DefaultStyles = Styles{
-	DisabledCursor:   lipgloss.NewStyle().Foreground(lipgloss.Color("247")),
-	Cursor:           lipgloss.NewStyle().Foreground(lipgloss.Color("212")),
+	Selected:         lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
+	DisabledSelected: lipgloss.NewStyle().Foreground(lipgloss.Color("247")),
 	Symlink:          lipgloss.NewStyle().Foreground(lipgloss.Color("36")),
 	Directory:        lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
+	EmptyDirectory:   lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
 	File:             lipgloss.NewStyle(),
 	DisabledFile:     lipgloss.NewStyle().Foreground(lipgloss.Color("243")),
-	DisabledSelected: lipgloss.NewStyle().Foreground(lipgloss.Color("247")),
-	Permission:       lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
-	Selected:         lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
 	FileSize:         lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(fileSizeWidth).Align(lipgloss.Right),
-	EmptyDirectory:   lipgloss.NewStyle().Foreground(lipgloss.Color("240")).PaddingLeft(paddingLeft),
+	Permission:       lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
 }
 
 type errorMsg struct {
@@ -139,20 +136,16 @@ type errorMsg struct {
 type readDirMsg struct {
 	id      int
 	entries []os.DirEntry
+	lastDir string
 }
 
-const (
-	marginBottom  = 5
-	fileSizeWidth = 7
-	paddingLeft   = 2
-)
+const fileSizeWidth = 7
 
 // New returns a new filepicker model with default styling and key bindings.
 func New() Model {
 	return Model{
 		id:               nextID(),
 		CurrentDirectory: ".",
-		Cursor:           ">",
 		AllowedTypes:     []string{},
 		selected:         0,
 		offset:           0,
@@ -195,7 +188,6 @@ type Model struct {
 	selectedStack stack
 	offsetStack   stack
 
-	Cursor string
 	Styles Styles
 }
 
@@ -231,7 +223,7 @@ func (m *Model) popView() (int, int) {
 	return m.selectedStack.Pop(), m.offsetStack.Pop()
 }
 
-func (m Model) readDir(path string, showHidden bool) tea.Cmd {
+func (m Model) readDir(path string, showHidden bool, lastDir string) tea.Cmd {
 	return func() tea.Msg {
 		dirEntries, err := os.ReadDir(path)
 		if err != nil {
@@ -246,7 +238,11 @@ func (m Model) readDir(path string, showHidden bool) tea.Cmd {
 		})
 
 		if showHidden {
-			return readDirMsg{id: m.id, entries: dirEntries}
+			return readDirMsg{
+				id:      m.id,
+				entries: dirEntries,
+				lastDir: lastDir,
+			}
 		}
 
 		var sanitizedDirEntries []os.DirEntry
@@ -257,7 +253,11 @@ func (m Model) readDir(path string, showHidden bool) tea.Cmd {
 			}
 			sanitizedDirEntries = append(sanitizedDirEntries, dirEntry)
 		}
-		return readDirMsg{id: m.id, entries: sanitizedDirEntries}
+		return readDirMsg{
+			id:      m.id,
+			entries: sanitizedDirEntries,
+			lastDir: lastDir,
+		}
 	}
 }
 
@@ -347,18 +347,26 @@ func (m *Model) refreshViewOffset(height int) {
 }
 
 // Init initializes the file picker model.
-func (m Model) Init(ctx tea.Context) tea.Cmd {
-	return m.readDir(m.CurrentDirectory, m.ShowHidden)
+func (m Model) Init(_ tea.Context) tea.Cmd {
+	return m.readDir(m.CurrentDirectory, m.ShowHidden, "")
 }
 
 // Update handles user interactions within the file picker model.
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(_ tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case readDirMsg:
 		if msg.id != m.id {
 			break
 		}
 		m.files = msg.entries
+		if msg.lastDir != "" {
+			for i, f := range m.files {
+				if f.Name() == msg.lastDir {
+					m.selected = i
+					break
+				}
+			}
+		}
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.GoToTop):
@@ -386,6 +394,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 				m.selected = len(m.files) - 1
 			}
 		case key.Matches(msg, m.KeyMap.Back):
+			base := filepath.Base(m.CurrentDirectory)
 			m.CurrentDirectory = filepath.Dir(m.CurrentDirectory)
 			if m.selectedStack.Length() > 0 {
 				m.selected, m.offset = m.popView()
@@ -393,7 +402,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 				m.selected = 0
 				m.offset = 0
 			}
-			return m, m.readDir(m.CurrentDirectory, m.ShowHidden)
+			return m, m.readDir(m.CurrentDirectory, m.ShowHidden, base)
 		case key.Matches(msg, m.KeyMap.Select), key.Matches(msg, m.KeyMap.Open):
 			if len(m.files) == 0 {
 				break
@@ -433,7 +442,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 			m.pushView(m.selected, m.offset)
 			m.selected = 0
 			m.offset = 0
-			return m, m.readDir(m.CurrentDirectory, m.ShowHidden)
+			return m, m.readDir(m.CurrentDirectory, m.ShowHidden, "")
 		}
 	}
 	return m, nil
@@ -454,61 +463,51 @@ func (m Model) View(height int) string {
 		}
 		f := m.files[fi]
 
-		var symlinkPath string
 		info, _ := f.Info()
-		isSymlink := info.Mode()&os.ModeSymlink != 0
-		size := strings.Replace(humanize.Bytes(uint64(info.Size())), " ", "", 1)
 		name := f.Name()
+		size := strings.Replace(humanize.Bytes(uint64(info.Size())), " ", "", 1)
+		disabled := !m.canSelect(name) && !f.IsDir()
 
+		var symlinkPath string
+		isSymlink := info.Mode()&os.ModeSymlink != 0
 		if isSymlink {
 			symlinkPath, _ = filepath.EvalSymlinks(filepath.Join(m.CurrentDirectory, name))
 		}
 
-		disabled := !m.canSelect(name) && !f.IsDir()
-
+		var style lipgloss.Style
 		if m.selected == fi {
-			selected := ""
-			if m.ShowPermissions {
-				selected += " " + info.Mode().String()
-			}
-			if m.ShowSize {
-				selected += fmt.Sprintf("%"+strconv.Itoa(m.Styles.FileSize.GetWidth())+"s", size)
-			}
-			selected += " " + name
-			if isSymlink {
-				selected += " → " + symlinkPath
-			}
 			if disabled {
-				s.WriteString(m.Styles.DisabledSelected.Render(m.Cursor) + m.Styles.DisabledSelected.Render(selected))
+				style = m.Styles.DisabledSelected
 			} else {
-				s.WriteString(m.Styles.Cursor.Render(m.Cursor) + m.Styles.Selected.Render(selected))
+				style = m.Styles.Selected
 			}
-			s.WriteRune('\n')
-			continue
 		}
 
-		style := m.Styles.File
-		switch {
-		case f.IsDir():
-			style = m.Styles.Directory
-		case isSymlink:
-			style = m.Styles.Symlink
-		case disabled:
-			style = m.Styles.DisabledFile
-		}
-
-		fileName := style.Render(name)
-		s.WriteString(m.Styles.Cursor.Render(" "))
-		if isSymlink {
-			fileName += " → " + symlinkPath
-		}
+		var line string
 		if m.ShowPermissions {
-			s.WriteString(" " + m.Styles.Permission.Render(info.Mode().String()))
+			line += style.Inherit(m.Styles.Permission).Render(info.Mode().String())
 		}
 		if m.ShowSize {
-			s.WriteString(m.Styles.FileSize.Render(size))
+			line += style.Inherit(m.Styles.FileSize).Render(size)
 		}
-		s.WriteString(" " + fileName)
+
+		fileStyle := m.Styles.File
+		switch {
+		case f.IsDir():
+			fileStyle = m.Styles.Directory
+		case isSymlink:
+			fileStyle = m.Styles.Symlink
+		case disabled:
+			fileStyle = m.Styles.DisabledFile
+		}
+		if isSymlink {
+			name += " → " + symlinkPath
+		}
+		line += style.Inherit(fileStyle).Render(" ", name)
+
+		s.WriteString(style.Render(" "))
+		s.WriteString(line)
+		s.WriteString(style.Render(" "))
 		s.WriteRune('\n')
 	}
 

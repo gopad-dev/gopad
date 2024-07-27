@@ -194,6 +194,12 @@ type FocusFileMsg struct {
 	Name string
 }
 
+func BlurFile() tea.Msg {
+	return BlurFileMsg{}
+}
+
+type BlurFileMsg struct{}
+
 func NewFile(name string) tea.Cmd {
 	return func() tea.Msg {
 		return NewFileMsg{
@@ -217,3 +223,9 @@ func RenameFile(name string) tea.Cmd {
 type RenameFileMsg struct {
 	Name string
 }
+
+func GoTo() tea.Msg {
+	return GoToMsg{}
+}
+
+type GoToMsg struct{}

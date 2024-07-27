@@ -30,12 +30,12 @@ open_folder = 'alt+o'
 close = 'ctrl+w'
 
 new = 'ctrl+n'
-rename = 'ctrl+r'
+rename = 'f5'
 save = 'ctrl+s'
-delete = 'ctrl+g'
+delete = 'f6'
 
-next_file = 'alt+right'
-prev_file = 'alt+left'
+next = 'alt+right'
+prev = 'alt+left'
 
 [editor.navigation]
 character_left = 'left'
@@ -54,6 +54,8 @@ line_start = 'home'
 line_end = 'end'
 file_start = 'ctrl+home'
 file_end = 'ctrl+end'
+
+go_to = 'ctrl+g'
 
 [editor.selection]
 select_left = 'shift+left'

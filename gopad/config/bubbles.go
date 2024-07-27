@@ -1,16 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -81,24 +78,6 @@ func NewNotifications() notifications.Model {
 	n.Styles = Theme.UI.NotificationStyle
 	n.Margin = 1
 	return n
-}
-
-func NewFileTree(openFile func(name string) tea.Cmd, languageIconFunc func(name string) lipgloss.Style) filetree.Model {
-	ft := filetree.New()
-	ft.Styles = Theme.UI.FileTree
-	ft.KeyMap = Keys.Editor.FileTree
-	ft.EmptyText = fmt.Sprintf("No folder open.\n\nPress '%s' to open a folder.", Keys.Editor.File.OpenFolder.Help().Key)
-	ft.OpenFile = openFile
-	ft.Icons = filetree.Icons{
-		RootDir:          Theme.Icons.RootDir,
-		Dir:              Theme.Icons.Dir,
-		OpenDir:          Theme.Icons.OpenDir,
-		File:             Theme.Icons.File,
-		LanguageIconFunc: languageIconFunc,
-	}
-	ft.Ignored = Gopad.FileTree.Ignored
-
-	return ft
 }
 
 func NewSearchBar(onSelect func(result searchbar.Result) tea.Cmd, onBlur tea.Cmd) searchbar.Model {

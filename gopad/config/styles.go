@@ -6,7 +6,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
-	"go.gopad.dev/gopad/internal/bubbles/filetree"
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -62,7 +61,7 @@ type UiStyles struct {
 	AppBar  AppBarStyles
 	CodeBar CodeBarStyles
 
-	FileTree filetree.Styles
+	FileTree FileTreeStyles
 	FileView FileViewStyles
 
 	SearchBar     searchbar.Styles
@@ -90,6 +89,14 @@ type AppBarFilesStyle struct {
 	Style             lipgloss.Style
 	FileStyle         lipgloss.Style
 	SelectedFileStyle lipgloss.Style
+}
+
+type FileTreeStyles struct {
+	Style                       lipgloss.Style
+	EmptyStyle                  lipgloss.Style
+	EntryStyle                  lipgloss.Style
+	EntrySelectedStyle          lipgloss.Style
+	EntrySelectedUnfocusedStyle lipgloss.Style
 }
 
 type FileViewStyles struct {
@@ -133,7 +140,7 @@ type EditorStyles struct {
 	CodeBarStyle       lipgloss.Style
 	CodeInlayHintStyle lipgloss.Style
 
-	FileTree      filetree.Styles
+	FileTree      FileTreeStyles
 	SearchBar     searchbar.Styles
 	List          list.Styles
 	Diagnostics   DiagnosticStyles

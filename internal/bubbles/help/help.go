@@ -15,10 +15,10 @@ import (
 // Note that if a key is disabled (via key.Binding.SetEnabled) it will not be
 // rendered in the help view, so in theory generated help should self-manage.
 type KeyMap interface {
-	// FullHelpView returns an extended group of help items, grouped by columns.
+	// HelpView returns an extended group of help items, grouped by columns.
 	// The help bubble will render the help in the order in which the help
 	// items are returned here.
-	FullHelpView() []KeyMapCategory
+	HelpView() []KeyMapCategory
 }
 
 type KeyMapCategory struct {
@@ -28,19 +28,12 @@ type KeyMapCategory struct {
 
 // Styles is a set of available style definitions for the Help bubble.
 type Styles struct {
-	Ellipsis lipgloss.Style
-
-	Header lipgloss.Style
-
-	// Styling for the short help
-	ShortKey       lipgloss.Style
-	ShortDesc      lipgloss.Style
-	ShortSeparator lipgloss.Style
-
-	// Styling for the full help
-	FullKey       lipgloss.Style
-	FullDesc      lipgloss.Style
-	FullSeparator lipgloss.Style
+	Ellipsis  lipgloss.Style
+	Group     lipgloss.Style
+	Header    lipgloss.Style
+	Key       lipgloss.Style
+	Desc      lipgloss.Style
+	Separator lipgloss.Style
 }
 
 var (
@@ -61,35 +54,22 @@ var (
 )
 
 var DefaultStyles = Styles{
-	Header:         lipgloss.NewStyle().Reverse(true).AlignHorizontal(lipgloss.Center),
-	ShortKey:       keyStyle,
-	ShortDesc:      descStyle,
-	ShortSeparator: sepStyle,
-	Ellipsis:       sepStyle,
-	FullKey:        keyStyle,
-	FullDesc:       descStyle,
-	FullSeparator:  sepStyle,
+	Header:    lipgloss.NewStyle().Reverse(true).AlignHorizontal(lipgloss.Center),
+	Ellipsis:  sepStyle,
+	Key:       keyStyle,
+	Desc:      descStyle,
+	Separator: sepStyle,
 }
 
 // Model contains the state of the help view.
 type Model struct {
-	ShortSeparator string
-	FullSeparator  string
-
-	// The symbol we use in the short help when help items have been truncated
-	// due to width. Periods of ellipsis by default.
-	Ellipsis string
-
 	Styles Styles
 }
 
 // New creates a new help view with some useful defaults.
 func New() Model {
 	return Model{
-		ShortSeparator: " • ",
-		FullSeparator:  "    ",
-		Ellipsis:       "…",
-		Styles:         DefaultStyles,
+		Styles: DefaultStyles,
 	}
 }
 
@@ -98,31 +78,15 @@ func (m Model) Update(_ tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the help view's current state.
-func (m Model) View(width int, height int, k KeyMap) string {
-	return m.FullHelpView(width, height, k.FullHelpView())
-}
-
-// FullHelpView renders help columns from a slice of key binding slices. Each
-// top level slice entry renders into a column.
-func (m Model) FullHelpView(width int, height int, groups []KeyMapCategory) string {
+// View renders help columns from a slice of key binding slices. Each top level slice entry renders into a column.
+func (m Model) View(k KeyMap, width int, height int) string {
+	groups := k.HelpView()
 	if len(groups) == 0 {
 		return ""
 	}
 
-	// Linter note: at this time we don't think it's worth the additional
-	// code complexity involved in preallocating this slice.
-	//nolint:prealloc
-	var (
-		out []string
-
-		totalWidth int
-		sep        = m.Styles.FullSeparator.Render(m.FullSeparator)
-		sepWidth   = lipgloss.Width(sep)
-	)
-
-	// Iterate over groups to build columns
-	for i, group := range groups {
+	var outs []string
+	for _, group := range groups {
 		if !shouldRenderColumn(group) {
 			continue
 		}
@@ -137,41 +101,42 @@ func (m Model) FullHelpView(width int, height int, groups []KeyMapCategory) stri
 			if !kb.Enabled() {
 				continue
 			}
-			keys = append(keys, kb.Help().Key)
-			descriptions = append(descriptions, kb.Help().Desc)
+			keys = append(keys, " "+kb.Help().Key)
+			descriptions = append(descriptions, kb.Help().Desc+" ")
 		}
 
 		col := lipgloss.JoinHorizontal(lipgloss.Top,
-			m.Styles.FullKey.Render(strings.Join(keys, "\n")),
-			m.Styles.FullKey.Render(" "),
-			m.Styles.FullDesc.Render(strings.Join(descriptions, "\n")),
+			m.Styles.Key.Render(strings.Join(keys, "\n")),
+			m.Styles.Key.Render(" "),
+			m.Styles.Desc.Render(strings.Join(descriptions, "\n")),
 		)
 
-		colWidth := lipgloss.Width(col)
-		colHeader := m.Styles.Header.Width(colWidth).Render(group.Category)
+		colHeader := m.Styles.Header.Width(lipgloss.Width(col)).Render(group.Category)
 
 		col = lipgloss.JoinVertical(lipgloss.Left, colHeader, col)
 
-		// Column
-		totalWidth += colWidth
-		if width > 0 && totalWidth > width {
-			break
-		}
-
-		out = append(out, col)
-
-		// Separator
-		if i < len(group.Keys)-1 {
-			totalWidth += sepWidth
-			if width > 0 && totalWidth > width {
-				break
-			}
-		}
-
-		out = append(out, sep)
+		outs = append(outs, m.Styles.Group.Render(col))
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, out...)
+	var cols []string
+	var col string
+	var colCount int
+	for _, out := range outs {
+		if lipgloss.Height(col)+lipgloss.Height(out) > height || colCount >= 3 {
+			cols = append(cols, col)
+			col = ""
+			colCount = 0
+		}
+
+		col = lipgloss.JoinVertical(lipgloss.Left, col, out)
+		colCount++
+	}
+
+	if col != "" {
+		cols = append(cols, col)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
 
 func shouldRenderColumn(b KeyMapCategory) (ok bool) {

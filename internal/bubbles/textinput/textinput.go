@@ -9,8 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/runeutil"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	rw "github.com/mattn/go-runewidth"
-	"github.com/rivo/uniseg"
+	"github.com/charmbracelet/x/ansi"
 
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 )
@@ -96,6 +95,8 @@ var DefaultKeyMap = KeyMap{
 }
 
 type Styles struct {
+	PromptCharacter    string
+	EchoCharacter      string
 	PromptStyle        lipgloss.Style
 	FocusedPromptStyle lipgloss.Style
 	TextStyle          lipgloss.Style
@@ -103,6 +104,8 @@ type Styles struct {
 }
 
 var DefaultStyles = Styles{
+	PromptCharacter:  "> ",
+	EchoCharacter:    "*",
 	PromptStyle:      lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
 	PlaceholderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
 }
@@ -110,12 +113,10 @@ var DefaultStyles = Styles{
 // New creates a new model with default settings.
 func New() Model {
 	return Model{
-		Prompt:        "> ",
-		EchoCharacter: '*',
-		CharLimit:     0,
-		Styles:        DefaultStyles,
-		Cursor:        cursor.New(),
-		KeyMap:        DefaultKeyMap,
+		CharLimit: 0,
+		Styles:    DefaultStyles,
+		Cursor:    cursor.New(),
+		KeyMap:    DefaultKeyMap,
 
 		value: nil,
 		focus: false,
@@ -128,11 +129,9 @@ type Model struct {
 	Err error
 
 	// General settings.
-	Prompt        string
-	Placeholder   string
-	EchoMode      EchoMode
-	EchoCharacter rune
-	Cursor        cursor.Model
+	Placeholder string
+	EchoMode    EchoMode
+	Cursor      cursor.Model
 
 	// Styles. These will be applied as inline config.Styles.
 	//
@@ -324,7 +323,7 @@ func (m *Model) insertRunesFromUserInput(v []rune) {
 // If a max width is defined, perform some logic to treat the visible area
 // as a horizontally scrolling viewport.
 func (m *Model) handleOverflow() {
-	if m.Width <= 0 || uniseg.StringWidth(string(m.value)) <= m.Width {
+	if m.Width <= 0 || ansi.StringWidth(string(m.value)) <= m.Width {
 		m.offset = 0
 		m.offsetRight = len(m.value)
 		return
@@ -341,7 +340,7 @@ func (m *Model) handleOverflow() {
 		runes := m.value[m.offset:]
 
 		for i < len(runes) && w <= m.Width {
-			w += rw.RuneWidth(runes[i])
+			w += ansi.StringWidth(string(runes[i]))
 			if w <= m.Width+1 {
 				i++
 			}
@@ -356,7 +355,7 @@ func (m *Model) handleOverflow() {
 		i := len(runes) - 1
 
 		for i > 0 && w < m.Width {
-			w += rw.RuneWidth(runes[i])
+			w += ansi.StringWidth(string(runes[i]))
 			if w <= m.Width {
 				i--
 			}
@@ -433,7 +432,7 @@ func (m *Model) wordForward() {
 func (m Model) echoTransform(v string) string {
 	switch m.EchoMode {
 	case EchoPassword:
-		return strings.Repeat(string(m.EchoCharacter), uniseg.StringWidth(v))
+		return strings.Repeat(m.Styles.EchoCharacter, ansi.StringWidth(v))
 	case EchoNone:
 		return ""
 	case EchoNormal:
@@ -539,7 +538,7 @@ func (m Model) View(ctx tea.Context) string {
 
 	// If a max width and background color were set fill the empty spaces with
 	// the background color.
-	valWidth := uniseg.StringWidth(string(value))
+	valWidth := ansi.StringWidth(string(value))
 	if m.Width > 0 && valWidth <= m.Width {
 		padding := max(0, m.Width-valWidth)
 		if valWidth+padding <= m.Width && pos < len(value) {
@@ -553,9 +552,9 @@ func (m Model) View(ctx tea.Context) string {
 
 func (m Model) viewPrompt() string {
 	if m.Focused() {
-		return m.Styles.FocusedPromptStyle.Render(m.Prompt)
+		return m.Styles.FocusedPromptStyle.Render(m.Styles.PromptCharacter)
 	}
-	return m.Styles.PromptStyle.Render(m.Prompt)
+	return m.Styles.PromptStyle.Render(m.Styles.PromptCharacter)
 }
 
 func (m Model) placeholderView() string {

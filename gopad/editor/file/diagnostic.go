@@ -38,33 +38,37 @@ func (f *File) ClearDiagnosticsByType(dType ls.DiagnosticType) {
 }
 
 func (f *File) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
-	pos := buffer.Position{Row: row, Col: col}
+	p := buffer.Position{Row: row, Col: col}
 
 	var diagnostics []ls.Diagnostic
 	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) {
+		if diag.Range.Contains(p) {
 			diagnostics = append(diagnostics, diag)
 		}
 	}
 	return diagnostics
 }
 
-func (f *File) HighestLineDiagnostic(row int) ls.Diagnostic {
-	var diagnostic ls.Diagnostic
-	for _, diag := range f.diagnostics {
+func (f *File) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
+	var (
+		diagnostic ls.Diagnostic
+		index      int
+	)
+	for i, diag := range f.diagnostics {
 		if diag.Range.ContainsRow(row) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
+			index = i
 		}
 	}
-	return diagnostic
+	return diagnostic, index
 }
 
 func (f *File) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
-	pos := buffer.Position{Row: row, Col: col}
+	p := buffer.Position{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic
 	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
+		if diag.Range.Contains(p) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
 		}
 	}
@@ -73,11 +77,11 @@ func (f *File) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 }
 
 func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
-	pos := buffer.Position{Row: row, Col: col}
+	p := buffer.Position{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic
 	for _, diag := range f.diagnostics {
-		if diag.Range.Contains(pos) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
+		if diag.Range.Contains(p) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
 			diagnostic = diag
 		}
 	}
@@ -87,6 +91,10 @@ func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col 
 	}
 
 	return diagnostic.Severity.CharStyle().Inherit(style)
+}
+
+func (f *File) ShowsCurrentDiagnostic() bool {
+	return f.showCurrentDiagnostic
 }
 
 func (f *File) ShowCurrentDiagnostic() {

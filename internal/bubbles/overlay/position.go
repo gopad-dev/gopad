@@ -5,9 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
+	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/muesli/reflow/ansi"
-	"github.com/muesli/reflow/truncate"
 )
 
 func PlacePosition(xPos lipgloss.Position, yPos lipgloss.Position, fg string, bg string, opts ...Option) string {
@@ -45,7 +44,7 @@ func Place(x int, y int, fg string, bg string) string {
 
 		pos := 0
 		if x > 0 {
-			left := truncate.String(bgLine, uint(x))
+			left := xansi.Truncate(bgLine, x, "")
 			pos = lipgloss.Width(left)
 			b.WriteString(left)
 			if pos < x {
@@ -139,7 +138,7 @@ func cutLeft(s string, cutWidth int) string {
 				}
 			}
 		} else {
-			w = runewidth.RuneWidth(c)
+			w = xansi.StringWidth(string(c))
 		}
 
 		if pos >= cutWidth {

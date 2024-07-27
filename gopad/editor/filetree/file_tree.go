@@ -12,13 +12,28 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
-	"github.com/mattn/go-runewidth"
 
-	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
+
+const (
+	zoneID       = "file_tree"
+	zoneIDPrefix = "file_tree:"
+)
+
+func fileIconByFileNameFunc(name string) lipgloss.Style {
+	language := file.GetLanguageByFilename(name)
+	var languageName string
+	if language != nil {
+		languageName = language.Name
+	}
+	return config.Theme.Icons.FileIcon(languageName)
+}
 
 type Entry struct {
 	Name     string
@@ -50,114 +65,21 @@ func Refresh() tea.Msg {
 
 type refreshMsg struct{}
 
-type Styles struct {
-	Style                       lipgloss.Style
-	EmptyStyle                  lipgloss.Style
-	EntryPrefixStyle            lipgloss.Style
-	EntryStyle                  lipgloss.Style
-	EntrySelectedStyle          lipgloss.Style
-	EntrySelectedUnfocusedStyle lipgloss.Style
-}
-
-var DefaultStyles = Styles{
-	Style:                       lipgloss.NewStyle().MarginRight(1),
-	EmptyStyle:                  lipgloss.NewStyle().Align(lipgloss.Center, lipgloss.Center),
-	EntryPrefixStyle:            lipgloss.NewStyle().Faint(true),
-	EntryStyle:                  lipgloss.NewStyle(),
-	EntrySelectedStyle:          lipgloss.NewStyle().Reverse(true),
-	EntrySelectedUnfocusedStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#666")).Reverse(true),
-}
-
-type KeyMap struct {
-	SelectPrev  key.Binding
-	SelectNext  key.Binding
-	ExpandWidth key.Binding
-	ShrinkWidth key.Binding
-	Open        key.Binding
-	Refresh     key.Binding
-}
-
-func (m KeyMap) FullHelpView() []help.KeyMapCategory {
-	return []help.KeyMapCategory{
-		{
-			Category: "File Tree",
-			Keys: []key.Binding{
-				m.SelectPrev,
-				m.SelectNext,
-				m.ExpandWidth,
-				m.ShrinkWidth,
-				m.Open,
-			},
-		},
-	}
-}
-
-var DefaultKeyMap = KeyMap{
-	SelectPrev: key.NewBinding(
-		key.WithKeys("up"),
-		key.WithHelp("up", "select previous entry"),
-	),
-	SelectNext: key.NewBinding(
-		key.WithKeys("down"),
-		key.WithHelp("down", "select next entry"),
-	),
-	ExpandWidth: key.NewBinding(
-		key.WithKeys("ctrl+right"),
-		key.WithHelp("ctrl+right", "expand width"),
-	),
-	ShrinkWidth: key.NewBinding(
-		key.WithKeys("ctrl+left"),
-		key.WithHelp("ctrl+left", "shrink width"),
-	),
-	Open: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "open file or directory"),
-	),
-	Refresh: key.NewBinding(
-		key.WithKeys("ctrl+r"),
-		key.WithHelp("ctrl+r", "refresh file tree"),
-	),
-}
-
-type Icons struct {
-	RootDir          lipgloss.Style
-	Dir              lipgloss.Style
-	OpenDir          lipgloss.Style
-	File             lipgloss.Style
-	LanguageIconFunc func(string) lipgloss.Style
-}
-
-var DefaultIcons = Icons{
-	RootDir: lipgloss.NewStyle().SetString("📁"),
-	Dir:     lipgloss.NewStyle().SetString("'📂'"),
-	OpenDir: lipgloss.NewStyle().SetString("📁"),
-	File:    lipgloss.NewStyle().SetString("📄"),
-}
-
 func New() Model {
 	return Model{
-		Width:      24,
-		Styles:     DefaultStyles,
-		KeyMap:     DefaultKeyMap,
-		Icons:      DefaultIcons,
-		EmptyText:  "No folder open",
-		zonePrefix: zone.NewPrefix(),
+		Width:     24,
+		EmptyText: "No folder open",
 	}
 }
 
 type Model struct {
-	entry      *Entry
-	focus      bool
-	show       bool
-	offset     int
-	Width      int
-	Styles     Styles
-	Icons      Icons
-	KeyMap     KeyMap
-	EmptyText  string
-	Ignored    []string
-	OpenFile   func(string) tea.Cmd
-	zonePrefix string
+	entry     *Entry
+	focus     bool
+	show      bool
+	offset    int
+	Width     int
+	EmptyText string
+	Ignored   []string
 }
 
 func (m *Model) Open(name string) error {
@@ -357,11 +279,7 @@ func (m *Model) Selected() *Entry {
 }
 
 func (m Model) zoneEntryID(i int) string {
-	return fmt.Sprintf("file_tree:%s:%d", m.zonePrefix, i)
-}
-
-func (m Model) zoneID() string {
-	return fmt.Sprintf("file_tree:%s", m.zonePrefix)
+	return fmt.Sprintf("%s%d", zoneIDPrefix, i)
 }
 
 func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
@@ -373,18 +291,37 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, notifications.Add("Error updating file tree: "+err.Error()))
 		}
 		return m, tea.Batch(cmds...)
-	case tea.MouseUpMsg:
-		zonePrefix := fmt.Sprintf("file_tree:%s:", m.zonePrefix)
-		for _, z := range zone.GetPrefix(zonePrefix) {
+	case tea.MouseDownMsg:
+		for _, z := range zone.GetPrefix(zoneIDPrefix) {
 			switch {
 			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zonePrefix))
+				if !m.Focused() {
+					m.Focus()
+					cmds = append(cmds, file.BlurFile)
+				}
+
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
+				m.selectIndex(i)
+
+				return m, tea.Batch(cmds...)
+			}
+		}
+	case tea.MouseUpMsg:
+		for _, z := range zone.GetPrefix(zoneIDPrefix) {
+			switch {
+			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+				if !m.Focused() {
+					m.Focus()
+					cmds = append(cmds, file.BlurFile)
+				}
+
+				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
 				entry := m.selectIndex(i)
 
 				if entry.IsDir {
 					entry.Open = !entry.Open
 				} else {
-					cmds = append(cmds, m.OpenFile(entry.Path))
+					cmds = append(cmds, file.OpenFile(entry.Path))
 				}
 
 				return m, tea.Batch(cmds...)
@@ -392,32 +329,40 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 		}
 	case tea.MouseWheelMsg:
 		switch {
-		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelUp):
+		case mouse.Matches(tea.MouseEvent(msg), zoneID, tea.MouseWheelUp):
+			if !m.Focused() {
+				m.Focus()
+				cmds = append(cmds, file.BlurFile)
+			}
 			m.SelectPrev()
-			return m, nil
-		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseWheelDown):
+			return m, tea.Batch(cmds...)
+		case mouse.Matches(tea.MouseEvent(msg), zoneID, tea.MouseWheelDown):
+			if !m.Focused() {
+				m.Focus()
+				cmds = append(cmds, file.BlurFile)
+			}
 			m.SelectNext()
-			return m, nil
+			return m, tea.Batch(cmds...)
 		}
 	case tea.KeyMsg:
-		if m.focus {
+		if m.Focused() {
 			switch {
-			case key.Matches(msg, m.KeyMap.Refresh):
+			case key.Matches(msg, config.Keys.Editor.FileTree.Refresh):
 				cmds = append(cmds, Refresh)
-			case key.Matches(msg, m.KeyMap.Open):
+			case key.Matches(msg, config.Keys.Editor.FileTree.Open):
 				selected := m.Selected()
 				if selected.IsDir {
 					selected.Open = !selected.Open
 				} else {
-					cmds = append(cmds, m.OpenFile(selected.Path))
+					cmds = append(cmds, file.OpenFile(selected.Path))
 				}
-			case key.Matches(msg, m.KeyMap.SelectNext):
+			case key.Matches(msg, config.Keys.Editor.FileTree.SelectNext):
 				m.SelectNext()
-			case key.Matches(msg, m.KeyMap.SelectPrev):
+			case key.Matches(msg, config.Keys.Editor.FileTree.SelectPrev):
 				m.SelectPrev()
-			case key.Matches(msg, m.KeyMap.ExpandWidth):
+			case key.Matches(msg, config.Keys.Editor.FileTree.ExpandWidth):
 				m.Width++
-			case key.Matches(msg, m.KeyMap.ShrinkWidth):
+			case key.Matches(msg, config.Keys.Editor.FileTree.ShrinkWidth):
 				if m.Width > 6 {
 					m.Width--
 				}
@@ -437,7 +382,7 @@ func (m *Model) refreshViewOffset(selected int, height int) {
 
 func (m Model) View(height int) string {
 	if m.entry == nil {
-		return m.Styles.Style.Render(m.Styles.EmptyStyle.Height(height).Width(m.Width).Render(m.EmptyText))
+		return config.Theme.UI.FileTree.Style.Render(config.Theme.UI.FileTree.EmptyStyle.Height(height).Width(m.Width).Render(m.EmptyText))
 	}
 
 	var i int
@@ -476,46 +421,42 @@ func (m Model) View(height int) string {
 
 	tree = strings.TrimSuffix(tree, "\n")
 
-	return zone.Mark(m.zoneID(), m.Styles.Style.Height(height).Width(m.Width).Render(tree))
+	return zone.Mark(zoneID, config.Theme.UI.FileTree.Style.Height(height).Width(m.Width).Render(tree))
 }
 
 func (m Model) entryView(e *Entry, i int, indent string) string {
 	var icon lipgloss.Style
-
 	if e.IsDir {
 		if indent == "" {
-			icon = m.Icons.RootDir
+			icon = config.Theme.Icons.RootDir
+		} else if e.Open {
+			icon = config.Theme.Icons.OpenDir
 		} else {
-			if e.Open {
-				icon = m.Icons.OpenDir
-			} else {
-				icon = m.Icons.Dir
-			}
+			icon = config.Theme.Icons.Dir
 		}
 	} else {
-		if m.Icons.LanguageIconFunc != nil {
-			icon = m.Icons.LanguageIconFunc(e.Name)
-		}
+		icon = fileIconByFileNameFunc(e.Name)
 		if icon.String() == "" {
-			icon = m.Icons.File
+			icon = config.Theme.Icons.File
 		}
 	}
 
-	line := indent + icon.Render() + " " + e.Name
-	if runewidth.StringWidth(line) > m.Width {
-		line = runewidth.Truncate(line, m.Width, "…")
-	} else {
-		line += strings.Repeat(" ", m.Width-lipgloss.Width(line))
-	}
-
+	entryStyle := config.Theme.UI.FileTree.EntryStyle
 	if e.Selected {
 		if m.Focused() {
-			line = m.Styles.EntrySelectedStyle.Render(line)
+			entryStyle = config.Theme.UI.FileTree.EntrySelectedStyle
 		} else {
-			line = m.Styles.EntrySelectedUnfocusedStyle.Render(line)
+			entryStyle = config.Theme.UI.FileTree.EntrySelectedUnfocusedStyle
 		}
+	}
+
+	icon = entryStyle.Inherit(icon).SetString(icon.String())
+
+	line := entryStyle.Render(indent) + icon.Render() + entryStyle.Render(" "+e.Name)
+	if ansi.StringWidth(line) > m.Width {
+		line = ansi.Truncate(line, m.Width, entryStyle.Render("…"))
 	} else {
-		line = m.Styles.EntryStyle.Render(line)
+		line += entryStyle.Render(strings.Repeat(" ", m.Width-lipgloss.Width(line)))
 	}
 
 	return zone.Mark(m.zoneEntryID(i), line)

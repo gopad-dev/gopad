@@ -31,9 +31,9 @@ subtext = "8"
 primary = "6"
 primary_selected = "14"
 
-
+# Icon configuration
 [icons]
-root_dir = { icon = 0xef81 }
+root_dir = { icon = 0xef81, style = { foreground = '$red' } }
 dir = { icon = 0xf024b }
 open_dir = { icon = 0xf0770 }
 file = { icon = 0xea7b }
@@ -45,14 +45,15 @@ hint = { icon = 0xf06e8, style = { foreground = '$cyan' } }
 
 unknown_type = { icon = 0xeb63 }
 
+# File Icon configuration
 [icons.files]
-"go" = { icon = 0xe627 }
-"go-mod" = { icon = 0xe627 }
-"go-sum" = { icon = 0xe627 }
-"go-work" = { icon = 0xe627 }
-"go-template" = { icon = 0xe627 }
-"templ" = { icon = 0xe627 }
-"toml" = { icon = 0xe6b2 }
+"go" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
+"go-mod" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"go-sum" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"go-work" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"go-template" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"templ" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"toml" = { icon = 0xe6b2, style = { foreground = '$bright_red' } }
 "query" = { icon = 0xe21c }
 "markdown" = { icon = 0xf0354 }
 "comment" = { icon = 0xf075 }
@@ -86,6 +87,7 @@ unknown_type = { icon = 0xeb63 }
 "requirements" = { icon = 0xf0320 }
 "javascript" = { icon = 0xf031e }
 
+# Type Icon configuration
 [icons.types]
 "text" = { icon = 0xeb8d, style = { foreground = '$bright_green' } }
 "method" = { icon = 0xea8c, style = { foreground = '$bright_cyan' } }
@@ -115,36 +117,47 @@ unknown_type = { icon = 0xeb63 }
 
 # UI Style configuration
 [ui]
+text = { foreground = '$text' }
+subtext = { foreground = '$subtext' }
+
+# App Bar Style configuration
 [ui.app_bar]
 style = { foreground = '$primary', reverse = true }
 title = { foreground = '$primary', reverse = true }
 
+# App Bar File Style configuration
 [ui.app_bar.files]
 style = { }
 file = { foreground = '$primary_selected', reverse = true }
 selected_file = { foreground = '$primary_selected', reverse = true }
 
+# Code Bar Style configuration
 [ui.code_bar]
 style = { foreground = '$primary', reverse = true }
 
+# General Menu Style configuration
 [ui.menu]
 style = { border_foreground = '$primary' }
-title = { foreground = '$text', background = '$mantle' }
+title = { foreground = '$primary', reverse = true }
 content = { foreground = '$text' }
 
 entry = { foreground = '$text' }
 selected_entry = { foreground = '$primary_selected', reverse = true }
 selected_entry_unfocused = { foreground = '$primary', reverse = true }
 
+# Basic Overlay Style configuration
 [ui.overlay]
 style = { background = '$surface0' }
 
-[ui.cursor]
-block = { foreground = '$red', reverse = true }
-underline = { underline = true, underline_color = '$red' }
-
+# File Tree Style configuration
 [ui.file_tree]
+style = { foreground = '$text' }
+empty = { foreground = '$subtext' }
+entry = { foreground = '$text' }
+selected_entry = { foreground = '$primary_selected', reverse = true }
+selected_entry_unfocused = { foreground = '$primary', reverse = true }
 
+# The Main Editor Style configuration
 [ui.file_view]
 style = { background = '$base', foreground = '$text' }
 empty = { foreground = '$subtext' }
@@ -160,6 +173,38 @@ current_line_char = { background = '$overlay0' }
 
 selection = { reverse = true }
 inlay_hint = { foreground = '$subtext', background = '$overlay0', italic = true, bold = true }
+
+# File Picker Style configuration
+[ui.file_picker]
+cursor = { foreground = '$primary' }
+disabled_cursor = { foreground = '$subtext' }
+
+selected = { foreground = '$primary_selected', reverse = true }
+disabled_selected = { foreground = '$subtext' }
+
+symlink = { foreground = '$cyan' }
+directory = { foreground = '$green' }
+empty_directory = { foreground = '$subtext' }
+
+file = { foreground = '$text' }
+disabled_file = { foreground = '$subtext' }
+file_size = { foreground = '$subtext' }
+
+permission = { foreground = '$yellow' }
+
+# Text Input Style configuration
+[ui.text_input]
+prompt_char = '$ '
+echo_char = '*'
+prompt = { foreground = '$primary' }
+focused_prompt = { foreground = '$primary_selected' }
+text = { foreground = '$text' }
+placeholder = { foreground = '$subtext' }
+
+# Cursor Style configuration
+[ui.cursor]
+block = { foreground = '$red', reverse = true }
+underline = { underline = true, underline_color = '$red' }
 
 # Diagnostic Style configuration
 [diagnostic]
