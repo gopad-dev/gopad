@@ -7,7 +7,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/help"
 	"go.gopad.dev/gopad/internal/bubbles/list"
-	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
@@ -95,11 +94,11 @@ type EditorKeyMap struct {
 	Diagnostic   EditorDiagnosticKeyMap
 
 	FileTree  FileTreeKeyMap
-	SearchBar searchbar.KeyMap
+	SearchBar SearchbarKeyMap
 }
 
 func (k EditorKeyMap) HelpView() []help.KeyMapCategory {
-	binds := []help.KeyMapCategory{
+	return []help.KeyMapCategory{
 		{
 			Category: "Editor",
 			Keys: []key.Binding{
@@ -121,10 +120,8 @@ func (k EditorKeyMap) HelpView() []help.KeyMapCategory {
 		k.Autocomplete.HelpView(),
 		k.Diagnostic.HelpView(),
 		k.FileTree.HelpView(),
+		k.SearchBar.HelpView(),
 	}
-	binds = append(binds)
-	binds = append(binds, k.SearchBar.HelpView()...)
-	return binds
 }
 
 func (k EditorKeyMap) TextInputKeyMap() textinput.KeyMap {
@@ -372,6 +369,27 @@ func (k FileTreeKeyMap) HelpView() help.KeyMapCategory {
 			emptyKeyBind,
 			k.Open,
 			k.Refresh,
+		},
+	}
+}
+
+type SearchbarKeyMap struct {
+	SelectPrev key.Binding
+	SelectNext key.Binding
+
+	SelectResult key.Binding
+	Close        key.Binding
+}
+
+func (k SearchbarKeyMap) HelpView() help.KeyMapCategory {
+	return help.KeyMapCategory{
+		Category: "Searchbar",
+		Keys: []key.Binding{
+			k.SelectPrev,
+			k.SelectNext,
+			emptyKeyBind,
+			k.SelectResult,
+			k.Close,
 		},
 	}
 }
@@ -868,7 +886,24 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 				key.WithHelp(k.FileTree.Refresh, "refresh file tree"),
 			),
 		},
-		SearchBar: k.SearchBar.KeyMap(),
+		SearchBar: SearchbarKeyMap{
+			SelectPrev: key.NewBinding(
+				key.WithKeys(k.SearchBar.SelectPrev),
+				key.WithHelp(k.SearchBar.SelectPrev, "select prev"),
+			),
+			SelectNext: key.NewBinding(
+				key.WithKeys(k.SearchBar.SelectNext),
+				key.WithHelp(k.SearchBar.SelectNext, "select next"),
+			),
+			SelectResult: key.NewBinding(
+				key.WithKeys(k.SearchBar.SelectResult),
+				key.WithHelp(k.SearchBar.SelectResult, "select result"),
+			),
+			Close: key.NewBinding(
+				key.WithKeys(k.SearchBar.Close),
+				key.WithHelp(k.SearchBar.Close, "close search"),
+			),
+		},
 	}
 }
 
@@ -886,27 +921,6 @@ type SearchBarKeyConfig struct {
 	SelectNext   string `toml:"select_next"`
 	SelectResult string `toml:"select_result"`
 	Close        string `toml:"close"`
-}
-
-func (k SearchBarKeyConfig) KeyMap() searchbar.KeyMap {
-	return searchbar.KeyMap{
-		SelectPrev: key.NewBinding(
-			key.WithKeys(k.SelectPrev),
-			key.WithHelp(k.SelectPrev, "select prev"),
-		),
-		SelectNext: key.NewBinding(
-			key.WithKeys(k.SelectNext),
-			key.WithHelp(k.SelectNext, "select next"),
-		),
-		SelectResult: key.NewBinding(
-			key.WithKeys(k.SelectResult),
-			key.WithHelp(k.SelectResult, "select result"),
-		),
-		Close: key.NewBinding(
-			key.WithKeys(k.Close),
-			key.WithHelp(k.Close, "close search"),
-		),
-	}
 }
 
 type FilePickerKeyConfig struct {

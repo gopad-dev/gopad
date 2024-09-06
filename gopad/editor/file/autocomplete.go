@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/ls"
@@ -86,7 +86,7 @@ func (s *Autocompleter) calculateOffset(height int) {
 	}
 }
 
-func (s *Autocompleter) View(ctx tea.Context, width int, height int) string {
+func (s *Autocompleter) View(width int, height int) string {
 	width = min(width, 80)
 	height = min(height, 10)
 

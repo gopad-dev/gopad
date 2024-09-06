@@ -478,12 +478,12 @@ func (f *File) ToggleLineComment() tea.Cmd {
 }
 
 func (f File) GetCursorForCharPos(row int, col int) (int, int) {
-	row = max(row-f.cursor.offsetRow, 0)
-	if row >= len(f.positions) {
+	positionRow := max(row-f.cursor.offsetRow, 0)
+	if positionRow >= len(f.positions) {
 		return max(f.buffer.LinesLen()-1, 0), 0
 	}
 
-	linePositions := f.positions[row]
+	linePositions := f.positions[positionRow]
 	if col >= len(linePositions) {
 		return row, f.buffer.LineLen(row)
 	}
@@ -492,7 +492,7 @@ func (f File) GetCursorForCharPos(row int, col int) (int, int) {
 	return p.row, p.col
 }
 
-func (f File) GetFileZoneCursorPos(msg tea.MouseEvent, z *zone.ZoneInfo) (int, int) {
+func (f File) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) (int, int) {
 	row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLinePrefix))
 	col, _ := z.Pos(msg)
 	row, col = f.GetCursorForCharPos(row, col)
@@ -504,7 +504,7 @@ type pos struct {
 	col int
 }
 
-func (f *File) View(ctx tea.Context, width int, height int, border bool, debug bool) string {
+func (f *File) View(width int, height int, border bool, debug bool) string {
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -512,7 +512,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 	}
 
 	prefixWidth := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
-	width -= prefixWidth + styles.FileView.BorderStyle.GetHorizontalFrameSize() + 3
+	width = max(width-prefixWidth+styles.FileView.BorderStyle.GetHorizontalFrameSize()+3, 0)
 
 	// debug takes up 4 lines
 	if debug {
@@ -655,7 +655,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 	if f.showCurrentDiagnostic {
 		diagnostic := f.HighestLineColDiagnostic(cursorRow, realCursorCol)
 		if diagnostic.Severity > 0 {
-			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(ctx, width, height), editorCode,
+			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
 				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+cursorCol),
 				overlay.WithMarginY(realCursorRow+1),
 			)
@@ -663,7 +663,7 @@ func (f *File) View(ctx tea.Context, width int, height int, border bool, debug b
 			f.HideCurrentDiagnostic()
 		}
 	} else if f.autocomplete.Visible() {
-		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(ctx, width, height), editorCode,
+		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, f.autocomplete.View(width, height), editorCode,
 			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+cursorCol),
 			overlay.WithMarginY(realCursorRow+1),
 		)

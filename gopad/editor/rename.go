@@ -46,11 +46,11 @@ func (r RenameOverlay) Title() string {
 	return "Rename File"
 }
 
-func (r RenameOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (r RenameOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return r, textinput.Blink
 }
 
-func (r RenameOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (r RenameOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -66,7 +66,7 @@ func (r RenameOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, te
 	}
 
 	var cmd tea.Cmd
-	r.fileName, cmd = r.fileName.Update(ctx, msg)
+	r.fileName, cmd = r.fileName.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -74,6 +74,6 @@ func (r RenameOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, te
 	return r, tea.Batch(cmds...)
 }
 
-func (r RenameOverlay) View(ctx tea.Context, width int, height int) string {
-	return r.fileName.View(ctx)
+func (r RenameOverlay) View(width int, height int) string {
+	return r.fileName.View()
 }

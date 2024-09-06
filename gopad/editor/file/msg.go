@@ -182,24 +182,6 @@ type CloseFileMsg struct {
 	Name string
 }
 
-func FocusFile(name string) tea.Cmd {
-	return func() tea.Msg {
-		return FocusFileMsg{
-			Name: name,
-		}
-	}
-}
-
-type FocusFileMsg struct {
-	Name string
-}
-
-func BlurFile() tea.Msg {
-	return BlurFileMsg{}
-}
-
-type BlurFileMsg struct{}
-
 func NewFile(name string) tea.Cmd {
 	return func() tea.Msg {
 		return NewFileMsg{

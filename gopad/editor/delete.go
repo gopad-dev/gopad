@@ -52,11 +52,11 @@ func (d DeleteOverlay) Title() string {
 	return "Delete File"
 }
 
-func (d DeleteOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (d DeleteOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return d, nil
 }
 
-func (d DeleteOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (d DeleteOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -78,12 +78,12 @@ func (d DeleteOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, te
 	}
 
 	var cmd tea.Cmd
-	d.buttonOK, cmd = d.buttonOK.Update(ctx, msg)
+	d.buttonOK, cmd = d.buttonOK.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	d.buttonCancel, cmd = d.buttonCancel.Update(ctx, msg)
+	d.buttonCancel, cmd = d.buttonCancel.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -91,9 +91,9 @@ func (d DeleteOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, te
 	return d, tea.Batch(cmds...)
 }
 
-func (d DeleteOverlay) View(ctx tea.Context, width int, height int) string {
+func (d DeleteOverlay) View(width int, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.NewStyle().MarginBottom(1).Render("Are you sure you want to delete this file?"),
-		lipgloss.JoinHorizontal(lipgloss.Center, d.buttonOK.View(ctx), d.buttonCancel.View(ctx)),
+		lipgloss.JoinHorizontal(lipgloss.Center, d.buttonOK.View(), d.buttonCancel.View()),
 	)
 }

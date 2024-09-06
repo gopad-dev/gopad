@@ -47,11 +47,11 @@ func (s SetLanguageOverlay) Title() string {
 	return "Set Language"
 }
 
-func (s SetLanguageOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (s SetLanguageOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return s, textinput.Blink
 }
 
-func (s SetLanguageOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -67,7 +67,7 @@ func (s SetLanguageOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overla
 	}
 
 	var cmd tea.Cmd
-	s.l, cmd = s.l.Update(ctx, msg)
+	s.l, cmd = s.l.Update(msg)
 
 	if s.l.Clicked() {
 		lang := s.l.Selected()
@@ -77,9 +77,9 @@ func (s SetLanguageOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overla
 	return s, cmd
 }
 
-func (s SetLanguageOverlay) View(ctx tea.Context, width int, height int) string {
+func (s SetLanguageOverlay) View(width int, height int) string {
 	s.l.SetHeight(height)
 	s.l.SetWidth(width / 2)
 
-	return s.l.View(ctx)
+	return s.l.View()
 }

@@ -49,11 +49,11 @@ func (o GoToOverlay) Title() string {
 	return "Go To"
 }
 
-func (o GoToOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (o GoToOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return o, o.ti.Focus()
 }
 
-func (o GoToOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (o GoToOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -83,7 +83,7 @@ func (o GoToOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.
 	}
 
 	var cmd tea.Cmd
-	o.ti, cmd = o.ti.Update(ctx, msg)
+	o.ti, cmd = o.ti.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -91,9 +91,9 @@ func (o GoToOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.
 	return o, tea.Batch(cmds...)
 }
 
-func (o GoToOverlay) View(ctx tea.Context, _ int, _ int) string {
+func (o GoToOverlay) View(_ int, _ int) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		o.ti.View(ctx),
+		o.ti.View(),
 		"Press [esc] to cancel or [enter] to go to.",
 	)
 }

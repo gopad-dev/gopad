@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbletea"
@@ -41,37 +42,53 @@ type Gopad struct {
 	workspace string
 	args      []string
 
+	height int
+	width  int
+
 	editor        editor.Editor
 	overlays      overlay.Model
 	notifications notifications.Model
 }
 
-func (g Gopad) Init(ctx tea.Context) (tea.Model, tea.Cmd) {
-	log.Printf("Initializing gopad, version: %s, color profile: %s\n", g.version, ctx.ColorProfile())
-	config.InitTheme(ctx)
+func (g Gopad) Init() (tea.Model, tea.Cmd) {
+	log.Printf("Initializing gopad, version: %s\n", g.version)
 
-	e, err := editor.NewEditor(g.workspace, g.args)
+	var err error
+	g.editor, err = editor.NewEditor(g.workspace, g.args)
 	if err != nil {
 		return g, notifications.Add(fmt.Sprintf("Error initializing editor: %s", err))
 	}
 
-	cmds := []tea.Cmd{e.Focus()}
+	var cmd tea.Cmd
+	g.editor, cmd = g.editor.Init()
 
-	g.editor = *e
+	cmds := []tea.Cmd{
+		cmd,
+		g.editor.Focus(),
+		tea.SetWindowTitle("gopad"),
+		cursor.Blink,
+	}
+
 	g.overlays = config.NewOverlays()
 	g.notifications = config.NewNotifications()
 
-	return g, tea.Batch(append(cmds,
-		tea.SetWindowTitle("gopad"),
-		cursor.Blink,
-		g.editor.Init(ctx),
-	)...)
+	return g, tea.Batch(cmds...)
 }
 
-func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
+func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	now := time.Now()
+	defer func() {
+		log.Printf("Update time: %s\n", time.Since(now))
+	}()
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		g.height = msg.Height
+		g.width = msg.Width
+		return g, tea.Batch(cmds...)
+
 	case overlay.ResetFocusMsg:
 		cmds = append(cmds, g.editor.Focus())
 		return g, tea.Batch(cmds...)
@@ -80,19 +97,16 @@ func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
 		g.editor.Blur()
 		return g, tea.Batch(cmds...)
 
-	case tea.MouseEvent, tea.MouseDownMsg, tea.MouseMotionMsg:
-		log.Printf("MouseMsg: %#v\n", msg)
-
-	case tea.MouseUpMsg:
+	case tea.MouseMsg:
 		log.Printf("MouseMsg: %#v\n", msg)
 		switch {
-		case mouse.Matches(tea.MouseEvent(msg), ZoneTheme, tea.MouseLeft):
+		case mouse.Matches(msg, ZoneTheme, tea.MouseLeft):
 			cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
 			return g, tea.Batch(cmds...)
 		}
 
 	case tea.KeyMsg:
-		log.Printf("KeyMsg: %#v\n", msg)
+		log.Printf("KeyMsg: %s: %#v\n", msg.String(), msg)
 		// global keybindings
 		switch {
 		case key.Matches(msg, config.Keys.Quit):
@@ -144,70 +158,78 @@ func (g Gopad) Update(ctx tea.Context, msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	if g.notifications, cmd = g.notifications.Update(ctx, msg); cmd != nil {
+	if g.notifications, cmd = g.notifications.Update(msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
-	if g.overlays, cmd = g.overlays.Update(ctx, msg); cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-	if bubbles.IsInputMsg(msg) && g.overlays.Focused() {
-		return g, tea.Batch(cmds...)
+	if focused := g.overlays.Focused(); focused || !bubbles.IsKeyMsg(msg) {
+		if g.overlays, cmd = g.overlays.Update(msg); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+		if bubbles.IsKeyMsg(msg) && focused {
+			return g, tea.Batch(cmds...)
+		}
 	}
 
-	if g.editor, cmd = g.editor.Update(ctx, msg); cmd != nil {
-		cmds = append(cmds, cmd)
+	if g.editor.Focused() || !bubbles.IsKeyMsg(msg) {
+		if g.editor, cmd = g.editor.Update(msg); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	return g, tea.Batch(cmds...)
 }
 
-func (g Gopad) View(ctx tea.Context) string {
-	// now := time.Now()
-	// defer func() {
-	//	log.Printf("Render time: %s\n", time.Since(now))
-	// }()
+func (g Gopad) View() string {
+	now := time.Now()
+	defer func() {
+		log.Printf("Render time: %s\n", time.Since(now))
+	}()
 
-	_, height := ctx.WindowSize()
+	height := g.height
 
-	appBar := g.AppBar(ctx)
-	codeBar := g.CodeBar(ctx)
-	codeEditor := g.editor.View(ctx, height-lipgloss.Height(appBar)-lipgloss.Height(codeBar))
+	appBar := g.AppBar()
+	codeBar := g.CodeBar()
+	codeEditor := g.editor.View(g.width, height-lipgloss.Height(appBar)-lipgloss.Height(codeBar))
 	view := fmt.Sprintf("%s\n%s\n%s", appBar, codeEditor, codeBar)
 
 	if g.overlays.Focused() {
-		view = g.overlays.View(ctx, view)
+		view = g.overlays.View(g.width, g.height, view)
 	}
 
 	if g.notifications.Active() {
 		g.notifications.SetBackground(view)
-		view = g.notifications.View(ctx)
+		view = g.notifications.View(g.width, g.height)
 	}
 
 	return zone.Scan(view)
 }
 
-func (g Gopad) AppBar(ctx tea.Context) string {
-	width, _ := ctx.WindowSize()
+func (g Gopad) AppBar() string {
+	width := g.width
 	appBar := config.Theme.UI.AppBar.TitleStyle.Render("gopad-" + g.version)
 	appBar += g.editor.FileTabsView(width - lipgloss.Width(appBar))
 
 	return config.Theme.UI.AppBar.Style.Width(width).Render(appBar)
 }
 
-func (g Gopad) CodeBar(ctx tea.Context) string {
-	width, _ := ctx.WindowSize()
+func (g Gopad) CodeBar() string {
+	width := g.width
 	contentWidth := width - config.Theme.UI.CodeBar.Style.GetHorizontalFrameSize()
 	file := g.editor.File()
 
-	infoLine := fmt.Sprintf("%s | ", zone.Mark(ZoneTheme, config.Theme.Name))
+	barStyle := config.Theme.UI.CodeBar.Style
+	inlineBarStyle := barStyle.Inline(true).Render
+
+	var infoLine []string
+	infoLine = append(infoLine, zone.Mark(ZoneTheme, inlineBarStyle(config.Theme.Name)))
 
 	if file != nil {
 		if s := file.Selection(); s != nil {
-			infoLine += zone.Mark(editor.ZoneFileGoTo, fmt.Sprintf("%d lines | [%d:%d-%d:%d] | ", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1))
+			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("%d lines | [%d:%d-%d:%d]", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1))))
 		} else {
 			cursorRow, cursorCol := file.Cursor()
-			infoLine += zone.Mark(editor.ZoneFileGoTo, fmt.Sprintf("[%d:%d] | ", cursorRow+1, cursorCol+1))
+			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("[%d:%d]", cursorRow+1, cursorCol+1))))
 		}
 
 		if servers := g.lsClient.SupportedServers(file.Name()); len(servers) > 0 {
@@ -215,31 +237,34 @@ func (g Gopad) CodeBar(ctx tea.Context) string {
 			for _, server := range servers {
 				clientNames = append(clientNames, server.Name())
 			}
-			infoLine += fmt.Sprintf("%s | ", strings.Join(clientNames, ","))
+			infoLine = append(infoLine, inlineBarStyle(strings.Join(clientNames, ",")))
 		}
 
 		if language := file.Language(); language != nil {
 			name := language.Name
 			icon := config.Theme.Icons.FileIcon(name).Render()
 
-			name = fmt.Sprintf("%s %s", icon, name)
+			name = icon + inlineBarStyle(" "+name)
 
 			if language.Config.Grammar != nil {
 				grammarName := language.Config.Grammar.Name
 				if language.Grammar == nil {
 					grammarName += " (not loaded)"
 				}
-				name = zone.Mark(editor.ZoneFileLanguage, fmt.Sprintf("%s (ts: %s)", name, grammarName))
+				name += inlineBarStyle(fmt.Sprintf(" (ts: %s)", grammarName))
 			}
 
-			infoLine += fmt.Sprintf("%s | ", name)
+			infoLine = append(infoLine, zone.Mark(editor.ZoneFileLanguage, inlineBarStyle(name)))
 		}
 
-		infoLine += fmt.Sprintf("%s | %s", zone.Mark(editor.ZoneFileLineEnding, file.LineEnding().String()), zone.Mark(editor.ZoneFileEncoding, file.Encoding()))
+		infoLine = append(infoLine,
+			zone.Mark(editor.ZoneFileLineEnding, inlineBarStyle(file.LineEnding().String())),
+			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle(file.Encoding())),
+		)
 	}
-	infoLine = strings.TrimSuffix(infoLine, " | ")
+	infoLineStr := strings.Join(infoLine, inlineBarStyle(" | "))
 
-	maxWorkspaceNameWidth := max(0, contentWidth-1-lipgloss.Width(infoLine))
+	maxWorkspaceNameWidth := max(0, contentWidth-1-lipgloss.Width(infoLineStr))
 	workspaceName := g.editor.Workspace()
 	if workspaceName != "" {
 		if file != nil {
@@ -265,7 +290,7 @@ func (g Gopad) CodeBar(ctx tea.Context) string {
 		workspaceName = joinPaths(dirName, baseName)
 	}
 
-	codeBar := workspaceName + strings.Repeat(" ", max(1, contentWidth-lipgloss.Width(workspaceName)-lipgloss.Width(infoLine))) + infoLine
+	codeBar := workspaceName + strings.Repeat(" ", max(1, contentWidth-lipgloss.Width(workspaceName)-lipgloss.Width(infoLineStr))) + infoLineStr
 
 	return config.Theme.UI.CodeBar.Style.Width(width).Render(codeBar)
 }

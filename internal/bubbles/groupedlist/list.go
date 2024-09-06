@@ -2,7 +2,7 @@ package groupedlist
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -60,7 +60,7 @@ func (m Model) SelectedItem() Item {
 	return walk(m.items)
 }
 
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -86,7 +86,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	m.TextInput, cmd = m.TextInput.Update(ctx, msg)
+	m.TextInput, cmd = m.TextInput.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -94,7 +94,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) View(ctx tea.Context) string {
+func (m *Model) View() string {
 	var listWidth int
 	if m.width > 0 {
 		m.TextInput.Width = m.width - 2
@@ -107,12 +107,12 @@ func (m *Model) View(ctx tea.Context) string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		m.TextInput.View(ctx),
-		m.itemsView(ctx, listWidth, listHeight),
+		m.TextInput.View(),
+		m.itemsView(listWidth, listHeight),
 	)
 }
 
-func (m *Model) itemsView(ctx tea.Context, width int, height int) string {
+func (m *Model) itemsView(width int, height int) string {
 	var list string
 
 	var i int

@@ -37,20 +37,9 @@ type Styles struct {
 }
 
 var (
-	keyStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#909090",
-		Dark:  "#626262",
-	})
-
-	descStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#B2B2B2",
-		Dark:  "#4A4A4A",
-	})
-
-	sepStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#DDDADA",
-		Dark:  "#3C3C3C",
-	})
+	keyStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+	descStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#4A4A4A"))
+	sepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#3C3C3C"))
 )
 
 var DefaultStyles = Styles{

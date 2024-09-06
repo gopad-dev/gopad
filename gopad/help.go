@@ -42,11 +42,11 @@ func (h HelpOverlay) Title() string {
 	return "Help"
 }
 
-func (h HelpOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (h HelpOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return h, nil
 }
 
-func (h HelpOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (h HelpOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -60,6 +60,6 @@ func (h HelpOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.
 	return h, tea.Batch(cmds...)
 }
 
-func (h HelpOverlay) View(ctx tea.Context, width int, height int) string {
+func (h HelpOverlay) View(width int, height int) string {
 	return h.help.View(config.Keys, width, height)
 }

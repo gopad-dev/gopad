@@ -2,11 +2,10 @@ package mouse
 
 import (
 	"github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/input"
 	"github.com/lrstanley/bubblezone"
 )
 
-func Matches(msg tea.MouseEvent, id string, button input.MouseButton, keyMod ...tea.KeyMod) bool {
+func Matches(msg tea.MouseMsg, id string, button tea.MouseButton, keyMod ...tea.KeyMod) bool {
 	var z *zone.ZoneInfo
 	if id != "" {
 		z = zone.Get(id)
@@ -15,14 +14,18 @@ func Matches(msg tea.MouseEvent, id string, button input.MouseButton, keyMod ...
 	return MatchesZone(msg, z, button, keyMod...)
 }
 
-func MatchesZone(msg tea.MouseEvent, zone *zone.ZoneInfo, button input.MouseButton, keyMod ...tea.KeyMod) bool {
-	if zone != nil {
-		if !zone.InBounds(msg) {
-			return false
-		}
+func MatchesZone(msg tea.MouseMsg, zone *zone.ZoneInfo, button tea.MouseButton, keyMod ...tea.KeyMod) bool {
+	if zone == nil {
+		return false
 	}
 
-	if msg.Button != button {
+	if !zone.InBounds(msg) {
+		return false
+	}
+
+	mouse := msg.Mouse()
+
+	if mouse.Button != button {
 		return false
 	}
 
@@ -32,7 +35,7 @@ func MatchesZone(msg tea.MouseEvent, zone *zone.ZoneInfo, button input.MouseButt
 			allKeyMods |= mod
 		}
 
-		if msg.Mod != allKeyMods {
+		if mouse.Mod != allKeyMods {
 			return false
 		}
 	}

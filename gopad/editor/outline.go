@@ -116,14 +116,14 @@ func (o *OutlineOverlay) renderOutlineItems() {
 	o.l.SetItems(out)
 }
 
-func (o OutlineOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (o OutlineOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return o, tea.Sequence(
 		textinput.Blink,
 		Outline(o.f),
 	)
 }
 
-func (o OutlineOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -144,7 +144,7 @@ func (o OutlineOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, t
 	}
 
 	var cmd tea.Cmd
-	o.l, cmd = o.l.Update(ctx, msg)
+	o.l, cmd = o.l.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -162,7 +162,7 @@ func (o OutlineOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, t
 	return o, tea.Batch(cmds...)
 }
 
-func (o OutlineOverlay) View(ctx tea.Context, width int, height int) string {
+func (o OutlineOverlay) View(width int, height int) string {
 	style := config.Theme.UI.Overlay.RunOverlayStyle
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
@@ -171,5 +171,5 @@ func (o OutlineOverlay) View(ctx tea.Context, width int, height int) string {
 	}
 
 	o.l.SetHeight(height - style.GetVerticalFrameSize() - 2)
-	return o.l.View(ctx)
+	return o.l.View()
 }

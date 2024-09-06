@@ -70,12 +70,12 @@ func (m Model) zoneID() string {
 	return fmt.Sprintf("button:%s", m.zonePrefix)
 }
 
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-	case tea.MouseUpMsg:
+	case tea.MouseReleaseMsg:
 		switch {
-		case mouse.Matches(tea.MouseEvent(msg), m.zoneID(), tea.MouseLeft):
+		case mouse.Matches((msg), m.zoneID(), tea.MouseLeft):
 			cmds = append(cmds, m.OnClick())
 			return m, tea.Batch(cmds...)
 		}
@@ -92,7 +92,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View(ctx tea.Context) string {
+func (m Model) View() string {
 	if m.focus {
 		return zone.Mark(m.zoneID(), m.Styles.Focus.Render(m.Label))
 	}

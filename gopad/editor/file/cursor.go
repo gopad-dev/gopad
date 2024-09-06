@@ -72,9 +72,9 @@ func (f *File) SetCursor(row, col int) {
 	}
 }
 
-func (f *File) UpdateCursor(ctx tea.Context, msg tea.Msg) tea.Cmd {
+func (f *File) UpdateCursor(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
-	f.cursor.cursor, cmd = f.cursor.cursor.Update(ctx, msg)
+	f.cursor.cursor, cmd = f.cursor.cursor.Update(msg)
 	return cmd
 }
 

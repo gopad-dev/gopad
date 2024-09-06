@@ -1,10 +1,10 @@
 package config
 
 import (
+	"image/color"
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -28,23 +28,23 @@ type Style struct {
 	Faint           bool `toml:"faint"`
 }
 
-func (s Style) Style(ctx tea.Context, colors ColorStyles) lipgloss.Style {
-	style := ctx.NewStyle()
+func (s Style) Style(colors ColorStyles) lipgloss.Style {
+	style := lipgloss.NewStyle()
 
 	if s.Foreground != "" {
-		style = style.Foreground(color(colors, s.Foreground))
+		style = style.Foreground(getColor(colors, s.Foreground))
 	}
 	if s.Background != "" {
-		style = style.Background(color(colors, s.Background))
+		style = style.Background(getColor(colors, s.Background))
 	}
 	if s.BorderForeground != "" {
-		style = style.BorderForeground(color(colors, s.BorderForeground))
+		style = style.BorderForeground(getColor(colors, s.BorderForeground))
 	}
 	if s.BorderBackground != "" {
-		style = style.BorderBackground(color(colors, s.BorderBackground))
+		style = style.BorderBackground(getColor(colors, s.BorderBackground))
 	}
 	if s.UnderlineColor != "" {
-		style = style.UnderlineColor(color(colors, s.UnderlineColor))
+		style = style.UnderlineColor(getColor(colors, s.UnderlineColor))
 	}
 
 	style = style.Bold(s.Bold)
@@ -61,7 +61,7 @@ func (s Style) Style(ctx tea.Context, colors ColorStyles) lipgloss.Style {
 	return style
 }
 
-func color(colors ColorStyles, color string) lipgloss.TerminalColor {
+func getColor(colors ColorStyles, color string) color.Color {
 	if color == "" {
 		return lipgloss.NoColor{}
 	}
@@ -76,7 +76,7 @@ func color(colors ColorStyles, color string) lipgloss.TerminalColor {
 	return parseColor(color)
 }
 
-func parseColor(color string) lipgloss.TerminalColor {
+func parseColor(color string) color.Color {
 	if ok := strings.HasPrefix(color, "#"); ok {
 		return lipgloss.Color(color)
 	}

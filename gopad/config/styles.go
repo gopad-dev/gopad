@@ -1,6 +1,8 @@
 package config
 
 import (
+	"image/color"
+
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
@@ -10,7 +12,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
-	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
@@ -24,7 +25,7 @@ type ThemeConfig struct {
 	CodeStyles map[string]lipgloss.Style
 }
 
-type ColorStyles map[string]lipgloss.TerminalColor
+type ColorStyles map[string]color.Color
 
 type IconStyles struct {
 	RootDir lipgloss.Style
@@ -61,10 +62,10 @@ type UiStyles struct {
 	AppBar  AppBarStyles
 	CodeBar CodeBarStyles
 
-	FileTree FileTreeStyles
-	FileView FileViewStyles
+	FileTree  FileTreeStyles
+	FileView  FileViewStyles
+	SearchBar SearchBarStyles
 
-	SearchBar     searchbar.Styles
 	Documentation DocumentationStyles
 	Autocomplete  AutocompleteStyles
 	Overlay       OverlayStyles
@@ -97,6 +98,11 @@ type FileTreeStyles struct {
 	EntryStyle                  lipgloss.Style
 	EntrySelectedStyle          lipgloss.Style
 	EntrySelectedUnfocusedStyle lipgloss.Style
+}
+
+type SearchBarStyles struct {
+	Style       lipgloss.Style
+	ResultStyle lipgloss.Style
 }
 
 type FileViewStyles struct {
@@ -141,7 +147,7 @@ type EditorStyles struct {
 	CodeInlayHintStyle lipgloss.Style
 
 	FileTree      FileTreeStyles
-	SearchBar     searchbar.Styles
+	SearchBar     SearchBarStyles
 	List          list.Styles
 	Diagnostics   DiagnosticStyles
 	Autocomplete  AutocompleteStyles

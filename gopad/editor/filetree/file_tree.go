@@ -16,6 +16,7 @@ import (
 	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/editormsg"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -282,7 +283,7 @@ func (m Model) zoneEntryID(i int) string {
 	return fmt.Sprintf("%s%d", zoneIDPrefix, i)
 }
 
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -291,13 +292,12 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, notifications.Add("Error updating file tree: "+err.Error()))
 		}
 		return m, tea.Batch(cmds...)
-	case tea.MouseDownMsg:
+	case tea.MouseClickMsg:
 		for _, z := range zone.GetPrefix(zoneIDPrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				if !m.Focused() {
-					m.Focus()
-					cmds = append(cmds, file.BlurFile)
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
 				}
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
@@ -306,13 +306,12 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 				return m, tea.Batch(cmds...)
 			}
 		}
-	case tea.MouseUpMsg:
+	case tea.MouseReleaseMsg:
 		for _, z := range zone.GetPrefix(zoneIDPrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				if !m.Focused() {
-					m.Focus()
-					cmds = append(cmds, file.BlurFile)
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
 				}
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
@@ -329,17 +328,15 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 		}
 	case tea.MouseWheelMsg:
 		switch {
-		case mouse.Matches(tea.MouseEvent(msg), zoneID, tea.MouseWheelUp):
+		case mouse.Matches(msg, zoneID, tea.MouseWheelUp):
 			if !m.Focused() {
-				m.Focus()
-				cmds = append(cmds, file.BlurFile)
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
 			}
 			m.SelectPrev()
 			return m, tea.Batch(cmds...)
-		case mouse.Matches(tea.MouseEvent(msg), zoneID, tea.MouseWheelDown):
+		case mouse.Matches(msg, zoneID, tea.MouseWheelDown):
 			if !m.Focused() {
-				m.Focus()
-				cmds = append(cmds, file.BlurFile)
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
 			}
 			m.SelectNext()
 			return m, tea.Batch(cmds...)

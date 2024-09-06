@@ -2,7 +2,6 @@ package config
 
 import (
 	"embed"
-	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"path/filepath"
 	"slices"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -89,10 +87,6 @@ func Load(name string, defaultConfigs embed.FS) error {
 	Keys = keymap.Keys()
 	Themes = themes
 
-	return nil
-}
-
-func InitTheme(ctx tea.Context) {
 	var theme RawThemeConfig
 	for _, t := range Themes {
 		theme = t
@@ -100,8 +94,9 @@ func InitTheme(ctx tea.Context) {
 			break
 		}
 	}
+	Theme = theme.Theme()
 
-	Theme = theme.Theme(ctx)
+	return nil
 }
 
 func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) {

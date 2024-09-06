@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
@@ -12,7 +12,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
-	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
@@ -78,15 +77,4 @@ func NewNotifications() notifications.Model {
 	n.Styles = Theme.UI.NotificationStyle
 	n.Margin = 1
 	return n
-}
-
-func NewSearchBar(onSelect func(result searchbar.Result) tea.Cmd, onBlur tea.Cmd) searchbar.Model {
-	sb := searchbar.New(onSelect, onBlur)
-	sb.TextInput = NewTextInput()
-	sb.TextInput.Placeholder = "type to search"
-	sb.TextInput.Width = 20
-	sb.Styles = Theme.UI.SearchBar
-	sb.KeyMap = Keys.Editor.SearchBar
-
-	return sb
 }

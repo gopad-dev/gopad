@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"fmt"
 	"log"
 	"slices"
 	"time"
@@ -17,6 +18,10 @@ func Add(content string) tea.Cmd {
 			Content: content,
 		}
 	}
+}
+
+func Addf(format string, a ...any) tea.Cmd {
+	return Add(fmt.Sprintf(format, a...))
 }
 
 func Remove(id int) tea.Cmd {
@@ -97,7 +102,7 @@ func (m *Model) remove(id int) {
 	})
 }
 
-func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case addMsg:
@@ -111,8 +116,7 @@ func (m Model) Update(ctx tea.Context, msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View(ctx tea.Context) string {
-	_, height := ctx.WindowSize()
+func (m Model) View(_ int, height int) string {
 	height = height - 1 - m.Margin
 
 	var str string

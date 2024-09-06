@@ -1,7 +1,7 @@
 package ls
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 )

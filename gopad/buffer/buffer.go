@@ -14,7 +14,6 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 
-	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 	"go.gopad.dev/gopad/internal/xbytes"
 )
 
@@ -97,6 +96,26 @@ type Buffer struct {
 	checksum   []byte
 	onDisk     bool
 	dirty      bool
+}
+
+func (b *Buffer) Copy() *Buffer {
+	lines := make([]Line, len(b.lines))
+	for i, line := range b.lines {
+		lines[i] = line.Copy()
+	}
+	checksum := make([]byte, len(b.checksum))
+	copy(checksum, b.checksum)
+
+	return &Buffer{
+		name:       b.name,
+		encoding:   b.encoding,
+		lineEnding: b.lineEnding,
+		version:    b.version,
+		lines:      lines,
+		checksum:   checksum,
+		onDisk:     b.onDisk,
+		dirty:      b.dirty,
+	}
 }
 
 // Name returns the full path of the buffer.
@@ -214,36 +233,6 @@ func (b *Buffer) Delete() error {
 	}
 
 	return nil
-}
-
-// Search searches for the given term in the buffer.
-func (b *Buffer) Search(term string) []searchbar.Result {
-	var results []searchbar.Result
-
-	bytesTerm := []byte(term)
-
-	buf := b.Bytes()
-	var lastIndex int
-	for {
-		index := bytes.Index(buf[lastIndex:], bytesTerm)
-		if index == -1 {
-			break
-		}
-
-		lastIndex += index
-		endIndex := index + len(term) - 1
-
-		row, col := b.Index(index)
-		rowEnd, colEnd := b.Index(endIndex)
-		results = append(results, searchbar.Result{
-			RowStart: row,
-			ColStart: col,
-			RowEnd:   rowEnd,
-			ColEnd:   colEnd + 1,
-		})
-	}
-
-	return results
 }
 
 // ByteIndex returns the byte index in the buffer for the given row and col.

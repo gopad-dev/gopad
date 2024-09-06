@@ -1,0 +1,35 @@
+# Maintainer: topi314 <git@topi.wtf>
+
+pkgname=gopad-git
+procname=gopad
+provides=("${procname}")
+pkgver=c84fd37 # patched by CI
+pkgrel=1
+pkgdesc="Simple terminal-based text editor written in Go and inspired mostly by nano"
+arch=('any')
+url="https://github.com/gopad-dev/${pkgname%-git}"
+license=('Apache-2.0')
+makedepends=(
+   'go'
+)
+source=(
+   "${pkgname}::git+https://github.com/gopad-dev/${pkgname%-git}.git"
+)
+b2sums=(
+   'SKIP'
+)
+
+pkgver() {
+    cd "$srcdir/${pkgname}"
+    git describe --always --tags --long | sed -e 's|^v||' -e 's|-|.|g'
+}
+
+build() {
+    cd "${srcdir}/${pkgname}"
+    commit=$(git rev-parse --short HEAD)
+    CGO_ENABLED=1 go build -ldflags="-X 'main.Version=${pkgver}' -X 'main.Commit=${commit}'" -o dist/gopad go.gopad.dev/gopad
+}
+
+package() {
+    install -Dm755 ${srcdir}/${pkgname}/dist/${procname} -t "${pkgdir}/usr/bin"
+}

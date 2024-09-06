@@ -20,13 +20,15 @@ import (
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/editormsg"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/editor/filetree"
+	"go.gopad.dev/gopad/gopad/editor/searchbar"
 	"go.gopad.dev/gopad/gopad/ls"
+	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
-	"go.gopad.dev/gopad/internal/bubbles/searchbar"
 )
 
 const (
@@ -40,66 +42,26 @@ const (
 	ZoneFilePrefix     = "file:"
 )
 
-func NewEditor(workspace string, args []string) (*Editor, error) {
-	var cmds []tea.Cmd
-
-	editor := Editor{
-		searchBar: config.NewSearchBar(
-			func(result searchbar.Result) tea.Cmd {
-				return file.Scroll(result.RowStart, result.ColStart)
-			},
-			file.FocusFile(""),
-		),
+func NewEditor(workspace string, args []string) (Editor, error) {
+	e := Editor{
+		args:      args,
+		searchBar: searchbar.New(),
 		fileTree:  filetree.New(),
 		workspace: workspace,
 	}
 
 	if workspace != "" {
-		if err := editor.fileTree.Open(workspace); err != nil {
-			return nil, fmt.Errorf("failed to init file tree: %w", err)
+		if err := e.fileTree.Open(workspace); err != nil {
+			return Editor{}, fmt.Errorf("failed to init file tree: %w", err)
 		}
-		editor.fileTree.Show()
-		cmds = append(cmds, ls.WorkspaceOpened(workspace))
 	}
 
-	for _, arg := range args {
-		stat, err := os.Stat(arg)
-		if errors.Is(err, os.ErrNotExist) {
-			cmd, err := editor.CreateFile(arg)
-			if err != nil {
-				return nil, err
-			}
-			cmds = append(cmds, cmd)
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if stat.IsDir() {
-			continue
-		}
-		cmd, err := editor.OpenFile(arg)
-		if err != nil {
-			return nil, err
-		}
-		cmds = append(cmds, cmd)
-	}
-
-	if f := editor.File(); f != nil {
-		cmds = append(cmds, f.Focus())
-	} else {
-		editor.fileTree.Focus()
-	}
-
-	editor.init = cmds
-
-	return &editor, nil
+	return e, nil
 }
 
 type Editor struct {
-	init             []tea.Cmd
 	fileTree         filetree.Model
+	args             []string
 	workspace        string
 	searchBar        searchbar.Model
 	files            []*file.File
@@ -107,6 +69,47 @@ type Editor struct {
 	activeFileOffset int
 	focus            bool
 	treeSitterDebug  bool
+}
+
+func (e Editor) Init() (Editor, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	if e.workspace != "" {
+		e.fileTree.Show()
+		cmds = append(cmds, ls.WorkspaceOpened(e.workspace))
+	}
+
+	for _, arg := range e.args {
+		stat, err := os.Stat(arg)
+		if errors.Is(err, os.ErrNotExist) {
+			cmd, err := e.CreateFile(arg)
+			if err != nil {
+				return e, notifications.Addf("error while creating file %s: %s", arg, err)
+			}
+			cmds = append(cmds, cmd)
+			continue
+		}
+		if err != nil {
+			return e, notifications.Addf("error while checking file %s: %s", arg, err)
+		}
+
+		if stat.IsDir() {
+			continue
+		}
+		cmd, err := e.OpenFile(arg)
+		if err != nil {
+			return e, notifications.Addf("error while opening file %s: %s", arg, err)
+		}
+		cmds = append(cmds, cmd)
+	}
+
+	if f := e.File(); f != nil {
+		cmds = append(cmds, f.Focus())
+	} else {
+		e.fileTree.Focus()
+	}
+
+	return e, tea.Batch(cmds...)
 }
 
 func (e Editor) Workspace() string {
@@ -133,10 +136,10 @@ func (e *Editor) Blur() {
 	e.fileTree.Blur()
 	e.searchBar.Blur()
 
-	if len(e.files) == 0 {
-		return
+	f := e.File()
+	if f != nil {
+		f.Blur()
 	}
-	e.files[e.activeFile].Blur()
 }
 
 func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
@@ -312,11 +315,7 @@ func (e *Editor) ToggleTreeSitterDebug() {
 	e.treeSitterDebug = !e.treeSitterDebug
 }
 
-func (e Editor) Init(ctx tea.Context) tea.Cmd {
-	return tea.Sequence(e.init...)
-}
-
-func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
+func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	var cmds []tea.Cmd
 	var overwriteCursorBlink bool
 
@@ -385,13 +384,14 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s opened", msg.Name)))
-		e.fileTree.Blur()
+		cmds = append(cmds,
+			notifications.Add(fmt.Sprintf("file %s opened", msg.Name)),
+			editormsg.Focus(editormsg.ModelFile),
+		)
 		e.SetFileByName(msg.Name)
 		if msg.Position != nil {
 			e.File().SetCursor(msg.Position.Row, msg.Position.Col)
 		}
-		cmds = append(cmds, e.File().Focus())
 		return e, tea.Batch(cmds...)
 	case file.SaveFileMsg:
 		cmd, err := e.SaveFile(msg.Name)
@@ -415,20 +415,6 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		}
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s closed", msg.Name)))
 		return e, tea.Batch(cmds...)
-	case file.FocusFileMsg:
-		name := msg.Name
-		if name == "" {
-			name = e.File().Name()
-		}
-		e.SetFileByName(name)
-		cmds = append(cmds, e.File().Focus())
-		return e, tea.Batch(cmds...)
-	case file.BlurFileMsg:
-		f := e.File()
-		if f != nil {
-			f.Blur()
-		}
-		return e, tea.Batch(cmds...)
 	case file.NewFileMsg:
 		cmd, err := e.CreateFile(msg.Name)
 		if err != nil {
@@ -438,10 +424,11 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s created", msg.Name)))
-		e.fileTree.Blur()
+		cmds = append(cmds,
+			notifications.Add(fmt.Sprintf("file %s created", msg.Name)),
+			editormsg.Focus(editormsg.ModelFile),
+		)
 		e.SetFileByName(msg.Name)
-		cmds = append(cmds, e.File().Focus())
 		return e, tea.Batch(cmds...)
 	case file.CloseAllMsg:
 		var files []string
@@ -462,64 +449,76 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case searchbar.SearchMsg:
 		f := e.File()
 		if f != nil {
-			results := f.Buffer().Search(msg.Term)
-			cmds = append(cmds, searchbar.SearchResult(results))
-			return e, tea.Batch(cmds...)
+			cmds = append(cmds, searchbar.ExecSearch(msg.Term, f.Buffer().Copy()))
+		}
+		return e, tea.Batch(cmds...)
+	case editormsg.FocusMsg:
+		log.Println("focus msg", msg)
+		switch msg.Model {
+		case editormsg.ModelFile:
+			f := e.File()
+			if f != nil {
+				cmds = append(cmds, f.Focus())
+			}
+			e.searchBar.Blur()
+			e.fileTree.Blur()
+		case editormsg.ModelSearch:
+			cmds = append(cmds, e.searchBar.Focus())
+			e.fileTree.Blur()
+			f := e.File()
+			if f != nil {
+				f.Blur()
+			}
+		case editormsg.ModelFileTree:
+			e.fileTree.Focus()
+			e.searchBar.Blur()
+			f := e.File()
+			if f != nil {
+				f.Blur()
+			}
 		}
 		return e, tea.Batch(cmds...)
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, config.Keys.Editor.ToggleFileTree) && e.focus:
-			f := e.File()
+		case key.Matches(msg, config.Keys.Editor.ToggleFileTree):
 			if e.fileTree.Visible() {
-				e.fileTree.Blur()
 				e.fileTree.Hide()
-				if f != nil {
-					cmds = append(cmds, f.Focus())
-				}
 			} else {
-				e.fileTree.Focus()
 				e.fileTree.Show()
-				if f != nil {
-					f.Blur()
-				}
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
 			}
 			return e, tea.Batch(cmds...)
-		case key.Matches(msg, config.Keys.Editor.FocusFileTree) && e.focus:
-			if e.fileTree.Visible() {
-				f := e.File()
-				if e.fileTree.Focused() {
-					if f != nil {
-						e.fileTree.Blur()
-						cmds = append(cmds, f.Focus())
-					}
-				} else {
-					e.fileTree.Focus()
-					if f != nil {
-						f.Blur()
-					}
-				}
-			}
-			return e, tea.Batch(cmds...)
-		case key.Matches(msg, config.Keys.Editor.File.New) && e.focus:
+		case key.Matches(msg, config.Keys.Editor.FocusFileTree):
+			return e, tea.Batch(append(cmds, editormsg.Focus(editormsg.ModelFileTree))...)
+		case key.Matches(msg, config.Keys.Editor.File.New):
 			return e, overlay.Open(NewNewOverlay())
+		case key.Matches(msg, config.Keys.Editor.Search):
+			if !e.searchBar.Visible() {
+				e.searchBar.Show()
+			}
+			if !e.searchBar.Focused() {
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelSearch))
+			} else {
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+			}
+			return e, tea.Batch(cmds...)
 		}
 	}
 
 	var cmd tea.Cmd
-	e.fileTree, cmd = e.fileTree.Update(ctx, msg)
+	e.fileTree, cmd = e.fileTree.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	if _, ok := msg.(tea.KeyMsg); ok && e.fileTree.Focused() {
+	if bubbles.IsKeyMsg(msg) && e.fileTree.Focused() {
 		return e, tea.Batch(cmds...)
 	}
 
-	e.searchBar, cmd = e.searchBar.Update(ctx, msg)
+	e.searchBar, cmd = e.searchBar.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	if _, ok := msg.(tea.KeyMsg); ok && e.searchBar.Focused() {
+	if bubbles.IsKeyMsg(msg) && e.searchBar.Focused() {
 		return e, tea.Batch(cmds...)
 	}
 
@@ -603,14 +602,13 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	case file.ScrollMsg:
 		f.SetCursor(msg.Row, msg.Col)
-	case tea.MouseDownMsg:
+	case tea.MouseClickMsg:
 		for _, z := range append(zone.GetPrefix(file.ZoneFileDiagnosticPrefix), zone.GetPrefix(file.ZoneFileLineDiagnosticPrefix)...) {
-
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				index, ok := strings.CutPrefix(z.ID(), file.ZoneFileDiagnosticPrefix)
 				if !ok {
-					index, ok = strings.CutPrefix(z.ID(), file.ZoneFileLineDiagnosticPrefix)
+					index, _ = strings.CutPrefix(z.ID(), file.ZoneFileLineDiagnosticPrefix)
 				}
 				i, _ := strconv.Atoi(index)
 
@@ -623,8 +621,8 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(msg, z)
 				f.SetCursor(row, col)
 				f.SetMark(f.Cursor())
 				overwriteCursorBlink = true
@@ -633,20 +631,24 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(file.ZoneFileLineNumberPrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), file.ZoneFileLineNumberPrefix))
 				f.SetCursor(row, -1)
 				f.SetMark(f.Cursor())
 				overwriteCursorBlink = true
 			}
 		}
-	case tea.MouseUpMsg:
+	case tea.MouseReleaseMsg:
 		for _, z := range append(zone.GetPrefix(file.ZoneFileDiagnosticPrefix), zone.GetPrefix(file.ZoneFileLineDiagnosticPrefix)...) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
 				index, ok := strings.CutPrefix(z.ID(), file.ZoneFileDiagnosticPrefix)
 				if !ok {
-					index, ok = strings.CutPrefix(z.ID(), file.ZoneFileLineDiagnosticPrefix)
+					index, _ = strings.CutPrefix(z.ID(), file.ZoneFileLineDiagnosticPrefix)
 				}
 				i, _ := strconv.Atoi(index)
 
@@ -663,15 +665,19 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
+				row, col := f.GetFileZoneCursorPos(msg, z)
 				f.SetCursor(row, col)
 				if s := f.Selection(); s == nil || s.Zero() {
 					f.ResetMark()
 				}
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseRight):
+			case mouse.MatchesZone(msg, z, tea.MouseRight):
 				// TODO: open context menu?
 				return e, tea.Batch(cmds...)
 			}
@@ -679,7 +685,11 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(file.ZoneFileLineNumberPrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
 				row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), file.ZoneFileLineNumberPrefix))
 				f.SetCursor(row, -1)
 				if s := f.Selection(); s == nil || s.Zero() {
@@ -692,15 +702,9 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(file.ZoneFileLineEmptyPrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				if e.fileTree.Focused() {
-					e.fileTree.Blur()
-				}
-				if e.searchBar.Focused() {
-					e.searchBar.Blur()
-				}
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				if !f.Focused() {
-					cmds = append(cmds, f.Focus())
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
 				}
 				return e, tea.Batch(cmds...)
 			}
@@ -708,14 +712,26 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 
 		for _, z := range zone.GetPrefix(ZoneFilePrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
 				e.SetFile(i)
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseRight):
+			case mouse.MatchesZone(msg, z, tea.MouseRight):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
 				// TODO: open context menu?
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseMiddle):
+			case mouse.MatchesZone(msg, z, tea.MouseMiddle):
+				if !f.Focused() {
+					cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				}
+
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
 				cmds = append(cmds, file.CloseFile(e.files[i].Name()))
 				return e, tea.Batch(cmds...)
@@ -723,26 +739,27 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		}
 
 		switch {
-		case mouse.Matches(tea.MouseEvent(msg), ZoneFileLanguage, tea.MouseLeft):
+		case mouse.Matches(msg, ZoneFileLanguage, tea.MouseLeft):
+			log.Println("file language zone")
 			cmds = append(cmds, overlay.Open(NewSetLanguageOverlay()))
 			return e, tea.Batch(cmds...)
-		case mouse.Matches(tea.MouseEvent(msg), ZoneFileLineEnding, tea.MouseLeft):
+		case mouse.Matches(msg, ZoneFileLineEnding, tea.MouseLeft):
 			log.Println("file line ending zone")
 			// cmds = append(cmds, overlay.Open(NewSetLineEndingOverlay()))
 			return e, tea.Batch(cmds...)
-		case mouse.Matches(tea.MouseEvent(msg), ZoneFileEncoding, tea.MouseLeft):
+		case mouse.Matches(msg, ZoneFileEncoding, tea.MouseLeft):
 			log.Println("file encoding zone")
 			// cmds = append(cmds, overlay.Open(NewSetEncodingOverlay()))
 			return e, tea.Batch(cmds...)
-		case mouse.Matches(tea.MouseEvent(msg), ZoneFileGoTo, tea.MouseLeft):
+		case mouse.Matches(msg, ZoneFileGoTo, tea.MouseLeft):
 			cmds = append(cmds, overlay.Open(NewGoToOverlay(f.Cursor())))
 			return e, tea.Batch(cmds...)
 		}
 	case tea.MouseMotionMsg:
 		for _, z := range zone.GetPrefix(file.ZoneFileLinePrefix) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseLeft):
-				row, col := f.GetFileZoneCursorPos(tea.MouseEvent(msg), z)
+			case mouse.MatchesZone(msg, z, tea.MouseLeft):
+				row, col := f.GetFileZoneCursorPos(msg, z)
 				f.SetCursor(row, col)
 				return e, tea.Batch(cmds...)
 			}
@@ -750,19 +767,19 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		for _, z := range append(zone.GetPrefix(file.ZoneFileLinePrefix), zone.GetPrefix(file.ZoneFileLineNumberPrefix)...) {
 			switch {
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelLeft), mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelDown, tea.Shift):
+			case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.ModShift):
 				f.MoveCursorLeft(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelRight), mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelUp, tea.Shift):
+			case mouse.MatchesZone(msg, z, tea.MouseWheelRight), mouse.MatchesZone(msg, z, tea.MouseWheelUp, tea.ModShift):
 				f.MoveCursorRight(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelUp):
+			case mouse.MatchesZone(msg, z, tea.MouseWheelUp):
 				f.MoveCursorUp(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
-			case mouse.MatchesZone(tea.MouseEvent(msg), z, tea.MouseWheelDown):
+			case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
 				f.MoveCursorDown(1)
 				cmds = append(cmds, f.Autocomplete().Update())
 				return e, tea.Batch(cmds...)
@@ -835,20 +852,13 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, f.ShowTypeDefinitions())
 				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowImplementation):
-				//cmds = append(cmds, f.ShowImplementations())
-				//return e, tea.Batch(cmds...)
+				// cmds = append(cmds, f.ShowImplementations())
+				// return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowReferences):
-				//cmds = append(cmds, f.ShowReferences())
-				//return e, tea.Batch(cmds...)
+				// cmds = append(cmds, f.ShowReferences())
+				// return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.OpenOutline):
 				cmds = append(cmds, overlay.Open(NewOutlineOverlay(f)))
-			case key.Matches(msg, config.Keys.Editor.Search):
-				if !e.searchBar.Focused() {
-					e.searchBar.Show()
-					f.Blur()
-					cmds = append(cmds, e.searchBar.Focus())
-				}
-				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.File.Next):
 				if e.activeFile < len(e.files)-1 {
 					e.activeFile++
@@ -1044,8 +1054,9 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 				log.Println("DEBUG")
 
 			default:
-				if msg.Mod == 0 {
-					text := []byte(string(msg.Rune))
+				k := msg.Key()
+				if k.Mod == 0 {
+					text := []byte(string(k.Code))
 					if s := f.Selection(); s != nil {
 						cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
 						f.ResetMark()
@@ -1058,7 +1069,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 					// handle auto pairs
 					if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
 						for _, pair := range lang.Config.AutoPairs {
-							if string(msg.Rune) == pair.Open {
+							if string(k.Code) == pair.Open {
 								row, col := f.Cursor()
 								cmds = append(cmds, f.InsertAt(row, col+ansi.StringWidth(pair.Open), []byte(pair.Close)))
 								break
@@ -1070,7 +1081,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 		}
 	}
 
-	if cmd = f.UpdateCursor(ctx, msg); cmd != nil {
+	if cmd = f.UpdateCursor(msg); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 
@@ -1083,9 +1094,7 @@ func (e Editor) Update(ctx tea.Context, msg tea.Msg) (Editor, tea.Cmd) {
 	return e, tea.Batch(cmds...)
 }
 
-func (e *Editor) View(ctx tea.Context, height int) string {
-	width, _ := ctx.WindowSize()
-
+func (e *Editor) View(width int, height int) string {
 	var fileTree string
 	if e.fileTree.Visible() {
 		fileTree = e.fileTree.View(height)
@@ -1111,21 +1120,23 @@ func (e *Editor) View(ctx tea.Context, height int) string {
 
 	var searchBar string
 	if e.searchBar.Visible() {
-		searchBar = e.searchBar.View(ctx)
+		searchBar = e.searchBar.View()
+		if fileTree != "" {
+			searchBar = config.Theme.UI.FileView.BorderStyle.Render(searchBar)
+		}
 		height -= lipgloss.Height(searchBar)
 	}
 
-	editor := f.View(ctx, width, height, e.fileTree.Visible(), e.treeSitterDebug)
+	editor := f.View(width, height, e.fileTree.Visible(), e.treeSitterDebug)
 
 	if searchBar != "" {
 		editor = lipgloss.JoinVertical(lipgloss.Left, searchBar, editor)
 	}
-
-	if fileTree == "" {
-		return editor
+	if fileTree != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Top, fileTree, editor)
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, fileTree, editor)
+	return editor
 }
 
 func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {

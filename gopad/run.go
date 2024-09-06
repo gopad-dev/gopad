@@ -68,11 +68,11 @@ func (r RunOverlay) Title() string {
 	return "Run"
 }
 
-func (r RunOverlay) Init(ctx tea.Context) (overlay.Overlay, tea.Cmd) {
+func (r RunOverlay) Init() (overlay.Overlay, tea.Cmd) {
 	return r, textinput.Blink
 }
 
-func (r RunOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.Cmd) {
+func (r RunOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -90,7 +90,7 @@ func (r RunOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.C
 	}
 
 	var cmd tea.Cmd
-	r.l, cmd = r.l.Update(ctx, msg)
+	r.l, cmd = r.l.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -105,7 +105,7 @@ func (r RunOverlay) Update(ctx tea.Context, msg tea.Msg) (overlay.Overlay, tea.C
 	return r, tea.Batch(cmds...)
 }
 
-func (r RunOverlay) View(ctx tea.Context, width int, height int) string {
+func (r RunOverlay) View(width int, height int) string {
 	style := config.Theme.UI.Overlay.RunOverlayStyle
 	width /= 2
 	width -= style.GetHorizontalFrameSize()
@@ -114,5 +114,5 @@ func (r RunOverlay) View(ctx tea.Context, width int, height int) string {
 	}
 
 	r.l.SetHeight(height - style.GetVerticalFrameSize() - 2)
-	return r.l.View(ctx)
+	return r.l.View()
 }
