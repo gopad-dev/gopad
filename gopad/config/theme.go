@@ -39,6 +39,8 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 		Colors: colors,
 		Icons:  c.Icons.Styles(colors),
 		UI: UiStyles{
+			Background: getColor(colors, c.UI.Background),
+			Foreground: getColor(colors, c.UI.Foreground),
 			AppBar: AppBarStyles{
 				Style:      c.UI.AppBar.Style.Style(colors),
 				TitleStyle: c.UI.AppBar.Title.Style(colors).Padding(0, 1),
@@ -129,8 +131,8 @@ func (c RawThemeConfig) Theme() ThemeConfig {
 				Ellipsis:  lipgloss.NewStyle(),
 				Group:     lipgloss.NewStyle().Margin(0, 1, 1, 1),
 				Header:    c.UI.Menu.Title.Style(colors).AlignHorizontal(lipgloss.Center),
-				Key:       c.UI.Text.Style(colors),
-				Desc:      c.UI.SubText.Style(colors),
+				Key:       c.UI.Menu.Text.Style(colors),
+				Desc:      c.UI.Menu.SubText.Style(colors),
 				Separator: lipgloss.NewStyle(),
 			},
 			NotificationStyle: notifications.Styles{
@@ -229,8 +231,8 @@ func (c IconConfig) IconStyle(colors ColorStyles) lipgloss.Style {
 }
 
 type UIConfig struct {
-	Text    Style `toml:"text"`
-	SubText Style `toml:"subtext"`
+	Background string `toml:"background"`
+	Foreground string `toml:"foreground"`
 
 	AppBar  AppBarUIConfig  `toml:"app_bar"`
 	CodeBar CodeBarUIConfig `toml:"code_bar"`
@@ -266,6 +268,9 @@ type MenuUIConfig struct {
 	Style   Style `toml:"style"`
 	Title   Style `toml:"title"`
 	Content Style `toml:"content"`
+
+	Text    Style `toml:"text"`
+	SubText Style `toml:"subtext"`
 
 	Entry                  Style `toml:"entry"`
 	SelectedEntry          Style `toml:"selected_entry"`

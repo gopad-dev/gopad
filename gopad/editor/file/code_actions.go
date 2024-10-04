@@ -1,7 +1,7 @@
 package file
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/ls"

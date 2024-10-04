@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/editor/file"

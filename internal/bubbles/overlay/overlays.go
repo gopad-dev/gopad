@@ -3,7 +3,7 @@ package overlay
 import (
 	"slices"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 )
 

@@ -3,10 +3,10 @@ package searchbar
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/editormsg"
@@ -91,7 +91,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			return m, tea.Batch(cmds...)
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.Focused() {
 			switch {
 			case key.Matches(msg, config.Keys.Editor.SearchBar.Close):

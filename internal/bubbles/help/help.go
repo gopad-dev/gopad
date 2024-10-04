@@ -3,9 +3,9 @@ package help
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 )
 
 // KeyMap is a map of keybindings used to generate help. Since it's an

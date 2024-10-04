@@ -10,6 +10,7 @@ blue = "4"
 magenta = "5"
 cyan = "6"
 white = "7"
+
 bright_black = "8"
 bright_red = "9"
 bright_green = "10"
@@ -25,7 +26,7 @@ background = ""
 overlay0 = "235"
 overlay1 = "234"
 
-text = "7"
+text = "15"
 subtext = "8"
 
 primary = "6"
@@ -48,11 +49,11 @@ unknown_type = { icon = 0xeb63 }
 # File Icon configuration
 [icons.files]
 "go" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
-"go-mod" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
-"go-sum" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
-"go-work" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
-"go-template" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
-"templ" = { icon = 0xe627, style = { foreground = '$bright_cyan' }  }
+"go-mod" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
+"go-sum" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
+"go-work" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
+"go-template" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
+"templ" = { icon = 0xe627, style = { foreground = '$bright_cyan' } }
 "toml" = { icon = 0xe6b2, style = { foreground = '$bright_red' } }
 "query" = { icon = 0xe21c }
 "markdown" = { icon = 0xf0354 }
@@ -117,8 +118,8 @@ unknown_type = { icon = 0xeb63 }
 
 # UI Style configuration
 [ui]
-text = { foreground = '$text' }
-subtext = { foreground = '$subtext' }
+background = '$background'
+foreground = '$text'
 
 # App Bar Style configuration
 [ui.app_bar]
@@ -128,7 +129,7 @@ title = { foreground = '$primary', reverse = true }
 # App Bar File Style configuration
 [ui.app_bar.files]
 style = { }
-file = { foreground = '$primary_selected', reverse = true }
+file = { foreground = '$primary', reverse = true }
 selected_file = { foreground = '$primary_selected', reverse = true }
 
 # Code Bar Style configuration
@@ -140,6 +141,9 @@ style = { foreground = '$primary', reverse = true }
 style = { border_foreground = '$primary' }
 title = { foreground = '$primary', reverse = true }
 content = { foreground = '$text' }
+
+text = { foreground = '$text' }
+subtext = { foreground = '$subtext' }
 
 entry = { foreground = '$text' }
 selected_entry = { foreground = '$primary_selected', reverse = true }

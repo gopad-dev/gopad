@@ -1,7 +1,7 @@
 package ls
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 )
@@ -57,12 +57,10 @@ type GetDefinitionMsg struct {
 	Col  int
 }
 
-func UpdateDefinition(name string, definitions []Definition) tea.Cmd {
-	return func() tea.Msg {
-		return UpdateDefinitionMsg{
-			Name:        name,
-			Definitions: definitions,
-		}
+func UpdateDefinition(name string, definitions []Definition) tea.Msg {
+	return UpdateDefinitionMsg{
+		Name:        name,
+		Definitions: definitions,
 	}
 }
 

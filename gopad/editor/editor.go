@@ -11,12 +11,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
 	"go.gopad.dev/go-tree-sitter"
+
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
@@ -165,13 +166,13 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 		tea.Sequence(
 			ls.FileCreated(f.Name(), f.Buffer().Bytes()),
 			ls.FileOpened(f.Name(), f.Buffer().Version(), f.Buffer().Bytes()),
+			ls.GetInlayHint(f.Name(), f.Version(), f.Range()),
 		),
 	}
 
-	if err = f.InitTree(); err != nil {
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
+	if cmd := f.InitTree(); cmd != nil {
+		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -191,12 +192,12 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 
 	cmds := []tea.Cmd{
 		ls.FileOpened(f.Name(), f.Buffer().Version(), f.Buffer().Bytes()),
+		ls.GetInlayHint(f.Name(), f.Version(), f.Range()),
 	}
 
-	if err = f.InitTree(); err != nil {
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
+	if cmd := f.InitTree(); cmd != nil {
+		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
 
 	return tea.Batch(cmds...), nil
 }
@@ -339,12 +340,19 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		if f == nil {
 			return e, tea.Batch(cmds...)
 		}
-		f.SetInlayHint(msg.Hints)
+		f.SetInlayHint(msg.Version, msg.Hints)
+		return e, tea.Batch(cmds...)
+	case file.UpdateMatchesMsg:
+		f := e.FileByName(msg.Name)
+		if f == nil {
+			return e, tea.Batch(cmds...)
+		}
+		f.SetMatches(msg.Version, msg.Matches)
 		return e, tea.Batch(cmds...)
 	case ls.RefreshInlayHintMsg:
 		// refresh inlay hints for all open files
 		for _, f := range e.files {
-			cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Range()))
+			cmds = append(cmds, ls.GetInlayHint(f.Name(), f.Version(), f.Range()))
 		}
 		return e, tea.Batch(cmds...)
 	case ls.UpdateDefinitionMsg:
@@ -478,7 +486,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			}
 		}
 		return e, tea.Batch(cmds...)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Editor.ToggleFileTree):
 			if e.fileTree.Visible() {
@@ -489,7 +497,12 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			}
 			return e, tea.Batch(cmds...)
 		case key.Matches(msg, config.Keys.Editor.FocusFileTree):
-			return e, tea.Batch(append(cmds, editormsg.Focus(editormsg.ModelFileTree))...)
+			if e.fileTree.Focused() {
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+			} else {
+				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
+			}
+			return e, tea.Batch(cmds...)
 		case key.Matches(msg, config.Keys.Editor.File.New):
 			return e, overlay.Open(NewNewOverlay())
 		case key.Matches(msg, config.Keys.Editor.Search):
@@ -578,11 +591,10 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s renamed to %s", f.Name(), msg.Name)))
 	case file.SetLanguageMsg:
 		f.SetLanguage(msg.Language)
-
 		f.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
 
-		if err := f.InitTree(); err != nil {
-			cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree: %s", err.Error())))
+		if cmd = f.InitTree(); cmd != nil {
+			cmds = append(cmds, cmd)
 		}
 		return e, tea.Batch(cmds...)
 	case file.SaveMsg:
@@ -785,7 +797,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				return e, tea.Batch(cmds...)
 			}
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if e.focus {
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete.Show):
@@ -818,8 +830,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				f.Autocomplete().ClearCompletions()
 				return e, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
-				if err := f.InitTree(); err != nil {
-					cmds = append(cmds, notifications.Add(fmt.Sprintf("error refreshing tree sitter tree: %s", err.Error())))
+				if cmd = f.InitTree(); cmd != nil {
+					cmds = append(cmds, cmd)
 				}
 			case key.Matches(msg, config.Keys.Editor.ToggleTreeSitterDebug):
 				e.ToggleTreeSitterDebug()
@@ -1055,25 +1067,27 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 			default:
 				k := msg.Key()
-				if k.Mod == 0 {
-					text := []byte(string(k.Code))
-					if s := f.Selection(); s != nil {
-						cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
-						f.ResetMark()
-					} else {
-						cmds = append(cmds, f.Insert(text))
-					}
+				if k.Text == "" || k.Mod.Contains(tea.ModAlt) || k.Mod.Contains(tea.ModCtrl) || k.Mod.Contains(tea.ModMeta) || k.Mod.Contains(tea.ModSuper) || k.Mod.Contains(tea.ModHyper) {
+					break
+				}
 
-					cmds = append(cmds, f.Autocomplete().Update())
+				text := []byte(k.Text)
+				if s := f.Selection(); s != nil {
+					cmds = append(cmds, f.Replace(s.Start.Row, s.Start.Col, s.End.Row, s.End.Col, text))
+					f.ResetMark()
+				} else {
+					cmds = append(cmds, f.Insert(text))
+				}
 
-					// handle auto pairs
-					if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
-						for _, pair := range lang.Config.AutoPairs {
-							if string(k.Code) == pair.Open {
-								row, col := f.Cursor()
-								cmds = append(cmds, f.InsertAt(row, col+ansi.StringWidth(pair.Open), []byte(pair.Close)))
-								break
-							}
+				cmds = append(cmds, f.Autocomplete().Update())
+
+				// handle auto pairs
+				if lang := f.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
+					for _, pair := range lang.Config.AutoPairs {
+						if string(k.Code) == pair.Open {
+							row, col := f.Cursor()
+							cmds = append(cmds, f.InsertAt(row, col+ansi.StringWidth(pair.Open), []byte(pair.Close)))
+							break
 						}
 					}
 				}

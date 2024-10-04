@@ -59,6 +59,9 @@ func (c IconStyles) TypeIcon(name string) lipgloss.Style {
 }
 
 type UiStyles struct {
+	Background color.Color
+	Foreground color.Color
+
 	AppBar  AppBarStyles
 	CodeBar CodeBarStyles
 

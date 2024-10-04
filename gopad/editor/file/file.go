@@ -2,13 +2,15 @@ package file
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
@@ -17,7 +19,6 @@ import (
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/ls"
-	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/xrunes"
 )
@@ -121,6 +122,7 @@ type File struct {
 
 	diagnosticVersions map[ls.DiagnosticType]int32
 	diagnostics        []ls.Diagnostic
+	inlayHintsVersion  int32
 	inlayHints         []ls.InlayHint
 	matchesVersion     int32
 	matches            [][]*Match
@@ -212,20 +214,25 @@ func (f *File) Dirty() bool {
 }
 
 func (f *File) recordChange(change Change) tea.Cmd {
+	now := time.Now()
+	defer func() {
+		log.Println("record change time: ", time.Since(now))
+	}()
+
 	var cmds []tea.Cmd
-	if err := f.UpdateTree(sitter.EditInput{
+	if cmd := f.UpdateTree(sitter.EditInput{
 		StartIndex:  change.StartIndex,
 		OldEndIndex: change.OldEndIndex,
 		NewEndIndex: change.NewEndIndex,
-	}); err != nil {
-		cmds = append(cmds, notifications.Add(fmt.Sprintf("Error updating tree: %v", err)))
+	}); cmd != nil {
+		cmds = append(cmds, cmd)
 	}
 
 	f.changes = append(f.changes, change)
 
 	cmds = append(cmds, tea.Sequence(
 		ls.FileChanged(f.Name(), f.Version(), change.Text),
-		ls.GetInlayHint(f.Name(), f.Range()),
+		ls.GetInlayHint(f.Name(), f.Version(), f.Range()),
 	))
 
 	return tea.Batch(cmds...)
@@ -236,6 +243,16 @@ func (f *File) InsertNewLine() tea.Cmd {
 	startIndex := f.buffer.ByteIndex(row, col)
 
 	f.SetCursor(f.buffer.InsertNewLine(row, col))
+	if len(f.matches) > row {
+		log.Println("inserting new line")
+		for _, lineMatches := range f.matches[row:] {
+			for _, match := range lineMatches {
+				match.Range.Start.Row++
+				match.Range.End.Row++
+			}
+		}
+		f.matches = slices.Insert(f.matches, row, make([]*Match, 0))
+	}
 
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),

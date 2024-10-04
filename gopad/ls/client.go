@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
 )
@@ -88,13 +88,6 @@ func (l *Client) updateSupportedServers(name string, msg tea.Msg) []tea.Cmd {
 	}
 
 	return cmds
-}
-
-func (l *Client) Filter(_ tea.Model, msg tea.Msg) tea.Msg {
-	if cmd := l.Update(msg); cmd != nil {
-		return cmd()
-	}
-	return msg
 }
 
 func (l *Client) Update(msg tea.Msg) tea.Cmd {

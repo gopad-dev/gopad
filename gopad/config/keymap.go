@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"

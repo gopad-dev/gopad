@@ -1,7 +1,7 @@
 package mouse
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/lrstanley/bubblezone"
 )
 

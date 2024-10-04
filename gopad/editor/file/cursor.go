@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"

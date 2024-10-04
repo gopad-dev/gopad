@@ -1,37 +1,39 @@
 package ls
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 )
 
-func GetInlayHint(name string, r buffer.Range) tea.Cmd {
+func GetInlayHint(name string, version int32, r buffer.Range) tea.Cmd {
 	return func() tea.Msg {
 		return GetInlayHintMsg{
-			Name:  name,
-			Range: r,
+			Name:    name,
+			Version: version,
+			Range:   r,
 		}
 	}
 }
 
 type GetInlayHintMsg struct {
-	Name  string
-	Range buffer.Range
+	Name    string
+	Version int32
+	Range   buffer.Range
 }
 
-func UpdateInlayHint(name string, hints []InlayHint) tea.Cmd {
-	return func() tea.Msg {
-		return UpdateInlayHintMsg{
-			Name:  name,
-			Hints: hints,
-		}
+func UpdateInlayHint(name string, version int32, hints []InlayHint) tea.Msg {
+	return UpdateInlayHintMsg{
+		Name:    name,
+		Version: version,
+		Hints:   hints,
 	}
 }
 
 type UpdateInlayHintMsg struct {
-	Name  string
-	Hints []InlayHint
+	Name    string
+	Version int32
+	Hints   []InlayHint
 }
 
 func RefreshInlayHint() tea.Cmd {

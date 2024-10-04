@@ -7,10 +7,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/internal/bubbles/help"
 )
@@ -286,7 +286,7 @@ func (m Model) didSelect(msg tea.Msg) (bool, string) {
 		return false, ""
 	}
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// If the msg does not match the Select keymap then this could not have been a selection.
 		if !key.Matches(msg, m.KeyMap.Select) {
 			return false, ""
@@ -367,7 +367,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 			}
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.GoToTop):
 			m.selected = 0

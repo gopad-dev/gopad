@@ -1,7 +1,7 @@
 package groupedlist
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 )
 
 type KeyMap struct {

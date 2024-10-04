@@ -6,12 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
@@ -50,6 +49,16 @@ type Gopad struct {
 	notifications notifications.Model
 }
 
+func (g *Gopad) Focus() {
+	if !zone.Enabled() {
+		g.editor.Focus()
+	}
+}
+
+func (g *Gopad) Blur() {
+	g.editor.Blur()
+}
+
 func (g Gopad) Init() (tea.Model, tea.Cmd) {
 	log.Printf("Initializing gopad, version: %s\n", g.version)
 
@@ -67,6 +76,8 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 		g.editor.Focus(),
 		tea.SetWindowTitle("gopad"),
 		cursor.Blink,
+		tea.SetBackgroundColor(config.Theme.UI.Background),
+		tea.SetForegroundColor(config.Theme.UI.Foreground),
 	}
 
 	g.overlays = config.NewOverlays()
@@ -76,12 +87,16 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	now := time.Now()
-	defer func() {
-		log.Printf("Update time: %s\n", time.Since(now))
-	}()
+	//now := time.Now()
+	//defer func() {
+	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
+	//}()
 
 	var cmds []tea.Cmd
+
+	if cmd := g.lsClient.Update(msg); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -97,6 +112,12 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		g.editor.Blur()
 		return g, tea.Batch(cmds...)
 
+	case tea.FocusMsg:
+		g.Focus()
+
+	case tea.BlurMsg:
+		g.Blur()
+
 	case tea.MouseMsg:
 		log.Printf("MouseMsg: %#v\n", msg)
 		switch {
@@ -105,7 +126,7 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return g, tea.Batch(cmds...)
 		}
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		log.Printf("KeyMsg: %s: %#v\n", msg.String(), msg)
 		// global keybindings
 		switch {
@@ -181,10 +202,10 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
-	now := time.Now()
-	defer func() {
-		log.Printf("Render time: %s\n", time.Since(now))
-	}()
+	//now := time.Now()
+	//defer func() {
+	//	log.Printf("Render time: %s\n", time.Since(now))
+	//}()
 
 	height := g.height
 

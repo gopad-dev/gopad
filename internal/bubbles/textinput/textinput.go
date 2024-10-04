@@ -5,13 +5,13 @@ import (
 	"unicode"
 
 	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/runeutil"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
+	"go.gopad.dev/gopad/internal/bubbles/key"
+	"go.gopad.dev/gopad/internal/bubbles/runeutil"
 )
 
 // Internal messages for clipboard operations.
@@ -453,7 +453,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	oldPos := m.pos // nolint
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.DeleteLeft):
 			m.Err = nil

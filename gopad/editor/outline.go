@@ -1,9 +1,9 @@
 package editor
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
@@ -130,7 +130,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	case outlineMsg:
 		o.items = msg
 		o.renderOutlineItems()
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Cancel):
 			return o, overlay.Close(OutlineOverlayID)

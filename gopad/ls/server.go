@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"go.lsp.dev/protocol"
 
 	"go.gopad.dev/gopad/gopad/buffer"
@@ -146,224 +146,265 @@ func (c *Server) Stop(ctx context.Context) error {
 }
 
 func (c *Server) Update(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
-
 	switch msg := msg.(type) {
 	case WorkspaceOpenedMsg:
 		c.workspace = msg.Workspace
-		if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
-			Event: protocol.WorkspaceFoldersChangeEvent{
-				Added: []protocol.WorkspaceFolder{
-					{
-						URI:  "file://" + c.workspace,
-						Name: filepath.Base(c.workspace),
+		return func() tea.Msg {
+			if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
+				Event: protocol.WorkspaceFoldersChangeEvent{
+					Added: []protocol.WorkspaceFolder{
+						{
+							URI:  "file://" + c.workspace,
+							Name: filepath.Base(c.workspace),
+						},
 					},
 				},
-			},
-		}); err != nil {
-			return Err(err)
+			}); err != nil {
+				return Err(err)
+			}
+
+			return nil
 		}
 
 	case WorkspaceClosedMsg:
 		c.workspace = ""
-		if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
-			Event: protocol.WorkspaceFoldersChangeEvent{
-				Removed: []protocol.WorkspaceFolder{
-					{
-						URI:  "file://" + c.workspace,
-						Name: filepath.Base(c.workspace),
+		return func() tea.Msg {
+			if err := c.server.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
+				Event: protocol.WorkspaceFoldersChangeEvent{
+					Removed: []protocol.WorkspaceFolder{
+						{
+							URI:  "file://" + c.workspace,
+							Name: filepath.Base(c.workspace),
+						},
 					},
 				},
-			},
-		}); err != nil {
-			return Err(err)
+			}); err != nil {
+				return Err(err)
+			}
+
+			return nil
 		}
 	}
 
 	switch msg := msg.(type) {
 	case GetDefinitionMsg:
-		locations, err := c.server.Definition(context.Background(), &protocol.DefinitionParams{
-			TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-				TextDocument: protocol.TextDocumentIdentifier{
-					URI: protocol.DocumentURI("file://" + msg.Name),
+		return func() tea.Msg {
+			locations, err := c.server.Definition(context.Background(), &protocol.DefinitionParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: protocol.Position{
+						Line:      uint32(msg.Row),
+						Character: uint32(msg.Col),
+					},
 				},
-				Position: protocol.Position{
-					Line:      uint32(msg.Row),
-					Character: uint32(msg.Col),
-				},
-			},
-		})
-		if err != nil {
-			return Err(err)
-		}
-
-		definitions := make([]Definition, 0, len(locations))
-		for _, location := range locations {
-			definitions = append(definitions, Definition{
-				Name:  location.URI.Filename(),
-				Range: buffer.ParseRange(location.Range),
 			})
+			if err != nil {
+				return err
+			}
+
+			definitions := make([]Definition, 0, len(locations))
+			for _, location := range locations {
+				definitions = append(definitions, Definition{
+					Name:  location.URI.Filename(),
+					Range: buffer.ParseRange(location.Range),
+				})
+			}
+			return UpdateDefinition(msg.Name, definitions)
 		}
-		cmds = append(cmds, UpdateDefinition(msg.Name, definitions))
 	case GetInlayHintMsg:
-		result, err := c.server.InlayHint(context.Background(), &protocol.InlayHintParams{
-			TextDocument: protocol.TextDocumentIdentifier{
-				URI: protocol.DocumentURI("file://" + msg.Name),
-			},
-			Range: msg.Range.ToProtocol(),
-		})
-		if err != nil {
-			return Err(err)
-		}
+		return func() tea.Msg {
 
-		hints := make([]InlayHint, 0, len(result))
-		for _, hint := range result {
-			kind := InlayHintTypeNone
-			if hint.Kind != nil {
-				kind = InlayHintType(*hint.Kind)
-			}
-
-			var label string
-			switch l := hint.Label.(type) {
-			case string:
-				label = l
-			case []protocol.InlayHintLabelPart:
-				for _, part := range l {
-					label += part.Value
-				}
-			}
-
-			var tooltip string
-			switch t := hint.Tooltip.(type) {
-			case string:
-				tooltip = t
-			case *protocol.MarkupContent:
-				tooltip = t.Value
-			}
-			hints = append(hints, InlayHint{
-				Type:         kind,
-				Position:     buffer.ParsePosition(hint.Position),
-				Label:        label,
-				Tooltip:      tooltip,
-				PaddingLeft:  hint.PaddingLeft,
-				PaddingRight: hint.PaddingRight,
-			})
-		}
-		cmds = append(cmds, UpdateInlayHint(msg.Name, hints))
-	case GetAutocompletionMsg:
-		result, err := c.server.Completion(context.Background(), &protocol.CompletionParams{
-			TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			result, err := c.server.InlayHint(context.Background(), &protocol.InlayHintParams{
 				TextDocument: protocol.TextDocumentIdentifier{
 					URI: protocol.DocumentURI("file://" + msg.Name),
 				},
-				Position: protocol.Position{
-					Line:      uint32(msg.Row),
-					Character: uint32(msg.Col),
-				},
-			},
-		})
-		if err != nil {
-			return Err(err)
-		}
-
-		items := make([]CompletionItem, 0, len(result.Items))
-		for _, resultItem := range result.Items {
-			item := CompletionItem{
-				Label:      resultItem.Label,
-				Detail:     resultItem.Detail,
-				Kind:       CompletionItemKind(resultItem.Kind),
-				Text:       resultItem.InsertText,
-				Deprecated: resultItem.Deprecated,
+				Range: msg.Range.ToProtocol(),
+			})
+			if err != nil {
+				return err
 			}
 
-			if resultItem.TextEdit != nil {
-				item.Edit = &TextEdit{
-					Range:   buffer.ParseRange(resultItem.TextEdit.Range),
-					NewText: resultItem.TextEdit.NewText,
+			hints := make([]InlayHint, 0, len(result))
+			for _, hint := range result {
+				kind := InlayHintTypeNone
+				if hint.Kind != nil {
+					kind = InlayHintType(*hint.Kind)
 				}
+
+				var label string
+				switch l := hint.Label.(type) {
+				case string:
+					label = l
+				case []protocol.InlayHintLabelPart:
+					for _, part := range l {
+						label += part.Value
+					}
+				}
+
+				var tooltip string
+				switch t := hint.Tooltip.(type) {
+				case string:
+					tooltip = t
+				case *protocol.MarkupContent:
+					tooltip = t.Value
+				}
+				hints = append(hints, InlayHint{
+					Type:         kind,
+					Position:     buffer.ParsePosition(hint.Position),
+					Label:        label,
+					Tooltip:      tooltip,
+					PaddingLeft:  hint.PaddingLeft,
+					PaddingRight: hint.PaddingRight,
+				})
+			}
+			return UpdateInlayHint(msg.Name, msg.Version, hints)
+		}
+	case GetAutocompletionMsg:
+		return func() tea.Msg {
+			result, err := c.server.Completion(context.Background(), &protocol.CompletionParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: protocol.Position{
+						Line:      uint32(msg.Row),
+						Character: uint32(msg.Col),
+					},
+				},
+			})
+			if err != nil {
+				return err
 			}
 
-			items = append(items, item)
+			items := make([]CompletionItem, 0, len(result.Items))
+			for _, resultItem := range result.Items {
+				item := CompletionItem{
+					Label:      resultItem.Label,
+					Detail:     resultItem.Detail,
+					Kind:       CompletionItemKind(resultItem.Kind),
+					Text:       resultItem.InsertText,
+					Deprecated: resultItem.Deprecated,
+				}
+
+				if resultItem.TextEdit != nil {
+					item.Edit = &TextEdit{
+						Range:   buffer.ParseRange(resultItem.TextEdit.Range),
+						NewText: resultItem.TextEdit.NewText,
+					}
+				}
+
+				items = append(items, item)
+			}
+			return UpdateAutocompletion(msg.Name, items)
 		}
-		cmds = append(cmds, UpdateAutocompletion(msg.Name, items))
 	case FileOpenedMsg:
-		if err := c.server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
-			TextDocument: protocol.TextDocumentItem{
-				URI:        protocol.DocumentURI("file://" + msg.Name),
-				LanguageID: protocol.GoLanguage,
-				Version:    msg.Version,
-				Text:       string(msg.Text),
-			},
-		}); err != nil {
-			return Err(err)
+		return func() tea.Msg {
+			if err := c.server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
+				TextDocument: protocol.TextDocumentItem{
+					URI:        protocol.DocumentURI("file://" + msg.Name),
+					LanguageID: protocol.GoLanguage,
+					Version:    msg.Version,
+					Text:       string(msg.Text),
+				},
+			}); err != nil {
+				return err
+			}
+
+			return nil
 		}
 	case FileClosedMsg:
-		if err := c.server.DidClose(context.Background(), &protocol.DidCloseTextDocumentParams{
-			TextDocument: protocol.TextDocumentIdentifier{
-				URI: protocol.DocumentURI("file://" + msg.Name),
-			},
-		}); err != nil {
-			return Err(err)
-		}
-	case FileCreatedMsg:
-		if err := c.server.DidCreateFiles(context.Background(), &protocol.CreateFilesParams{
-			Files: []protocol.FileCreate{
-				{
-					URI: "file://" + msg.Name,
-				},
-			},
-		}); err != nil {
-			return Err(err)
-		}
-	case FileDeletedMsg:
-		if err := c.server.DidDeleteFiles(context.Background(), &protocol.DeleteFilesParams{
-			Files: []protocol.FileDelete{
-				{
-					URI: "file://" + msg.Name,
-				},
-			},
-		}); err != nil {
-			return Err(err)
-		}
-	case FileRenamedMsg:
-		if err := c.server.DidRenameFiles(context.Background(), &protocol.RenameFilesParams{
-			Files: []protocol.FileRename{
-				{
-					OldURI: "file://" + msg.OldName,
-					NewURI: "file://" + msg.NewName,
-				},
-			},
-		}); err != nil {
-			return Err(err)
-		}
-	case FileChangedMsg:
-		if err := c.server.DidChange(context.Background(), &protocol.DidChangeTextDocumentParams{
-			TextDocument: protocol.VersionedTextDocumentIdentifier{
-				TextDocumentIdentifier: protocol.TextDocumentIdentifier{
+		return func() tea.Msg {
+			if err := c.server.DidClose(context.Background(), &protocol.DidCloseTextDocumentParams{
+				TextDocument: protocol.TextDocumentIdentifier{
 					URI: protocol.DocumentURI("file://" + msg.Name),
 				},
-				Version: msg.Version,
-			},
-			ContentChanges: []protocol.TextDocumentContentChangeEvent{
-				{
-					Text: string(msg.Text),
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	case FileCreatedMsg:
+		return func() tea.Msg {
+			if err := c.server.DidCreateFiles(context.Background(), &protocol.CreateFilesParams{
+				Files: []protocol.FileCreate{
+					{
+						URI: "file://" + msg.Name,
+					},
 				},
-			},
-		}); err != nil {
-			return Err(err)
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	case FileDeletedMsg:
+		return func() tea.Msg {
+			if err := c.server.DidDeleteFiles(context.Background(), &protocol.DeleteFilesParams{
+				Files: []protocol.FileDelete{
+					{
+						URI: "file://" + msg.Name,
+					},
+				},
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	case FileRenamedMsg:
+		return func() tea.Msg {
+			if err := c.server.DidRenameFiles(context.Background(), &protocol.RenameFilesParams{
+				Files: []protocol.FileRename{
+					{
+						OldURI: "file://" + msg.OldName,
+						NewURI: "file://" + msg.NewName,
+					},
+				},
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	case FileChangedMsg:
+		return func() tea.Msg {
+			if err := c.server.DidChange(context.Background(), &protocol.DidChangeTextDocumentParams{
+				TextDocument: protocol.VersionedTextDocumentIdentifier{
+					TextDocumentIdentifier: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Version: msg.Version,
+				},
+				ContentChanges: []protocol.TextDocumentContentChangeEvent{
+					{
+						Text: string(msg.Text),
+					},
+				},
+			}); err != nil {
+				return err
+			}
+
+			return nil
 		}
 	case FileSavedMsg:
-		if err := c.server.DidSave(context.Background(), &protocol.DidSaveTextDocumentParams{
-			Text: string(msg.Text),
-			TextDocument: protocol.TextDocumentIdentifier{
-				URI: protocol.DocumentURI("file://" + msg.Name),
-			},
-		}); err != nil {
-			return Err(err)
+		return func() tea.Msg {
+			if err := c.server.DidSave(context.Background(), &protocol.DidSaveTextDocumentParams{
+				Text: string(msg.Text),
+				TextDocument: protocol.TextDocumentIdentifier{
+					URI: protocol.DocumentURI("file://" + msg.Name),
+				},
+			}); err != nil {
+				return Err(err)
+			}
+
+			return nil
 		}
 	}
 
-	return tea.Batch(cmds...)
+	return nil
 }
 
 func (c *Server) Progress(ctx context.Context, params *protocol.ProgressParams) error {

@@ -1,7 +1,7 @@
 package editormsg
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 )
 
 type Model int

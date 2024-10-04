@@ -1,7 +1,7 @@
 package ls
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 )
 
 func Err(err error) tea.Cmd {

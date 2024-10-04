@@ -3,10 +3,10 @@ package button
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 )
@@ -79,7 +79,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			cmds = append(cmds, m.OnClick())
 			return m, tea.Batch(cmds...)
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.focus {
 			switch {
 			case key.Matches(msg, m.KeyMap.OK):

@@ -1,6 +1,7 @@
 package file
 
 import (
+	"log"
 	"slices"
 
 	"github.com/charmbracelet/lipgloss"
@@ -12,6 +13,7 @@ import (
 func (f *File) SetDiagnostic(dType ls.DiagnosticType, version int32, diagnostics []ls.Diagnostic) {
 	// ignore outdated diagnostics
 	if version < f.diagnosticVersions[dType] {
+		log.Printf("skipping outdated diagnostics: %d < %d", version, f.diagnosticVersions[dType])
 		return
 	}
 

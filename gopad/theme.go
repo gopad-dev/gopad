@@ -1,9 +1,9 @@
 package gopad
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/internal/bubbles/list"
@@ -51,7 +51,7 @@ func (s SetThemeOverlay) Init() (overlay.Overlay, tea.Cmd) {
 
 func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, config.Keys.Cancel):
 			return s, overlay.Close(SetThemeOverlayID)

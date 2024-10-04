@@ -3,7 +3,7 @@ package searchbar
 import (
 	"bytes"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"go.gopad.dev/gopad/gopad/buffer"

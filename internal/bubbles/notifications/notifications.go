@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/internal/bubbles/overlay"

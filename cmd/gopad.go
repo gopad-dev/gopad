@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/lrstanley/bubblezone"
 	"github.com/spf13/cobra"
 
@@ -34,7 +34,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			debug, _ := cmd.Flags().GetString("debug")
 			debugLSP, _ := cmd.Flags().GetString("debug-lsp")
 			pprof, _ := cmd.Flags().GetString("pprof")
-			mouse, _ := cmd.Flags().GetBool("mouse")
+			disableMouse, _ := cmd.Flags().GetBool("disable-mouse")
 
 			if debug != "" {
 				logFile, err := tea.LogToFile(debug, "gopad")
@@ -81,12 +81,14 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 
 			opts := []tea.ProgramOption{
 				tea.WithAltScreen(),
-				tea.WithFilter(lsClient.Filter),
+				tea.WithReportFocus(),
 			}
-			if mouse {
-				zone.NewGlobal()
-				defer zone.Close()
+			zone.NewGlobal()
+			defer zone.Close()
+			if !disableMouse {
 				opts = append(opts, tea.WithMouseCellMotion())
+			} else {
+				zone.SetEnabled(false)
 			}
 			p := tea.NewProgram(e, opts...)
 			lsClient.SetProgram(p)
@@ -104,7 +106,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 	cmd.Flags().StringP("debug", "d", "", "set debug log file")
 	cmd.Flags().StringP("debug-lsp", "l", "", "set debug lsp log file")
 	cmd.Flags().StringP("pprof", "p", "", "set pprof address:port")
-	cmd.Flags().BoolP("mouse", "m", true, "enable mouse support (Default: true)")
+	cmd.Flags().BoolP("disable-mouse", "", false, "disable mouse support (enabled by default)")
 
 	return cmd
 }

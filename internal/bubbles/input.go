@@ -1,7 +1,7 @@
 package bubbles
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea/v2"
 )
 
 func IsKeyMsg(msg tea.Msg) bool {
