@@ -461,7 +461,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		}
 		return e, tea.Batch(cmds...)
 	case editormsg.FocusMsg:
-		log.Println("focus msg", msg)
+		cmds = append(cmds, e.Focus())
 		switch msg.Model {
 		case editormsg.ModelFile:
 			f := e.File()

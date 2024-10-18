@@ -215,7 +215,6 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 		}
 	case GetInlayHintMsg:
 		return func() tea.Msg {
-
 			result, err := c.server.InlayHint(context.Background(), &protocol.InlayHintParams{
 				TextDocument: protocol.TextDocumentIdentifier{
 					URI: protocol.DocumentURI("file://" + msg.Name),

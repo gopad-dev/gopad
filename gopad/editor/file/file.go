@@ -529,7 +529,7 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 	}
 
 	prefixWidth := lipgloss.Width(strconv.Itoa(f.buffer.LinesLen()))
-	width = max(width-prefixWidth+styles.FileView.BorderStyle.GetHorizontalFrameSize()+3, 0)
+	width = max(width-prefixWidth-styles.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
 
 	// debug takes up 4 lines
 	if debug {
@@ -719,6 +719,8 @@ func (f *File) View(width int, height int, border bool, debug bool) string {
 		}
 		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Definitions: %s", strings.Join(currentDefinitions, ", ")))
 	}
+
+	//log.Println("editor code: ", editorCode)
 
 	return editorCode
 }
