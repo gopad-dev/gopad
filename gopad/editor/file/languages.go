@@ -93,12 +93,12 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 		}
 
 		if language.Grammar != nil {
-			grammar, err := loadTreeSitterGrammar(name, *language.Grammar, defaultConfigs)
+			g, err := loadTreeSitterGrammar(name, *language.Grammar, defaultConfigs)
 			if err != nil {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
-			if grammar != nil {
-				lang.Grammar = grammar
+			if g != nil {
+				lang.Grammar = g
 			}
 		}
 
@@ -258,7 +258,9 @@ func readQuery(config string, defaultConfigs embed.FS, name string, query string
 		return nil, fmt.Errorf("error opening query %q: %w", query, err)
 	}
 
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	return io.ReadAll(f)
 }

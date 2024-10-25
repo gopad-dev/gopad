@@ -15,7 +15,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type ThemeConfig struct {
+type ThemeStyles struct {
 	Name string
 
 	Colors     ColorStyles

@@ -1,4 +1,4 @@
-package filetree
+package editor
 
 import (
 	"cmp"
@@ -13,10 +13,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
+
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/editormsg"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -66,14 +66,14 @@ func Refresh() tea.Msg {
 
 type refreshMsg struct{}
 
-func New() Model {
-	return Model{
+func NewFileTree() FileTree {
+	return FileTree{
 		Width:     24,
 		EmptyText: "No folder open",
 	}
 }
 
-type Model struct {
+type FileTree struct {
 	entry     *Entry
 	focus     bool
 	show      bool
@@ -83,7 +83,7 @@ type Model struct {
 	Ignored   []string
 }
 
-func (m *Model) Open(name string) error {
+func (m *FileTree) Open(name string) error {
 	root := &Entry{
 		Name:     filepath.Base(name),
 		Path:     name,
@@ -140,31 +140,31 @@ func (m *Model) Open(name string) error {
 	return nil
 }
 
-func (m *Model) Visible() bool {
+func (m *FileTree) Visible() bool {
 	return m.show
 }
 
-func (m *Model) Show() {
+func (m *FileTree) Show() {
 	m.show = true
 }
 
-func (m *Model) Hide() {
+func (m *FileTree) Hide() {
 	m.show = false
 }
 
-func (m *Model) Focused() bool {
+func (m *FileTree) Focused() bool {
 	return m.focus
 }
 
-func (m *Model) Focus() {
+func (m *FileTree) Focus() {
 	m.focus = true
 }
 
-func (m *Model) Blur() {
+func (m *FileTree) Blur() {
 	m.focus = false
 }
 
-func (m *Model) selectIndex(i int) *Entry {
+func (m *FileTree) selectIndex(i int) *Entry {
 	if m.entry == nil {
 		return nil
 	}
@@ -193,7 +193,7 @@ func (m *Model) selectIndex(i int) *Entry {
 	return selected
 }
 
-func (m *Model) SelectNext() {
+func (m *FileTree) SelectNext() {
 	if m.entry == nil {
 		return
 	}
@@ -230,7 +230,7 @@ func (m *Model) SelectNext() {
 	}
 }
 
-func (m *Model) SelectPrev() {
+func (m *FileTree) SelectPrev() {
 	if m.entry == nil {
 		return
 	}
@@ -259,7 +259,7 @@ func (m *Model) SelectPrev() {
 	walk(m.entry)
 }
 
-func (m *Model) Selected() *Entry {
+func (m *FileTree) Selected() *Entry {
 	if m.entry == nil {
 		return nil
 	}
@@ -279,11 +279,11 @@ func (m *Model) Selected() *Entry {
 	return walk(m.entry)
 }
 
-func (m Model) zoneEntryID(i int) string {
+func (m FileTree) zoneEntryID(i int) string {
 	return fmt.Sprintf("%s%d", zoneIDPrefix, i)
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m FileTree) Update(msg tea.Msg) (FileTree, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -297,7 +297,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			switch {
 			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				if !m.Focused() {
-					cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
+					cmds = append(cmds, Focus(ModelTypeFileTree))
 				}
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
@@ -311,7 +311,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			switch {
 			case mouse.MatchesZone(msg, z, tea.MouseLeft):
 				if !m.Focused() {
-					cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
+					cmds = append(cmds, Focus(ModelTypeFileTree))
 				}
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), zoneIDPrefix))
@@ -330,13 +330,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		switch {
 		case mouse.Matches(msg, zoneID, tea.MouseWheelUp):
 			if !m.Focused() {
-				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
+				cmds = append(cmds, Focus(ModelTypeFileTree))
 			}
 			m.SelectPrev()
 			return m, tea.Batch(cmds...)
 		case mouse.Matches(msg, zoneID, tea.MouseWheelDown):
 			if !m.Focused() {
-				cmds = append(cmds, editormsg.Focus(editormsg.ModelFileTree))
+				cmds = append(cmds, Focus(ModelTypeFileTree))
 			}
 			m.SelectNext()
 			return m, tea.Batch(cmds...)
@@ -369,7 +369,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) refreshViewOffset(selected int, height int) {
+func (m *FileTree) refreshViewOffset(selected int, height int) {
 	if selected >= m.offset+height {
 		m.offset = selected - height + 1
 	} else if selected < m.offset {
@@ -377,7 +377,7 @@ func (m *Model) refreshViewOffset(selected int, height int) {
 	}
 }
 
-func (m Model) View(height int) string {
+func (m FileTree) View(height int) string {
 	if m.entry == nil {
 		return config.Theme.UI.FileTree.Style.Render(config.Theme.UI.FileTree.EmptyStyle.Height(height).Width(m.Width).Render(m.EmptyText))
 	}
@@ -421,7 +421,7 @@ func (m Model) View(height int) string {
 	return zone.Mark(zoneID, config.Theme.UI.FileTree.Style.Height(height).Width(m.Width).Render(tree))
 }
 
-func (m Model) entryView(e *Entry, i int, indent string) string {
+func (m FileTree) entryView(e *Entry, i int, indent string) string {
 	var icon lipgloss.Style
 	if e.IsDir {
 		if indent == "" {

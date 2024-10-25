@@ -6,8 +6,8 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func Save() tea.Msg {
@@ -63,10 +63,10 @@ func Paste() tea.Msg {
 	if err != nil {
 		return notifications.Add(fmt.Sprintf("Error pasting: %s", err))()
 	}
-	return PasteMsg(text)
+	return tea.Batch(func() tea.Msg {
+		return tea.PasteMsg(text)
+	}, notifications.Add("Pasted from clipboard"))()
 }
-
-type PasteMsg []byte
 
 func Copy(b []byte) tea.Cmd {
 	return func() tea.Msg {
@@ -92,37 +92,21 @@ func Cut(s buffer.Range, b []byte) tea.Cmd {
 
 type CutMsg buffer.Range
 
-func Select(fromRow int, fromCol int, toRow int, toCol int) tea.Cmd {
+func Select(r buffer.Range) tea.Cmd {
 	return func() tea.Msg {
-		return SelectMsg{
-			FromRow: fromRow,
-			FromCol: fromCol,
-			ToRow:   toRow,
-			ToCol:   toCol,
-		}
+		return SelectMsg(r)
 	}
 }
 
-type SelectMsg struct {
-	FromRow int
-	FromCol int
-	ToRow   int
-	ToCol   int
-}
+type SelectMsg buffer.Range
 
-func Scroll(row int, col int) tea.Cmd {
+func Scroll(p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
-		return ScrollMsg{
-			Row: row,
-			Col: col,
-		}
+		return ScrollMsg(p)
 	}
 }
 
-type ScrollMsg struct {
-	Row int
-	Col int
-}
+type ScrollMsg buffer.Point
 
 func OpenDir(name string) tea.Cmd {
 	return func() tea.Msg {
@@ -144,7 +128,7 @@ func OpenFile(name string) tea.Cmd {
 	}
 }
 
-func OpenFilePosition(name string, position *buffer.Position) tea.Cmd {
+func OpenFilePosition(name string, position *buffer.Point) tea.Cmd {
 	return func() tea.Msg {
 		return OpenFileMsg{
 			Name:     name,
@@ -155,7 +139,7 @@ func OpenFilePosition(name string, position *buffer.Position) tea.Cmd {
 
 type OpenFileMsg struct {
 	Name     string
-	Position *buffer.Position
+	Position *buffer.Point
 }
 
 func SaveFile(name string) tea.Cmd {
@@ -194,15 +178,29 @@ type NewFileMsg struct {
 	Name string
 }
 
-func RenameFile(name string) tea.Cmd {
+func RenameFile(oldName string, newName string) tea.Cmd {
 	return func() tea.Msg {
 		return RenameFileMsg{
-			Name: name,
+			OldName: oldName,
+			NewName: newName,
 		}
 	}
 }
 
 type RenameFileMsg struct {
+	OldName string
+	NewName string
+}
+
+func DeleteFile(name string) tea.Cmd {
+	return func() tea.Msg {
+		return DeleteFileMsg{
+			Name: name,
+		}
+	}
+}
+
+type DeleteFileMsg struct {
 	Name string
 }
 

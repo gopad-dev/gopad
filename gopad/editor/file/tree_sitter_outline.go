@@ -5,7 +5,7 @@ import (
 
 	"go.gopad.dev/go-tree-sitter"
 
-	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type OutlineItem struct {
@@ -15,7 +15,7 @@ type OutlineItem struct {
 
 type OutlineItemChar struct {
 	Char string
-	Pos  *buffer.Position
+	Pos  *buffer.Point
 }
 
 type outlineBufferRange struct {
@@ -29,13 +29,13 @@ type byteRange struct {
 }
 
 func (f *File) OutlineTree() []OutlineItem {
-	if f.tree == nil || f.tree.Tree == nil || f.tree.Language.Grammar == nil || f.tree.Language.Grammar.OutlineQuery == nil {
+	if f.Tree == nil || f.Tree.Tree == nil || f.Tree.Language.Grammar == nil || f.Tree.Language.Grammar.OutlineQuery == nil {
 		return nil
 	}
 
-	queryConfig := f.tree.Language.Grammar.OutlineQuery
+	queryConfig := f.Tree.Language.Grammar.OutlineQuery
 	queryCursor := sitter.NewQueryCursor()
-	queryCursor.Exec(queryConfig.Query, f.tree.Tree.RootNode())
+	queryCursor.Exec(queryConfig.Query, f.Tree.Tree.RootNode())
 
 	var items []OutlineItem
 	for {
@@ -53,11 +53,11 @@ func (f *File) OutlineTree() []OutlineItem {
 
 		itemCapture := match.Captures[itemNodeIndex]
 		itemRange := buffer.Range{
-			Start: buffer.Position{
+			Start: buffer.Point{
 				Row: int(itemCapture.Node.StartPoint().Row),
 				Col: int(itemCapture.Node.StartPoint().Column),
 			},
-			End: buffer.Position{
+			End: buffer.Point{
 				Row: int(itemCapture.Node.EndPoint().Row),
 				Col: int(itemCapture.Node.EndPoint().Column),
 			},
@@ -81,7 +81,7 @@ func (f *File) OutlineTree() []OutlineItem {
 			start := capture.Node.StartPoint()
 
 			if capture.Node.EndPoint().Row > start.Row {
-				r.end = r.start + f.buffer.LineLen(int(start.Row)) - int(start.Column)
+				r.end = r.start + f.Buffer.LineLen(int(start.Row)) - int(start.Column)
 			}
 
 			bufferRanges = append(bufferRanges, outlineBufferRange{
@@ -119,11 +119,11 @@ func (f *File) OutlineTree() []OutlineItem {
 				})
 			}
 
-			start := f.buffer.Position(bufferRange.r.start)
-			end := f.buffer.Position(bufferRange.r.end)
+			start := f.Buffer.Position(bufferRange.r.start)
+			end := f.Buffer.Position(bufferRange.r.end)
 
 			for i := start.Row; i <= end.Row; i++ {
-				line := f.buffer.Line(i)
+				line := f.Buffer.Line(i)
 				var colOffset int
 				if i == start.Row && i == end.Row {
 					line = line.CutRange(start.Col, end.Col)
@@ -138,7 +138,7 @@ func (f *File) OutlineTree() []OutlineItem {
 				for j, char := range line.RuneStrings() {
 					chars = append(chars, OutlineItemChar{
 						Char: char,
-						Pos: &buffer.Position{
+						Pos: &buffer.Point{
 							Row: i,
 							Col: j + colOffset,
 						},

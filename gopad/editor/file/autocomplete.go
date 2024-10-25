@@ -8,6 +8,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/ls"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func NewAutocompleter(f *File) *Autocompleter {
@@ -25,10 +26,9 @@ type Autocompleter struct {
 	show bool
 }
 
-func (s *Autocompleter) Update() tea.Cmd {
+func (s *Autocompleter) Update(p buffer.Point) tea.Cmd {
 	if s.Visible() {
-		row, col := s.file.Cursor()
-		return ls.GetAutocompletion(s.file.Name(), row, col)
+		return ls.GetAutocompletion(s.file.Buffer.Name(), p)
 	}
 
 	return nil

@@ -15,7 +15,6 @@ import (
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles"
-	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -49,10 +48,8 @@ type Gopad struct {
 	notifications notifications.Model
 }
 
-func (g *Gopad) Focus() {
-	if !zone.Enabled() {
-		g.editor.Focus()
-	}
+func (g *Gopad) Focus() tea.Cmd {
+	return g.editor.Focus(editor.ModelTypeFile)
 }
 
 func (g *Gopad) Blur() {
@@ -73,9 +70,7 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 
 	cmds := []tea.Cmd{
 		cmd,
-		g.editor.Focus(),
 		tea.SetWindowTitle("gopad"),
-		cursor.Blink,
 		tea.SetBackgroundColor(config.Theme.UI.Background),
 		tea.SetForegroundColor(config.Theme.UI.Foreground),
 	}
@@ -87,6 +82,7 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	log.Printf("Msg: %T: %v\n", msg, msg)
 	//now := time.Now()
 	//defer func() {
 	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
@@ -104,19 +100,13 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		g.width = msg.Width
 		return g, tea.Batch(cmds...)
 
-	case overlay.ResetFocusMsg:
-		cmds = append(cmds, g.editor.Focus())
+	case overlay.ResetFocusMsg, tea.FocusMsg:
+		cmds = append(cmds, g.Focus())
 		return g, tea.Batch(cmds...)
 
-	case overlay.TakeFocusMsg:
-		g.editor.Blur()
-		return g, tea.Batch(cmds...)
-
-	case tea.FocusMsg:
-		g.Focus()
-
-	case tea.BlurMsg:
+	case overlay.TakeFocusMsg, tea.BlurMsg:
 		g.Blur()
+		return g, tea.Batch(cmds...)
 
 	case tea.MouseMsg:
 		log.Printf("MouseMsg: %#v\n", msg)
@@ -126,53 +116,59 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return g, tea.Batch(cmds...)
 		}
 
-	case tea.KeyPressMsg:
+	case tea.KeyMsg:
 		log.Printf("KeyMsg: %s: %#v\n", msg.String(), msg)
-		// global keybindings
-		switch {
-		case key.Matches(msg, config.Keys.Quit):
-			if !g.overlays.Has(QuitOverlayID) {
-				if g.editor.HasChanges() {
-					return g, overlay.Open(NewQuitOverlay())
-				}
-				return g, tea.Quit
-			}
-		case key.Matches(msg, config.Keys.Help):
-			if !g.overlays.Has(HelpOverlayID) {
-				cmds = append(cmds, overlay.Open(NewHelpOverlay()))
-			}
-		case key.Matches(msg, config.Keys.Terminal):
-			return g, Terminal()
-		}
 
-		if !g.overlays.Has(KeyMapperOverlayID) {
+		switch msg := msg.(type) {
+		case tea.KeyPressMsg:
+			// global keybindings
 			switch {
-			case key.Matches(msg, config.Keys.Run):
-				if !g.overlays.Has(RunOverlayID) {
-					cmds = append(cmds, overlay.Open(NewRunOverlay()))
+			case key.Matches(msg, config.Keys.Quit):
+				if !g.overlays.Has(QuitOverlayID) {
+					if g.editor.HasChanges() {
+						return g, overlay.Open(NewQuitOverlay())
+					}
+					return g, tea.Quit
 				}
+			case key.Matches(msg, config.Keys.Help):
+				if !g.overlays.Has(HelpOverlayID) {
+					cmds = append(cmds, overlay.Open(NewHelpOverlay()))
+				}
+			case key.Matches(msg, config.Keys.Terminal):
+				return g, Terminal()
+			case key.Matches(msg, config.Keys.Debug):
+				log.Println("DEBUG")
+			}
 
-			case key.Matches(msg, config.Keys.KeyMapper):
-				if !g.overlays.Has(KeyMapperOverlayID) {
-					cmds = append(cmds, overlay.Open(NewKeyMapperOverlay()))
-				}
-			case key.Matches(msg, config.Keys.Editor.File.Open):
-				if !g.overlays.Has(editor.OpenOverlayID) {
-					path, err := os.Getwd()
-					if err != nil {
-						cmds = append(cmds, notifications.Add(fmt.Sprintf("Error getting current working directory: %s", err)))
-						return g, tea.Batch(cmds...)
+			if !g.overlays.Has(KeyMapperOverlayID) {
+				switch {
+				case key.Matches(msg, config.Keys.Run):
+					if !g.overlays.Has(RunOverlayID) {
+						cmds = append(cmds, overlay.Open(NewRunOverlay()))
 					}
-					cmds = append(cmds, overlay.Open(editor.NewOpenOverlay(path, true, false)))
-				}
-			case key.Matches(msg, config.Keys.Editor.File.OpenFolder):
-				if !g.overlays.Has(editor.OpenOverlayID) {
-					path, err := os.Getwd()
-					if err != nil {
-						cmds = append(cmds, notifications.Add(fmt.Sprintf("Error getting current working directory: %s", err)))
-						return g, tea.Batch(cmds...)
+
+				case key.Matches(msg, config.Keys.KeyMapper):
+					if !g.overlays.Has(KeyMapperOverlayID) {
+						cmds = append(cmds, overlay.Open(NewKeyMapperOverlay()))
 					}
-					cmds = append(cmds, overlay.Open(editor.NewOpenOverlay(path, false, true)))
+				case key.Matches(msg, config.Keys.Editor.File.Open):
+					if !g.overlays.Has(editor.OpenOverlayID) {
+						path, err := os.Getwd()
+						if err != nil {
+							cmds = append(cmds, notifications.Add(fmt.Sprintf("Error getting current working directory: %s", err)))
+							return g, tea.Batch(cmds...)
+						}
+						cmds = append(cmds, overlay.Open(editor.NewOpenOverlay(path, true, false)))
+					}
+				case key.Matches(msg, config.Keys.Editor.File.OpenFolder):
+					if !g.overlays.Has(editor.OpenOverlayID) {
+						path, err := os.Getwd()
+						if err != nil {
+							cmds = append(cmds, notifications.Add(fmt.Sprintf("Error getting current working directory: %s", err)))
+							return g, tea.Batch(cmds...)
+						}
+						cmds = append(cmds, overlay.Open(editor.NewOpenOverlay(path, false, true)))
+					}
 				}
 			}
 		}
@@ -237,7 +233,7 @@ func (g Gopad) AppBar() string {
 func (g Gopad) CodeBar() string {
 	width := g.width
 	contentWidth := width - config.Theme.UI.CodeBar.Style.GetHorizontalFrameSize()
-	file := g.editor.File()
+	file := g.editor.FileView()
 
 	barStyle := config.Theme.UI.CodeBar.Style
 	inlineBarStyle := barStyle.Inline(true).Render
@@ -249,8 +245,8 @@ func (g Gopad) CodeBar() string {
 		if s := file.Selection(); s != nil {
 			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("%d lines | [%d:%d-%d:%d]", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1))))
 		} else {
-			cursorRow, cursorCol := file.Cursor()
-			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("[%d:%d]", cursorRow+1, cursorCol+1))))
+			c := file.Cursor()
+			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("[%d:%d]", c.Row+1, c.Col+1))))
 		}
 
 		if servers := g.lsClient.SupportedServers(file.Name()); len(servers) > 0 {
@@ -280,7 +276,7 @@ func (g Gopad) CodeBar() string {
 
 		infoLine = append(infoLine,
 			zone.Mark(editor.ZoneFileLineEnding, inlineBarStyle(file.LineEnding().String())),
-			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle(file.Encoding())),
+			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle(file.EncodingName())),
 		)
 	}
 	infoLineStr := strings.Join(infoLine, inlineBarStyle(" | "))

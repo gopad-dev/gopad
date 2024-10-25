@@ -6,62 +6,87 @@ import (
 	"go.lsp.dev/protocol"
 )
 
-func ParsePosition(p protocol.Position) Position {
-	return Position{
+func ParsePoint(p protocol.Position) Point {
+	return Point{
 		Row: int(p.Line),
 		Col: int(p.Character),
 	}
 }
 
-type Position struct {
+type Point struct {
 	Row int
 	Col int
 }
 
-func (p Position) LessThan(other Position) bool {
+func (p Point) Point() (int, int) {
+	return p.Row, p.Col
+}
+
+func (p Point) Add(p2 Point) Point {
+	return Point{
+		Row: p.Row + p2.Row,
+		Col: p.Col + p2.Col,
+	}
+}
+
+func (p Point) Sub(p2 Point) Point {
+	return Point{
+		Row: p.Row - p2.Row,
+		Col: p.Col - p2.Col,
+	}
+}
+
+func (p Point) Offset(row, col int) Point {
+	return Point{
+		Row: p.Row + row,
+		Col: p.Col + col,
+	}
+}
+
+func (p Point) LessThan(other Point) bool {
 	if p.Row == other.Row {
 		return p.Col < other.Col
 	}
 	return p.Row < other.Row
 }
 
-func (p Position) LessThanOrEqual(other Position) bool {
+func (p Point) LessThanOrEqual(other Point) bool {
 	if p.Row == other.Row {
 		return p.Col <= other.Col
 	}
 	return p.Row < other.Row
 }
 
-func (p Position) GreaterThan(other Position) bool {
+func (p Point) GreaterThan(other Point) bool {
 	if p.Row == other.Row {
 		return p.Col > other.Col
 	}
 	return p.Row > other.Row
 }
 
-func (p Position) GreaterThanOrEqual(other Position) bool {
+func (p Point) GreaterThanOrEqual(other Point) bool {
 	if p.Row == other.Row {
 		return p.Col >= other.Col
 	}
 	return p.Row > other.Row
 }
 
-func (p Position) Equal(other Position) bool {
+func (p Point) Equal(other Point) bool {
 	return p.Row == other.Row && p.Col == other.Col
 }
 
-func (p Position) String() string {
+func (p Point) String() string {
 	return fmt.Sprintf("[%d:%d]", p.Row+1, p.Col+1)
 }
 
-func (p Position) ToProtocol() protocol.Position {
+func (p Point) ToProtocol() protocol.Position {
 	return protocol.Position{
 		Line:      uint32(p.Row),
 		Character: uint32(p.Col),
 	}
 }
 
-func (p Position) Compare(start Position) int {
+func (p Point) Compare(start Point) int {
 	if p.Row < start.Row {
 		return -1
 	}
@@ -79,17 +104,17 @@ func (p Position) Compare(start Position) int {
 
 func ParseRange(r protocol.Range) Range {
 	return Range{
-		Start: ParsePosition(r.Start),
-		End:   ParsePosition(r.End),
+		Start: ParsePoint(r.Start),
+		End:   ParsePoint(r.End),
 	}
 }
 
 type Range struct {
-	Start Position
-	End   Position
+	Start Point
+	End   Point
 }
 
-func (r Range) Contains(p Position) bool {
+func (r Range) Contains(p Point) bool {
 	return p.GreaterThanOrEqual(r.Start) && p.LessThanOrEqual(r.End)
 }
 

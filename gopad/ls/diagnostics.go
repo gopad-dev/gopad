@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {

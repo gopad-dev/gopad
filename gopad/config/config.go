@@ -29,8 +29,9 @@ var (
 	Languages       LanguageConfigs
 	LanguageServers LanguageServerConfigs
 	Keys            KeyMap
-	Theme           ThemeConfig
-	Themes          []RawThemeConfig
+	KeyMaps         []KeyMap
+	Theme           ThemeStyles
+	Themes          []ThemeConfig
 )
 
 func FindHome() (string, error) {
@@ -87,7 +88,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	Keys = keymap.Keys()
 	Themes = themes
 
-	var theme RawThemeConfig
+	var theme ThemeConfig
 	for _, t := range Themes {
 		theme = t
 		if t.Name == Gopad.Theme {
@@ -99,8 +100,8 @@ func Load(name string, defaultConfigs embed.FS) error {
 	return nil
 }
 
-func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) {
-	themes := make([]RawThemeConfig, 0)
+func loadThemes(name string, defaultConfigs embed.FS) ([]ThemeConfig, error) {
+	themes := make([]ThemeConfig, 0)
 
 	themeFiles, err := os.ReadDir(filepath.Join(name, themeDir))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -129,7 +130,7 @@ func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) 
 			return nil, fmt.Errorf("error reading default theme file %s: %w", themeFile.Name(), err)
 		}
 
-		if themeConfig == nil || slices.ContainsFunc(themes, func(theme RawThemeConfig) bool {
+		if themeConfig == nil || slices.ContainsFunc(themes, func(theme ThemeConfig) bool {
 			return theme.Name == themeConfig.Name
 		}) {
 			continue
@@ -140,9 +141,9 @@ func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) 
 	return themes, nil
 }
 
-func readTheme(name string, entry os.DirEntry, defaultConfigs *embed.FS) (*RawThemeConfig, error) {
+func readTheme(name string, entry os.DirEntry, defaultConfigs *embed.FS) (*ThemeConfig, error) {
 	if entry.IsDir() {
-		return &RawThemeConfig{}, nil
+		return &ThemeConfig{}, nil
 	}
 
 	var (
@@ -159,7 +160,7 @@ func readTheme(name string, entry os.DirEntry, defaultConfigs *embed.FS) (*RawTh
 	}
 	defer f.Close()
 
-	var themeConfig RawThemeConfig
+	var themeConfig ThemeConfig
 	if err = toml.NewDecoder(f).Decode(&themeConfig); err != nil {
 		return nil, fmt.Errorf("error decoding theme file: %w", err)
 	}

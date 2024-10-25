@@ -3,9 +3,9 @@ package file
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func (f *File) SetDeclarations(definitions []ls.Definition) tea.Cmd {
@@ -16,21 +16,19 @@ func (f *File) SetDeclarations(definitions []ls.Definition) tea.Cmd {
 		return f.openDefinition(definitions[0])
 	}
 
-	f.definitions = definitions
+	f.Definitions = definitions
 	return nil
 }
 
 func (f *File) openDeclaration(definition ls.Definition) tea.Cmd {
-	return OpenFilePosition(definition.Name, &buffer.Position{
+	return OpenFilePosition(definition.Name, &buffer.Point{
 		Row: definition.Range.Start.Row,
 		Col: definition.Range.Start.Col,
 	})
 }
 
-func (f *File) ShowDeclaration() tea.Cmd {
-	row, col := f.Cursor()
-
-	return ls.GetDeclaration(f.Name(), row, col)
+func (f *File) ShowDeclaration(p buffer.Point) tea.Cmd {
+	return ls.GetDeclaration(f.Buffer.Name(), p)
 }
 
 func (f *File) SetDefinitions(definitions []ls.Definition) tea.Cmd {
@@ -41,21 +39,19 @@ func (f *File) SetDefinitions(definitions []ls.Definition) tea.Cmd {
 		return f.openDefinition(definitions[0])
 	}
 
-	f.definitions = definitions
+	f.Definitions = definitions
 	return nil
 }
 
 func (f *File) openDefinition(definition ls.Definition) tea.Cmd {
-	return OpenFilePosition(definition.Name, &buffer.Position{
+	return OpenFilePosition(definition.Name, &buffer.Point{
 		Row: definition.Range.Start.Row,
 		Col: definition.Range.Start.Col,
 	})
 }
 
-func (f *File) ShowDefinitions() tea.Cmd {
-	row, col := f.Cursor()
-
-	return ls.GetDefinition(f.Name(), row, col)
+func (f *File) ShowDefinitions(p buffer.Point) tea.Cmd {
+	return ls.GetDefinition(f.Buffer.Name(), p)
 }
 
 func (f *File) SetTypeDefinitions(typeDefinitions []ls.TypeDefinition) tea.Cmd {
@@ -66,19 +62,17 @@ func (f *File) SetTypeDefinitions(typeDefinitions []ls.TypeDefinition) tea.Cmd {
 		return f.openTypeDefinition(typeDefinitions[0])
 	}
 
-	f.typeDefinitions = typeDefinitions
+	f.TypeDefinitions = typeDefinitions
 	return nil
 }
 
 func (f *File) openTypeDefinition(typeDefinition ls.TypeDefinition) tea.Cmd {
-	return OpenFilePosition(typeDefinition.Name, &buffer.Position{
+	return OpenFilePosition(typeDefinition.Name, &buffer.Point{
 		Row: typeDefinition.Range.Start.Row,
 		Col: typeDefinition.Range.Start.Col,
 	})
 }
 
-func (f *File) ShowTypeDefinitions() tea.Cmd {
-	row, col := f.Cursor()
-
-	return ls.GetTypeDefinition(f.Name(), row, col)
+func (f *File) ShowTypeDefinitions(p buffer.Point) tea.Cmd {
+	return ls.GetTypeDefinition(f.Buffer.Name(), p)
 }

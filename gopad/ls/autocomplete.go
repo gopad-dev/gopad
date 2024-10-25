@@ -5,24 +5,22 @@ import (
 
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func GetAutocompletion(name string, row int, col int) tea.Cmd {
+func GetAutocompletion(name string, p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
 		return GetAutocompletionMsg{
-			Name: name,
-			Row:  row,
-			Col:  col,
+			Name:  name,
+			Point: p,
 		}
 	}
 }
 
 type GetAutocompletionMsg struct {
-	Name string
-	Row  int
-	Col  int
+	Name  string
+	Point buffer.Point
 }
 
 func UpdateAutocompletion(name string, completions []CompletionItem) tea.Cmd {

@@ -14,20 +14,16 @@ func (f *File) SetInlayHint(version int32, hints []ls.InlayHint) {
 	if version > f.inlayHintsVersion {
 		f.inlayHintsVersion = version
 	}
-	f.inlayHints = hints
-}
-
-func (f *File) InlayHints() []ls.InlayHint {
-	return f.inlayHints
+	f.InlayHints = hints
 }
 
 func (f *File) ClearInlayHints() {
-	f.inlayHints = nil
+	f.InlayHints = nil
 }
 
 func (f *File) InlayHintsForLineCol(row int, col int) []ls.InlayHint {
 	var hints []ls.InlayHint
-	for _, hint := range f.inlayHints {
+	for _, hint := range f.InlayHints {
 		if hint.Position.Row == row && hint.Position.Col == col {
 			hints = append(hints, hint)
 		}
@@ -37,7 +33,7 @@ func (f *File) InlayHintsForLineCol(row int, col int) []ls.InlayHint {
 
 func (f *File) InlayHintsForLine(row int) []ls.InlayHint {
 	var hints []ls.InlayHint
-	for _, hint := range f.inlayHints {
+	for _, hint := range f.InlayHints {
 		if hint.Position.Row == row {
 			hints = append(hints, hint)
 		}

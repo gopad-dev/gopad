@@ -3,23 +3,21 @@ package ls
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func GetDeclaration(name string, row int, col int) tea.Cmd {
+func GetDeclaration(name string, p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
 		return GetDeclarationMsg{
-			Name: name,
-			Row:  row,
-			Col:  col,
+			Name:  name,
+			Point: p,
 		}
 	}
 }
 
 type GetDeclarationMsg struct {
-	Name string
-	Row  int
-	Col  int
+	Name  string
+	Point buffer.Point
 }
 
 func UpdateDeclaration(name string, declarations []Declaration) tea.Cmd {
@@ -41,20 +39,18 @@ type Declaration struct {
 	Range buffer.Range
 }
 
-func GetDefinition(name string, row int, col int) tea.Cmd {
+func GetDefinition(name string, p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
 		return GetDefinitionMsg{
-			Name: name,
-			Row:  row,
-			Col:  col,
+			Name:  name,
+			Point: p,
 		}
 	}
 }
 
 type GetDefinitionMsg struct {
-	Name string
-	Row  int
-	Col  int
+	Name  string
+	Point buffer.Point
 }
 
 func UpdateDefinition(name string, definitions []Definition) tea.Msg {
@@ -74,20 +70,18 @@ type Definition struct {
 	Range buffer.Range
 }
 
-func GetTypeDefinition(name string, row int, col int) tea.Cmd {
+func GetTypeDefinition(name string, p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
 		return GetDefinitionMsg{
-			Name: name,
-			Row:  row,
-			Col:  col,
+			Name:  name,
+			Point: p,
 		}
 	}
 }
 
 type GetTypeDefinitionMsg struct {
-	Name string
-	Row  int
-	Col  int
+	Name  string
+	Point buffer.Point
 }
 
 func UpdateTypeDefinition(name string, typeDefinitions []TypeDefinition) tea.Cmd {

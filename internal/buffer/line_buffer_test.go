@@ -13,27 +13,27 @@ func TestBuffer_BytesRange(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := []struct {
-		from Position
-		to   Position
+		from Point
+		to   Point
 		want []byte
 	}{
 		{
-			from: Position{
+			from: Point{
 				Row: 0,
 				Col: 1,
 			},
-			to: Position{
+			to: Point{
 				Row: 0,
 				Col: 2,
 			},
 			want: []byte("e"),
 		},
 		{
-			from: Position{
+			from: Point{
 				Row: 0,
 				Col: 0,
 			},
-			to: Position{
+			to: Point{
 				Row: 0,
 				Col: 1,
 			},
@@ -42,7 +42,10 @@ func TestBuffer_BytesRange(t *testing.T) {
 	}
 
 	for _, d := range data {
-		got := b.BytesRange(d.from, d.to)
+		got := b.BytesRange(Range{
+			Start: d.from,
+			End:   d.to,
+		})
 		assert.Equal(t, d.want, got)
 	}
 }
@@ -53,17 +56,17 @@ func TestBuffer_Replace(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := []struct {
-		from Position
-		to   Position
+		from Point
+		to   Point
 		text []byte
 		want []byte
 	}{
 		{
-			from: Position{
+			from: Point{
 				Row: 1,
 				Col: 0,
 			},
-			to: Position{
+			to: Point{
 				Row: 1,
 				Col: 2,
 			},
@@ -73,7 +76,10 @@ func TestBuffer_Replace(t *testing.T) {
 	}
 
 	for _, d := range data {
-		b.Replace(d.from.Row, d.from.Col, d.to.Row, d.to.Col, d.text)
+		b.Replace(Range{
+			Start: d.from,
+			End:   d.to,
+		}, d.text)
 		assert.Equal(t, d.want, b.Bytes())
 	}
 }

@@ -1,4 +1,4 @@
-package config
+package bubbles
 
 import (
 	"image/color"
@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"go.gopad.dev/gopad/gopad/config"
 )
 
 type Style struct {
@@ -28,23 +30,23 @@ type Style struct {
 	Faint           bool `toml:"faint"`
 }
 
-func (s Style) Style(colors ColorStyles) lipgloss.Style {
+func (s Style) Style(colors config.ColorStyles) lipgloss.Style {
 	style := lipgloss.NewStyle()
 
 	if s.Foreground != "" {
-		style = style.Foreground(getColor(colors, s.Foreground))
+		style = style.Foreground(GetColor(colors, s.Foreground))
 	}
 	if s.Background != "" {
-		style = style.Background(getColor(colors, s.Background))
+		style = style.Background(GetColor(colors, s.Background))
 	}
 	if s.BorderForeground != "" {
-		style = style.BorderForeground(getColor(colors, s.BorderForeground))
+		style = style.BorderForeground(GetColor(colors, s.BorderForeground))
 	}
 	if s.BorderBackground != "" {
-		style = style.BorderBackground(getColor(colors, s.BorderBackground))
+		style = style.BorderBackground(GetColor(colors, s.BorderBackground))
 	}
 	if s.UnderlineColor != "" {
-		style = style.UnderlineColor(getColor(colors, s.UnderlineColor))
+		style = style.UnderlineColor(GetColor(colors, s.UnderlineColor))
 	}
 
 	style = style.Bold(s.Bold)
@@ -61,7 +63,7 @@ func (s Style) Style(colors ColorStyles) lipgloss.Style {
 	return style
 }
 
-func getColor(colors ColorStyles, color string) color.Color {
+func GetColor(colors config.ColorStyles, color string) color.Color {
 	if color == "" {
 		return lipgloss.NoColor{}
 	}
@@ -73,10 +75,10 @@ func getColor(colors ColorStyles, color string) color.Color {
 		}
 	}
 
-	return parseColor(color)
+	return ParseColor(color)
 }
 
-func parseColor(color string) color.Color {
+func ParseColor(color string) color.Color {
 	if ok := strings.HasPrefix(color, "#"); ok {
 		return lipgloss.Color(color)
 	}

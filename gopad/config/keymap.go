@@ -242,8 +242,8 @@ func (k EditorSelectionKeyMap) HelpView() help.KeyMapCategory {
 }
 
 type EditorEditKeyMap struct {
-	Tab       key.Binding
-	RemoveTab key.Binding
+	Tab       key.Binding // TODO: change to IncreaseIndent
+	RemoveTab key.Binding // TODO: change to DecreaseIndent
 
 	Paste key.Binding
 	Copy  key.Binding
