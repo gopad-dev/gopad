@@ -193,7 +193,7 @@ type IconsConfig struct {
 	Types       map[string]IconConfig `toml:"types"`
 }
 
-func (c IconsConfig) Styles(colors ColorStyles) IconStyles {
+func (c IconsConfig) Styles(colors bubbles.ColorStyles) IconStyles {
 	files := make(map[string]lipgloss.Style, len(c.Files))
 	for k, v := range c.Files {
 		files[k] = v.IconStyle(colors)
@@ -227,7 +227,7 @@ type IconConfig struct {
 	Style bubbles.Style `toml:"style"`
 }
 
-func (c IconConfig) IconStyle(colors ColorStyles) lipgloss.Style {
+func (c IconConfig) IconStyle(colors bubbles.ColorStyles) lipgloss.Style {
 	return c.Style.Style(colors).SetString(string(c.Icon))
 }
 
@@ -358,7 +358,7 @@ type DiagnosticConfig struct {
 
 type CodeStylesConfig map[string]bubbles.Style
 
-func (c CodeStylesConfig) Styles(colors ColorStyles) map[string]lipgloss.Style {
+func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) map[string]lipgloss.Style {
 	m := make(map[string]lipgloss.Style, len(c))
 	for k, v := range c {
 		m[k] = v.Style(colors)

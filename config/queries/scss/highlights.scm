@@ -36,7 +36,7 @@
 "@keyframes" @constant.builtin
 "@media" @constant.builtin
 "@mixin" @constant.builtin
-"@namespace" @namespace
+"@namespace" @section
 "@return" @keyword.control.return
 "@supports" @constant.builtin
 "@use" @keyword.control.import

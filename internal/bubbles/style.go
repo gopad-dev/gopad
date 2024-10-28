@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-
-	"go.gopad.dev/gopad/gopad/config"
 )
+
+type ColorStyles map[string]color.Color
 
 type Style struct {
 	Foreground       string `toml:"foreground"`
@@ -30,7 +30,7 @@ type Style struct {
 	Faint           bool `toml:"faint"`
 }
 
-func (s Style) Style(colors config.ColorStyles) lipgloss.Style {
+func (s Style) Style(colors ColorStyles) lipgloss.Style {
 	style := lipgloss.NewStyle()
 
 	if s.Foreground != "" {
@@ -63,7 +63,7 @@ func (s Style) Style(colors config.ColorStyles) lipgloss.Style {
 	return style
 }
 
-func GetColor(colors config.ColorStyles, color string) color.Color {
+func GetColor(colors ColorStyles, color string) color.Color {
 	if color == "" {
 		return lipgloss.NoColor{}
 	}

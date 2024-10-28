@@ -7,7 +7,7 @@
 
 ; Namespaces
 
-(package_identifier) @namespace
+(package_identifier) @section
 
 (import_spec ["." "_"] @punctuation.special)
 

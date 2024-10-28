@@ -41,7 +41,7 @@
 ] @variable.other.member
 (enumVariantName) @type.enum.variant
 
-(fullIdent) @namespace
+(fullIdent) @section
 
 (intLit) @constant.numeric.integer
 (floatLit) @constant.numeric.float

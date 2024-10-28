@@ -13,7 +13,7 @@
   (name) @property)
 
 (section
-  (name) @namespace)
+  (name) @section)
 
 (section
   device: (device_name) @type)
