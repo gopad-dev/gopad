@@ -25,8 +25,8 @@ const (
 	ZoneTheme = "theme"
 )
 
-func New(lsClient *ls.Client, version string, workspace string, args []string) *Gopad {
-	return &Gopad{
+func New(lsClient *ls.Client, version string, workspace string, args []string) Gopad {
+	return Gopad{
 		lsClient:  lsClient,
 		version:   version,
 		workspace: workspace,
@@ -49,7 +49,8 @@ type Gopad struct {
 }
 
 func (g *Gopad) Focus() tea.Cmd {
-	return g.editor.Focus(editor.ModelTypeFile)
+	//return g.editor.Focus(editor.ModelTypeFile)
+	return nil
 }
 
 func (g *Gopad) Blur() {
@@ -82,7 +83,7 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Printf("Msg: %T: %v\n", msg, msg)
+	//log.Printf("Msg: %T: %v\n", msg, msg)
 	//now := time.Now()
 	//defer func() {
 	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)

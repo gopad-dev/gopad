@@ -8,8 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gdamore/tcell/v2"
-
 	"go.gopad.dev/gopad/cmd"
 )
 
@@ -22,17 +20,6 @@ var (
 )
 
 func main() {
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		panic(err)
-	}
-
-	screen.Init()
-
-	screen.SetStyle(tcell.StyleDefault)
-
-	screen.Sync()
-
 	rootCmd := cmd.NewRootCmd(Version, defaultConfigs)
 	cmd.NewVersionCmd(rootCmd, Version, Commit)
 	cmd.NewConfigCmd(rootCmd, defaultConfigs)

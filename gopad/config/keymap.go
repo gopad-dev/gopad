@@ -12,7 +12,7 @@ import (
 
 var emptyKeyBind = key.NewBinding(key.WithKeys([]string{}...))
 
-type KeyMap struct {
+type Keymap struct {
 	Quit   key.Binding
 	Help   key.Binding
 	OK     key.Binding
@@ -33,13 +33,13 @@ type KeyMap struct {
 	Debug      key.Binding
 }
 
-func (k KeyMap) ButtonKeyMap() button.KeyMap {
+func (k Keymap) ButtonKeyMap() button.KeyMap {
 	return button.KeyMap{
 		OK: k.OK,
 	}
 }
 
-func (k KeyMap) HelpView() []help.KeyMapCategory {
+func (k Keymap) HelpView() []help.KeyMapCategory {
 	binds := []help.KeyMapCategory{
 		{
 			Category: "General",
@@ -66,7 +66,7 @@ func (k KeyMap) HelpView() []help.KeyMapCategory {
 	return binds
 }
 
-func (k KeyMap) List() list.KeyMap {
+func (k Keymap) List() list.KeyMap {
 	return list.KeyMap{
 		Up:    k.Up,
 		Down:  k.Down,
@@ -394,7 +394,17 @@ func (k SearchbarKeyMap) HelpView() help.KeyMapCategory {
 	}
 }
 
-type KeyMapConfig struct {
+type KeymapConfig struct {
+	Name string `toml:"name"`
+
+	Keys KeysConfig `toml:"keys"`
+}
+
+func (k KeymapConfig) KeyMap() Keymap {
+	return k.Keys.KeyMap()
+}
+
+type KeysConfig struct {
 	Quit   string `toml:"quit"`
 	Help   string `toml:"help"`
 	OK     string `toml:"ok"`
@@ -415,8 +425,8 @@ type KeyMapConfig struct {
 	Debug      string              `toml:"debug"`
 }
 
-func (k KeyMapConfig) Keys() KeyMap {
-	return KeyMap{
+func (k KeysConfig) KeyMap() Keymap {
+	return Keymap{
 		Quit: key.NewBinding(
 			key.WithKeys(k.Quit),
 			key.WithHelp(k.Quit, "quit"),

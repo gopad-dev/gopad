@@ -464,20 +464,20 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 
 			case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
 				// TODO: decide where to put this
-				//if v.file.Tree == nil {
+				// if v.file.Tree == nil {
 				//	cmds = append(cmds, notifications.Add("no tree available for this file"))
 				//	return v, tea.Batch(cmds...)
-				//}
-				//buff, err := buffer.New(v.file.Buffer.FileName()+".tree", bytes.NewReader([]byte(v.file.Tree.Print())), "utf-8", buffer.LineEndingLF, false)
-				//if err != nil {
+				// }
+				// buff, err := buffer.New(v.file.Buffer.FileName()+".tree", bytes.NewReader([]byte(v.file.Tree.Print())), "utf-8", buffer.LineEndingLF, false)
+				// if err != nil {
 				//	cmds = append(cmds, notifications.Add(fmt.Sprintf("error while opening tree.scm: %s", err.Error())))
 				//	return v, tea.Batch(cmds...)
-				//}
+				// }
 				//
-				//debugFile := file.NewFileWithBuffer(buff, file.ModeReadOnly)
+				// debugFile := file.NewFileWithBuffer(buff, file.ModeReadOnly)
 				//
-				//e.files = append(e.files, debugFile)
-				//e.activeFile = len(e.files) - 1
+				// e.files = append(e.files, debugFile)
+				// e.activeFile = len(e.files) - 1
 			case key.Matches(msg, config.Keys.Editor.Diagnostic.Show):
 				v.ShowCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Cancel) && v.ShowsCurrentDiagnostic():
@@ -699,7 +699,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				// TODO: implement
-				//cmds = append(cmds, v.file.ToggleComment())
+				// cmds = append(cmds, v.file.ToggleComment())
 				overwriteCursorBlink = true
 
 			default:
@@ -729,7 +729,6 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 						}
 					}
 				}
-
 			}
 		}
 	}

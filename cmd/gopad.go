@@ -86,6 +86,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			opts := []tea.ProgramOption{
 				tea.WithAltScreen(),
 				tea.WithReportFocus(),
+				tea.WithGraphemeClustering(),
 				tea.WithKeyboardEnhancements(
 					tea.WithKeyReleases,
 					tea.WithUniformKeyLayout,

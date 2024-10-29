@@ -470,8 +470,6 @@ func (b *lineBuffer) DeleteRange(r Range) {
 		b.lines[r.Start.Row] = b.lines[r.Start.Row].CutEnd(r.Start.Col).Append(b.lines[r.End.Row].CutStart(r.End.Col))
 		b.lines = append(b.lines[:r.Start.Row+1], b.lines[r.End.Row+1:]...)
 	}
-
-	return
 }
 
 func (b *lineBuffer) AddTab(row int) {
@@ -571,7 +569,6 @@ func (b *lineBuffer) ToggleBlockComment(r Range, tokens []BlockCommentToken) {
 	if hasStartComment && hasEndComment {
 		b.lines[r.Start.Row] = startLine.ReplaceRange(r.Start.Col, r.Start.Col+len(blockToken.Start), nil)
 		b.lines[r.End.Row] = endLine.ReplaceRange(r.End.Col-len(blockToken.End), r.End.Col, nil)
-
 	} else {
 		b.lines[r.Start.Row] = startLine.Insert(r.Start.Col, []byte(blockToken.Start))
 		b.lines[r.End.Row] = endLine.Insert(r.End.Col, []byte(blockToken.End))
@@ -604,8 +601,6 @@ func (b *lineBuffer) ToggleLineComment(row int, tokens []string) {
 			return
 		}
 	}
-
-	return
 }
 
 func hasPrefixes(b []byte, prefixes []string) (bool, string) {
