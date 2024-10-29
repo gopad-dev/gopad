@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
@@ -15,17 +16,15 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type ThemeConfig struct {
+type ThemeStyles struct {
 	Name string
 
-	Colors     ColorStyles
+	Colors     bubbles.ColorStyles
 	Icons      IconStyles
 	UI         UiStyles
 	Diagnostic DiagnosticStyles
 	CodeStyles map[string]lipgloss.Style
 }
-
-type ColorStyles map[string]color.Color
 
 type IconStyles struct {
 	RootDir lipgloss.Style

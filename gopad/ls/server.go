@@ -14,9 +14,9 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"go.lsp.dev/protocol"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type ServerConfig struct {
@@ -194,10 +194,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 					TextDocument: protocol.TextDocumentIdentifier{
 						URI: protocol.DocumentURI("file://" + msg.Name),
 					},
-					Position: protocol.Position{
-						Line:      uint32(msg.Row),
-						Character: uint32(msg.Col),
-					},
+					Position: msg.Point.ToProtocol(),
 				},
 			})
 			if err != nil {
@@ -251,7 +248,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 				}
 				hints = append(hints, InlayHint{
 					Type:         kind,
-					Position:     buffer.ParsePosition(hint.Position),
+					Position:     buffer.ParsePoint(hint.Position),
 					Label:        label,
 					Tooltip:      tooltip,
 					PaddingLeft:  hint.PaddingLeft,
@@ -267,10 +264,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 					TextDocument: protocol.TextDocumentIdentifier{
 						URI: protocol.DocumentURI("file://" + msg.Name),
 					},
-					Position: protocol.Position{
-						Line:      uint32(msg.Row),
-						Character: uint32(msg.Col),
-					},
+					Position: msg.Point.ToProtocol(),
 				},
 			})
 			if err != nil {

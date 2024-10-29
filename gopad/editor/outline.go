@@ -3,9 +3,10 @@ package editor
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
-	"go.gopad.dev/gopad/internal/bubbles/key"
 
-	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/internal/bubbles/key"
+	"go.gopad.dev/gopad/internal/buffer"
+
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/list"
@@ -138,7 +139,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			item := o.l.Selected()
 			return o, tea.Batch(
 				overlay.Close(OutlineOverlayID),
-				file.Scroll(item.r.Start.Row, item.r.Start.Col),
+				file.Scroll(item.r.Start),
 			)
 		}
 	}
@@ -155,7 +156,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		item := o.l.Selected()
 		return o, tea.Batch(
 			overlay.Close(OutlineOverlayID),
-			file.Scroll(item.r.Start.Row, item.r.Start.Col),
+			file.Scroll(item.r.Start),
 		)
 	}
 

@@ -7,23 +7,24 @@ import (
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
-	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 const GoToOverlayID = "editor.goto"
 
 var _ overlay.Overlay = (*GoToOverlay)(nil)
 
-func NewGoToOverlay(row int, col int) GoToOverlay {
+func NewGoToOverlay(p buffer.Point) GoToOverlay {
 	ti := textinput.New()
 	ti.Placeholder = "[line] [:column]"
-	ti.SetValue(fmt.Sprintf("%d:%d", row, col))
+	ti.SetValue(fmt.Sprintf("%d:%d", p.Row, p.Col))
 	return GoToOverlay{
 		ti: ti,
 	}
@@ -76,7 +77,10 @@ func (o GoToOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 
 			cmds = append(cmds, tea.Sequence(
 				overlay.Close(GoToOverlayID),
-				file.Scroll(row, col),
+				file.Scroll(buffer.Point{
+					Row: row,
+					Col: col,
+				}),
 			))
 			return o, tea.Batch(cmds...)
 		}

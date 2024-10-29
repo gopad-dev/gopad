@@ -1,4 +1,4 @@
-(user) @namespace
+(user) @section
 (auth) @keyword
 (uid) @constant
 (gid) @constant

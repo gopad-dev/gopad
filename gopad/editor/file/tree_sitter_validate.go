@@ -4,8 +4,8 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"go.gopad.dev/go-tree-sitter"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func ValidateTree(name string, version int32, tree *Tree) tea.Cmd {
@@ -38,11 +38,11 @@ func validateTree(tree *Tree) []ls.Diagnostic {
 				Name:   tree.Language.Name,
 				Source: "syntax",
 				Range: buffer.Range{
-					Start: buffer.Position{
+					Start: buffer.Point{
 						Row: int(node.StartPoint().Row),
 						Col: int(node.StartPoint().Column),
 					},
-					End: buffer.Position{
+					End: buffer.Point{
 						Row: int(node.EndPoint().Row),
 						Col: int(node.EndPoint().Column),
 					},

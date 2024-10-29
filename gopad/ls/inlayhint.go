@@ -3,7 +3,7 @@ package ls
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func GetInlayHint(name string, version int32, r buffer.Range) tea.Cmd {
@@ -67,7 +67,7 @@ const (
 
 type InlayHint struct {
 	Type         InlayHintType
-	Position     buffer.Position
+	Position     buffer.Point
 	Label        string
 	Tooltip      string
 	PaddingLeft  bool

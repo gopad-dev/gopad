@@ -8,6 +8,7 @@ import (
 
 type GopadConfig struct {
 	Theme    string         `toml:"theme"`
+	Keymap   string         `toml:"keymap"`
 	Editor   EditorConfig   `toml:"editor"`
 	FileView FileViewConfig `toml:"file_view"`
 	FileTree FileTreeConfig `toml:"file_tree"`

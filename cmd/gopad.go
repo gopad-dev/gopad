@@ -41,7 +41,9 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				if err != nil {
 					log.Panicln("failed to open debug log file:", err)
 				}
-				defer logFile.Close()
+				defer func() {
+					_ = logFile.Close()
+				}()
 
 				log.Println("debug mode enabled")
 			} else {
@@ -55,7 +57,9 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				if err != nil {
 					log.Panicln("failed to open debug lsp log file:", err)
 				}
-				defer lspLogFile.Close()
+				defer func() {
+					_ = lspLogFile.Close()
+				}()
 
 				log.Println("debug lsp mode enabled")
 			} else {
@@ -82,6 +86,11 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			opts := []tea.ProgramOption{
 				tea.WithAltScreen(),
 				tea.WithReportFocus(),
+				tea.WithGraphemeClustering(),
+				tea.WithKeyboardEnhancements(
+					tea.WithKeyReleases,
+					tea.WithUniformKeyLayout,
+				),
 			}
 			zone.NewGlobal()
 			defer zone.Close()

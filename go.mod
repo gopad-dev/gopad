@@ -11,9 +11,9 @@ replace (
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bmatcuk/doublestar/v4 v4.7.1
-	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.1.0.20241017211530-8f0d12446ba8
+	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.1.0.20241028191104-f7c464793655
 	github.com/charmbracelet/lipgloss v0.13.0
-	github.com/charmbracelet/x/ansi v0.3.2
+	github.com/charmbracelet/x/ansi v0.4.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
 	github.com/muesli/reflow v0.3.0
@@ -28,12 +28,12 @@ require (
 )
 
 require (
-	github.com/charmbracelet/x/cellbuf v0.0.0-20241017213443-f2394f742aee // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.2 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
-	github.com/charmbracelet/x/wcwidth v0.0.0-20241017213443-f2394f742aee // indirect
+	github.com/charmbracelet/x/wcwidth v0.0.0-20241029140037-8315017daad4 // indirect
 	github.com/charmbracelet/x/windows v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ebitengine/purego v0.8.0 // indirect
+	github.com/ebitengine/purego v0.8.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect

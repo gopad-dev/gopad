@@ -12,8 +12,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"go.gopad.dev/go-tree-sitter"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func HighlightTree(name string, version int32, tree *Tree, lines int) tea.Cmd {
@@ -37,27 +37,26 @@ type UpdateMatchesMsg struct {
 }
 
 func (f *File) SetMatches(version int32, matches [][]*Match) {
-	log.Println("setting matches", version, len(matches))
 	if version < f.matchesVersion {
 		log.Printf("skipping outdated matches: %d < %d", version, f.matchesVersion)
 		return
 	}
 	if version > f.matchesVersion {
-		f.matches = matches
+		f.Matches = matches
 		f.matchesVersion = version
 		return
 	}
-	f.matches = append(f.matches, matches...)
+	f.Matches = append(f.Matches, matches...)
 }
 
 func (f *File) MatchesForLineCol(row int, col int) []*Match {
-	pos := buffer.Position{Row: row, Col: col}
+	pos := buffer.Point{Row: row, Col: col}
 
-	if len(f.matches) <= row {
+	if len(f.Matches) <= row {
 		return nil
 	}
 
-	lineMatches := f.matches[row]
+	lineMatches := f.Matches[row]
 
 	var matches []*Match
 	for _, match := range lineMatches {
@@ -76,14 +75,14 @@ func (f *File) HighestMatchStyle(style lipgloss.Style, row int, col int) lipglos
 	)
 	for _, match := range f.MatchesForLineCol(row, col) {
 		if match.ReferenceType != "" {
-			newStyle := getMatchingStyle(match.ReferenceType, f.language.Name)
+			newStyle := getMatchingStyle(match.ReferenceType, f.Language.Name)
 			if newStyle != nil {
 				referenceStyle = newStyle
 			}
 			continue
 		}
 
-		newStyle := getMatchingStyle(match.Type, f.language.Name)
+		newStyle := getMatchingStyle(match.Type, f.Language.Name)
 		if newStyle != nil {
 			currentStyle = newStyle
 		}
@@ -173,11 +172,11 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 			capture := match.Captures[index]
 
 			captureRange := buffer.Range{
-				Start: buffer.Position{
+				Start: buffer.Point{
 					Row: int(capture.StartPoint().Row),
 					Col: int(capture.StartPoint().Column),
 				},
-				End: buffer.Position{
+				End: buffer.Point{
 					Row: int(capture.EndPoint().Row),
 					Col: int(capture.EndPoint().Column),
 				},
@@ -254,8 +253,8 @@ func highlightTree(tree *Tree, lines int) [][]*Match {
 
 			lineMatch := &Match{
 				Range: buffer.Range{
-					Start: buffer.Position{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
-					End:   buffer.Position{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
+					Start: buffer.Point{Row: int(capture.StartPoint().Row), Col: int(capture.StartPoint().Column)},
+					End:   buffer.Point{Row: int(capture.EndPoint().Row), Col: max(0, int(capture.EndPoint().Column)-1)}, // -1 to exclude the last character idk why this is like this tbh
 				},
 				Type:          query.Query.CaptureNameForID(capture.Index),
 				ReferenceType: refType,

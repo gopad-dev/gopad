@@ -343,30 +343,30 @@
 ; -------
 
 (use_declaration
-  argument: (identifier) @namespace)
+  argument: (identifier) @section)
 (use_wildcard
-  (identifier) @namespace)
+  (identifier) @section)
 (extern_crate_declaration
-  name: (identifier) @namespace)
+  name: (identifier) @section)
 (mod_item
-  name: (identifier) @namespace)
+  name: (identifier) @section)
 (scoped_use_list
-  path: (identifier)? @namespace)
+  path: (identifier)? @section)
 (use_list
-  (identifier) @namespace)
+  (identifier) @section)
 (use_as_clause
-  path: (identifier)? @namespace
-  alias: (identifier) @namespace)
+  path: (identifier)? @section
+  alias: (identifier) @section)
 
 ; ---
 ; Remaining Paths
 ; ---
 
 (scoped_identifier
-  path: (identifier)? @namespace
-  name: (identifier) @namespace)
+  path: (identifier)? @section
+  name: (identifier) @section)
 (scoped_type_identifier
-  path: (identifier) @namespace)
+  path: (identifier) @section)
 
 ; -------
 ; Remaining Identifiers

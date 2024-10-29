@@ -9,18 +9,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/pelletier/go-toml/v2"
 )
 
 const (
 	gopadConfig           = "gopad.toml"
-	keymapConfig          = "keymap.toml"
 	languagesConfig       = "languages.toml"
 	languageServersConfig = "language_servers.toml"
 	configDir             = "config"
-	themeDir              = "themes"
+	keymapsDir            = "keymaps"
+	themesDir             = "themes"
 )
 
 var (
@@ -28,9 +27,10 @@ var (
 	Gopad           GopadConfig
 	Languages       LanguageConfigs
 	LanguageServers LanguageServerConfigs
-	Keys            KeyMap
-	Theme           ThemeConfig
-	Themes          []RawThemeConfig
+	Keys            Keymap
+	Keymaps         []KeymapConfig
+	Theme           ThemeStyles
+	Themes          []ThemeConfig
 )
 
 func FindHome() (string, error) {
@@ -55,27 +55,27 @@ func FindHome() (string, error) {
 }
 
 func Load(name string, defaultConfigs embed.FS) error {
-	var (
-		gopad           GopadConfig
-		keymap          KeyMapConfig
-		languages       LanguageConfigs
-		languageServers LanguageServerConfigs
-	)
-
-	if err := readTOMLFile(name, gopadConfig, defaultConfigs, &gopad); err != nil {
+	gopad, err := readFileFallback[GopadConfig](name, gopadConfig, defaultConfigs)
+	if err != nil {
 		return fmt.Errorf("error reading gopad config: %w", err)
 	}
-	if err := readTOMLFile(name, keymapConfig, defaultConfigs, &keymap); err != nil {
-		return fmt.Errorf("error reading keymap config: %w", err)
-	}
-	if err := readTOMLFile(name, languagesConfig, defaultConfigs, &languages); err != nil {
+
+	languages, err := readFileFallback[LanguageConfigs](name, languagesConfig, defaultConfigs)
+	if err != nil {
 		return fmt.Errorf("error reading languages config: %w", err)
 	}
-	if err := readTOMLFile(name, languageServersConfig, defaultConfigs, &languageServers); err != nil {
+
+	languageServers, err := readFileFallback[LanguageServerConfigs](name, languageServersConfig, defaultConfigs)
+	if err != nil {
 		return fmt.Errorf("error reading language servers config: %w", err)
 	}
 
-	themes, err := loadThemes(name, defaultConfigs)
+	keymaps, err := readDir[KeymapConfig](name, keymapsDir, defaultConfigs)
+	if err != nil {
+		return fmt.Errorf("error loading keymaps: %w", err)
+	}
+
+	themes, err := readDir[ThemeConfig](name, themesDir, defaultConfigs)
 	if err != nil {
 		return fmt.Errorf("error loading themes: %w", err)
 	}
@@ -84,10 +84,19 @@ func Load(name string, defaultConfigs embed.FS) error {
 	Gopad = gopad
 	Languages = languages.filter()
 	LanguageServers = languageServers.filter()
-	Keys = keymap.Keys()
-	Themes = themes
 
-	var theme RawThemeConfig
+	Keymaps = keymaps
+	var keymap KeymapConfig
+	for _, k := range Keymaps {
+		keymap = k
+		if k.Name == Gopad.Keymap {
+			break
+		}
+	}
+	Keys = keymap.KeyMap()
+
+	Themes = themes
+	var theme ThemeConfig
 	for _, t := range Themes {
 		theme = t
 		if t.Name == Gopad.Theme {
@@ -99,75 +108,76 @@ func Load(name string, defaultConfigs embed.FS) error {
 	return nil
 }
 
-func loadThemes(name string, defaultConfigs embed.FS) ([]RawThemeConfig, error) {
-	themes := make([]RawThemeConfig, 0)
+func readDir[T any](name string, dir string, defaultConfigs embed.FS) ([]T, error) {
+	files := make([]T, 0)
 
-	themeFiles, err := os.ReadDir(filepath.Join(name, themeDir))
+	configFiles, err := os.ReadDir(filepath.Join(name, dir))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("error reading themes directory: %w", err)
+		return nil, fmt.Errorf("error reading directory: %w", err)
 	}
-	for _, themeFile := range themeFiles {
-		themeConfig, err := readTheme(name, themeFile, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error reading theme file %s: %w", themeFile.Name(), err)
-		}
 
-		if themeConfig == nil {
+	for _, configFile := range configFiles {
+		if configFile.IsDir() {
 			continue
 		}
-		themes = append(themes, *themeConfig)
-	}
 
-	defaultThemeFiles, err := defaultConfigs.ReadDir(filepath.Join(configDir, themeDir))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("error reading default themes directory: %w", err)
-	}
-
-	for _, themeFile := range defaultThemeFiles {
-		themeConfig, err := readTheme("", themeFile, &defaultConfigs)
+		config, err := readFile[T](dir, name, configFile, nil)
 		if err != nil {
-			return nil, fmt.Errorf("error reading default theme file %s: %w", themeFile.Name(), err)
+			return nil, fmt.Errorf("error reading file %s: %w", configFile.Name(), err)
 		}
 
-		if themeConfig == nil || slices.ContainsFunc(themes, func(theme RawThemeConfig) bool {
-			return theme.Name == themeConfig.Name
-		}) {
+		files = append(files, config)
+	}
+
+	defaultConfigFiles, err := defaultConfigs.ReadDir(filepath.Join(configDir, dir))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("error reading default directory: %w", err)
+	}
+
+	for _, configFile := range defaultConfigFiles {
+		if configFile.IsDir() {
 			continue
 		}
-		themes = append(themes, *themeConfig)
+
+		config, err := readFile[T](dir, "", configFile, &defaultConfigs)
+		if err != nil {
+			return nil, fmt.Errorf("error reading default file %s: %w", configFile.Name(), err)
+		}
+
+		files = append(files, config)
 	}
 
-	return themes, nil
+	return files, nil
 }
 
-func readTheme(name string, entry os.DirEntry, defaultConfigs *embed.FS) (*RawThemeConfig, error) {
-	if entry.IsDir() {
-		return &RawThemeConfig{}, nil
-	}
-
+func readFile[T any](dir string, name string, entry os.DirEntry, defaultConfigs *embed.FS) (T, error) {
 	var (
 		f   fs.File
 		err error
 	)
 	if defaultConfigs != nil {
-		f, err = defaultConfigs.Open(filepath.Join(configDir, themeDir, entry.Name()))
+		f, err = defaultConfigs.Open(filepath.Join(configDir, dir, entry.Name()))
 	} else {
-		f, err = os.Open(filepath.Join(name, themeDir, entry.Name()))
+		f, err = os.Open(filepath.Join(name, dir, entry.Name()))
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error opening theme file: %w", err)
+		var zero T
+		return zero, fmt.Errorf("error opening config file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
-	var themeConfig RawThemeConfig
-	if err = toml.NewDecoder(f).Decode(&themeConfig); err != nil {
-		return nil, fmt.Errorf("error decoding theme file: %w", err)
+	var config T
+	if err = toml.NewDecoder(f).Decode(&config); err != nil {
+		var zero T
+		return zero, fmt.Errorf("error decoding config file: %w", err)
 	}
 
-	return &themeConfig, nil
+	return config, nil
 }
 
-func readTOMLFile(localConfigDir string, name string, defaultConfigs embed.FS, a any) error {
+func readFileFallback[T any](localConfigDir string, name string, defaultConfigs embed.FS) (T, error) {
 	var (
 		f   fs.File
 		err error
@@ -180,18 +190,20 @@ func readTOMLFile(localConfigDir string, name string, defaultConfigs embed.FS, a
 	}
 
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("error opening config file: %w", err)
+		var zero T
+		return zero, fmt.Errorf("error opening config file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
-	if err = toml.NewDecoder(f).Decode(a); err != nil {
-		return fmt.Errorf("error decoding config file: %w", err)
+	var config T
+	if err = toml.NewDecoder(f).Decode(&config); err != nil {
+		var zero T
+		return zero, fmt.Errorf("error decoding config file: %w", err)
 	}
 
-	return nil
+	return config, nil
 }
 
 func Create(name string, defaultConfigs embed.FS) error {
@@ -236,13 +248,17 @@ func copyFile(name string, dstName string, defaultConfigs embed.FS) error {
 	if err != nil {
 		return fmt.Errorf("error creating config file: %w", err)
 	}
-	defer out.Close()
+	defer func() {
+		_ = out.Close()
+	}()
 
 	f, err := defaultConfigs.Open(name)
 	if err != nil {
 		return fmt.Errorf("error opening config file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	if _, err = io.Copy(out, f); err != nil {
 		return fmt.Errorf("error copying config file: %w", err)

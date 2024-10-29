@@ -1,4 +1,4 @@
-package searchbar
+package editor
 
 import (
 	"fmt"
@@ -6,10 +6,11 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
+
 	"go.gopad.dev/gopad/internal/bubbles/key"
+	"go.gopad.dev/gopad/internal/buffer"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/editormsg"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -18,27 +19,22 @@ import (
 const ZoneID = "editor.search-bar"
 
 func onSelect(result Result) tea.Cmd {
-	return file.Scroll(result.RowStart, result.ColStart)
+	return file.Scroll(result.Start)
 }
 
-type Result struct {
-	RowStart int
-	ColStart int
-	RowEnd   int
-	ColEnd   int
-}
+type Result buffer.Range
 
-func New() Model {
+func NewSearchBar() SearchBar {
 	ti := config.NewTextInput()
 	ti.Placeholder = "type to search"
 	ti.Width = 20
 
-	return Model{
+	return SearchBar{
 		TextInput: ti,
 	}
 }
 
-type Model struct {
+type SearchBar struct {
 	TextInput textinput.Model
 	focus     bool
 	show      bool
@@ -47,33 +43,33 @@ type Model struct {
 	resultIndex int
 }
 
-func (m *Model) Visible() bool {
+func (m *SearchBar) Visible() bool {
 	return m.show
 }
 
-func (m *Model) Show() {
+func (m *SearchBar) Show() {
 	m.show = true
 }
 
-func (m *Model) Hide() {
+func (m *SearchBar) Hide() {
 	m.show = false
 }
 
-func (m *Model) Focused() bool {
+func (m *SearchBar) Focused() bool {
 	return m.focus
 }
 
-func (m *Model) Focus() tea.Cmd {
+func (m *SearchBar) Focus() tea.Cmd {
 	m.focus = true
 	return m.TextInput.Focus()
 }
 
-func (m *Model) Blur() {
+func (m *SearchBar) Blur() {
 	m.focus = false
 	m.TextInput.Blur()
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -87,7 +83,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		switch {
 		case mouse.Matches(msg, ZoneID, tea.MouseLeft):
 			if !m.Focused() {
-				cmds = append(cmds, editormsg.Focus(editormsg.ModelSearch))
+				cmds = append(cmds, Focus(ModelTypeSearchBar))
 			}
 			return m, tea.Batch(cmds...)
 		}
@@ -96,7 +92,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, config.Keys.Editor.SearchBar.Close):
 				m.Hide()
-				cmds = append(cmds, editormsg.Focus(editormsg.ModelFile))
+				cmds = append(cmds, Focus(ModelTypeFile))
 				return m, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.SearchBar.SelectPrev):
 				if len(m.results) > 0 {
@@ -118,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 			case key.Matches(msg, config.Keys.Editor.SearchBar.SelectResult):
 				if len(m.results) > 0 {
-					cmds = append(cmds, onSelect(m.results[m.resultIndex]), editormsg.Focus(editormsg.ModelFile))
+					cmds = append(cmds, onSelect(m.results[m.resultIndex]), Focus(ModelTypeFile))
 				}
 				return m, tea.Batch(cmds...)
 			}
@@ -141,7 +137,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m SearchBar) View() string {
 	results := "0 results"
 	if len(m.results) > 0 {
 		results = fmt.Sprintf(" %d/%d 🠅🠇", m.resultIndex+1, len(m.results))

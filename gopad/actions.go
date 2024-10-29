@@ -88,7 +88,7 @@ var Actions = []Action{
 	{
 		Name: "Delete File",
 		Run: func() tea.Cmd {
-			return overlay.Open(editor.NewDeleteOverlay())
+			return file.Delete
 		},
 	},
 	{

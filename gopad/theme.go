@@ -3,6 +3,7 @@ package gopad
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
+
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
@@ -26,7 +27,7 @@ func NewSetThemeOverlay() SetThemeOverlay {
 }
 
 type SetThemeOverlay struct {
-	l list.Model[config.RawThemeConfig]
+	l list.Model[config.ThemeConfig]
 }
 
 func (s SetThemeOverlay) ID() string {
@@ -61,7 +62,7 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 				return s, nil
 			}
 			// TODO: set theme somehow
-			// theme := item.(config.ThemeConfig)
+			// theme := item.(config.ThemeStyles)
 			return s, tea.Batch(overlay.Close(SetThemeOverlayID))
 		}
 	}
@@ -73,7 +74,7 @@ func (s SetThemeOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		item := s.l.Selected()
 		if item.Name != "" {
 			// TODO: set theme somehow
-			// theme := item.(config.ThemeConfig)
+			// theme := item.(config.ThemeStyles)
 			return s, tea.Batch(cmd, overlay.Close(SetThemeOverlayID))
 		}
 	}

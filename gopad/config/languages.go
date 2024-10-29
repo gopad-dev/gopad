@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"go.gopad.dev/gopad/gopad/buffer"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type Use struct {

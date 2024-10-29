@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
@@ -15,7 +16,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-type RawThemeConfig struct {
+type ThemeConfig struct {
 	Name       string           `toml:"name"`
 	Colors     Colors           `toml:"colors"`
 	Icons      IconsConfig      `toml:"icons"`
@@ -24,23 +25,23 @@ type RawThemeConfig struct {
 	CodeStyles CodeStylesConfig `toml:"code_styles"`
 }
 
-func (c RawThemeConfig) Title() string {
+func (c ThemeConfig) Title() string {
 	return c.Name
 }
 
-func (c RawThemeConfig) Description() string {
+func (c ThemeConfig) Description() string {
 	return ""
 }
 
-func (c RawThemeConfig) Theme() ThemeConfig {
+func (c ThemeConfig) Theme() ThemeStyles {
 	colors := c.Colors.Colors()
-	return ThemeConfig{
+	return ThemeStyles{
 		Name:   c.Name,
 		Colors: colors,
 		Icons:  c.Icons.Styles(colors),
 		UI: UiStyles{
-			Background: getColor(colors, c.UI.Background),
-			Foreground: getColor(colors, c.UI.Foreground),
+			Background: bubbles.GetColor(colors, c.UI.Background),
+			Foreground: bubbles.GetColor(colors, c.UI.Foreground),
 			AppBar: AppBarStyles{
 				Style:      c.UI.AppBar.Style.Style(colors),
 				TitleStyle: c.UI.AppBar.Title.Style(colors).Padding(0, 1),
@@ -170,7 +171,7 @@ type Colors map[string]string
 func (c Colors) Colors() map[string]color.Color {
 	m := make(map[string]color.Color, len(c))
 	for k, v := range c {
-		m[k] = parseColor(v)
+		m[k] = bubbles.ParseColor(v)
 	}
 	return m
 }
@@ -192,7 +193,7 @@ type IconsConfig struct {
 	Types       map[string]IconConfig `toml:"types"`
 }
 
-func (c IconsConfig) Styles(colors ColorStyles) IconStyles {
+func (c IconsConfig) Styles(colors bubbles.ColorStyles) IconStyles {
 	files := make(map[string]lipgloss.Style, len(c.Files))
 	for k, v := range c.Files {
 		files[k] = v.IconStyle(colors)
@@ -222,11 +223,11 @@ func (c IconsConfig) Styles(colors ColorStyles) IconStyles {
 }
 
 type IconConfig struct {
-	Icon  rune  `toml:"icon"`
-	Style Style `toml:"style"`
+	Icon  rune          `toml:"icon"`
+	Style bubbles.Style `toml:"style"`
 }
 
-func (c IconConfig) IconStyle(colors ColorStyles) lipgloss.Style {
+func (c IconConfig) IconStyle(colors bubbles.ColorStyles) lipgloss.Style {
 	return c.Style.Style(colors).SetString(string(c.Icon))
 }
 
@@ -248,116 +249,116 @@ type UIConfig struct {
 }
 
 type AppBarUIConfig struct {
-	Style Style `toml:"style"`
-	Title Style `toml:"title"`
+	Style bubbles.Style `toml:"style"`
+	Title bubbles.Style `toml:"title"`
 
 	Files AppBarFilesUIConfig `toml:"files"`
 }
 
 type AppBarFilesUIConfig struct {
-	Style        Style `toml:"style"`
-	File         Style `toml:"file"`
-	SelectedFile Style `toml:"selected_file"`
+	Style        bubbles.Style `toml:"style"`
+	File         bubbles.Style `toml:"file"`
+	SelectedFile bubbles.Style `toml:"selected_file"`
 }
 
 type CodeBarUIConfig struct {
-	Style Style `toml:"style"`
+	Style bubbles.Style `toml:"style"`
 }
 
 type MenuUIConfig struct {
-	Style   Style `toml:"style"`
-	Title   Style `toml:"title"`
-	Content Style `toml:"content"`
+	Style   bubbles.Style `toml:"style"`
+	Title   bubbles.Style `toml:"title"`
+	Content bubbles.Style `toml:"content"`
 
-	Text    Style `toml:"text"`
-	SubText Style `toml:"subtext"`
+	Text    bubbles.Style `toml:"text"`
+	SubText bubbles.Style `toml:"subtext"`
 
-	Entry                  Style `toml:"entry"`
-	SelectedEntry          Style `toml:"selected_entry"`
-	SelectedEntryUnfocused Style `toml:"selected_entry_unfocused"`
+	Entry                  bubbles.Style `toml:"entry"`
+	SelectedEntry          bubbles.Style `toml:"selected_entry"`
+	SelectedEntryUnfocused bubbles.Style `toml:"selected_entry_unfocused"`
 }
 
 type OverlayUIConfig struct {
-	Style Style `toml:"style"`
+	Style bubbles.Style `toml:"style"`
 }
 
 type CursorUIConfig struct {
-	Block     Style `toml:"block"`
-	Underline Style `toml:"underline"`
+	Block     bubbles.Style `toml:"block"`
+	Underline bubbles.Style `toml:"underline"`
 }
 
 type FileTreeUIConfig struct {
-	Style                  Style `toml:"style"`
-	Empty                  Style `toml:"empty"`
-	Entry                  Style `toml:"entry"`
-	SelectedEntry          Style `toml:"selected_entry"`
-	SelectedEntryUnfocused Style `toml:"selected_entry_unfocused"`
+	Style                  bubbles.Style `toml:"style"`
+	Empty                  bubbles.Style `toml:"empty"`
+	Entry                  bubbles.Style `toml:"entry"`
+	SelectedEntry          bubbles.Style `toml:"selected_entry"`
+	SelectedEntryUnfocused bubbles.Style `toml:"selected_entry_unfocused"`
 }
 
 type FileViewUIConfig struct {
-	Style  Style `toml:"style"`
-	Empty  Style `toml:"empty"`
-	Border Style `toml:"border"`
+	Style  bubbles.Style `toml:"style"`
+	Empty  bubbles.Style `toml:"empty"`
+	Border bubbles.Style `toml:"border"`
 
-	Line       Style `toml:"line"`
-	LinePrefix Style `toml:"line_prefix"`
-	LineChar   Style `toml:"line_char"`
+	Line       bubbles.Style `toml:"line"`
+	LinePrefix bubbles.Style `toml:"line_prefix"`
+	LineChar   bubbles.Style `toml:"line_char"`
 
-	CurrentLine       Style `toml:"current_line"`
-	CurrentLinePrefix Style `toml:"current_line_prefix"`
-	CurrentLineChar   Style `toml:"current_line_char"`
+	CurrentLine       bubbles.Style `toml:"current_line"`
+	CurrentLinePrefix bubbles.Style `toml:"current_line_prefix"`
+	CurrentLineChar   bubbles.Style `toml:"current_line_char"`
 
-	Selection Style `toml:"selection"`
-	InlayHint Style `toml:"inlay_hint"`
+	Selection bubbles.Style `toml:"selection"`
+	InlayHint bubbles.Style `toml:"inlay_hint"`
 }
 
 type FilePickerUIConfig struct {
-	Selected         Style `toml:"selected"`
-	DisabledSelected Style `toml:"disabled_selected"`
+	Selected         bubbles.Style `toml:"selected"`
+	DisabledSelected bubbles.Style `toml:"disabled_selected"`
 
-	Symlink        Style `toml:"symlink"`
-	Directory      Style `toml:"directory"`
-	EmptyDirectory Style `toml:"empty_directory"`
+	Symlink        bubbles.Style `toml:"symlink"`
+	Directory      bubbles.Style `toml:"directory"`
+	EmptyDirectory bubbles.Style `toml:"empty_directory"`
 
-	File         Style `toml:"file"`
-	DisabledFile Style `toml:"disabled_file"`
-	FileSize     Style `toml:"file_size"`
+	File         bubbles.Style `toml:"file"`
+	DisabledFile bubbles.Style `toml:"disabled_file"`
+	FileSize     bubbles.Style `toml:"file_size"`
 
-	Permission Style `toml:"permission"`
+	Permission bubbles.Style `toml:"permission"`
 }
 
 type TextInputUIConfig struct {
-	PromptChar    string `toml:"prompt_char"`
-	EchoChar      string `toml:"echo_char"`
-	Prompt        Style  `toml:"prompt"`
-	FocusedPrompt Style  `toml:"focused_prompt"`
-	Text          Style  `toml:"text"`
-	Placeholder   Style  `toml:"placeholder"`
+	PromptChar    string        `toml:"prompt_char"`
+	EchoChar      string        `toml:"echo_char"`
+	Prompt        bubbles.Style `toml:"prompt"`
+	FocusedPrompt bubbles.Style `toml:"focused_prompt"`
+	Text          bubbles.Style `toml:"text"`
+	Placeholder   bubbles.Style `toml:"placeholder"`
 }
 
 type DiagnosticConfig struct {
-	Error     Style `toml:"error"`
-	ErrorChar Style `toml:"error_char"`
+	Error     bubbles.Style `toml:"error"`
+	ErrorChar bubbles.Style `toml:"error_char"`
 
-	Warning     Style `toml:"warning"`
-	WarningChar Style `toml:"warning_char"`
+	Warning     bubbles.Style `toml:"warning"`
+	WarningChar bubbles.Style `toml:"warning_char"`
 
-	Info     Style `toml:"info"`
-	InfoChar Style `toml:"info_char"`
+	Info     bubbles.Style `toml:"info"`
+	InfoChar bubbles.Style `toml:"info_char"`
 
-	Hint     Style `toml:"hint"`
-	HintChar Style `toml:"hint_char"`
+	Hint     bubbles.Style `toml:"hint"`
+	HintChar bubbles.Style `toml:"hint_char"`
 
-	Deprecated     Style `toml:"deprecated"`
-	DeprecatedChar Style `toml:"deprecated_char"`
+	Deprecated     bubbles.Style `toml:"deprecated"`
+	DeprecatedChar bubbles.Style `toml:"deprecated_char"`
 
-	Unnecessary     Style `toml:"unnecessary"`
-	UnnecessaryChar Style `toml:"unnecessary_char"`
+	Unnecessary     bubbles.Style `toml:"unnecessary"`
+	UnnecessaryChar bubbles.Style `toml:"unnecessary_char"`
 }
 
-type CodeStylesConfig map[string]Style
+type CodeStylesConfig map[string]bubbles.Style
 
-func (c CodeStylesConfig) Styles(colors ColorStyles) map[string]lipgloss.Style {
+func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) map[string]lipgloss.Style {
 	m := make(map[string]lipgloss.Style, len(c))
 	for k, v := range c {
 		m[k] = v.Style(colors)

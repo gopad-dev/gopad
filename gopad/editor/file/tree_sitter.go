@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	sitter "go.gopad.dev/go-tree-sitter"
+	"go.gopad.dev/go-tree-sitter"
 
-	"go.gopad.dev/gopad/gopad/buffer"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
+	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type Tree struct {
@@ -57,7 +57,7 @@ func (t *Tree) Print() string {
 	return s
 }
 
-func (t *Tree) FindTree(p buffer.Position) *Tree {
+func (t *Tree) FindTree(p buffer.Point) *Tree {
 	if len(t.SubTrees) == 0 {
 		return t
 	}
@@ -71,7 +71,7 @@ func (t *Tree) FindTree(p buffer.Position) *Tree {
 }
 
 func (f *File) InitTree() tea.Cmd {
-	if f.language == nil || f.language.Grammar == nil {
+	if f.Language == nil || f.Language.Grammar == nil {
 		return nil
 	}
 
@@ -79,12 +79,12 @@ func (f *File) InitTree() tea.Cmd {
 		return notifications.Addf("Error updating tree sitter tree: %s", err.Error())
 	}
 
-	name := f.Name()
-	version := f.Version()
+	name := f.Buffer.Name()
+	version := f.Buffer.Version()
 
 	return tea.Batch(
-		HighlightTree(name, version, f.tree.Copy(), f.buffer.LinesLen()),
-		ValidateTree(name, version, f.tree.Copy()),
+		HighlightTree(name, version, f.Tree.Copy(), f.Buffer.LinesLen()),
+		ValidateTree(name, version, f.Tree.Copy()),
 	)
 }
 
@@ -94,22 +94,22 @@ func (f *File) UpdateTree(edit sitter.EditInput) tea.Cmd {
 		log.Println("Update tree time: ", time.Since(now))
 	}()
 
-	if f.language == nil || f.language.Grammar == nil {
+	if f.Language == nil || f.Language.Grammar == nil {
 		return nil
 	}
 
-	editTree(f.tree, edit)
+	editTree(f.Tree, edit)
 
 	if err := f.updateTree(); err != nil {
 		return notifications.Addf("Error updating tree sitter tree: %s", err.Error())
 	}
 
-	name := f.Name()
-	version := f.Version()
+	name := f.Buffer.Name()
+	version := f.Buffer.Version()
 
 	return tea.Batch(
-		HighlightTree(name, version, f.tree.Copy(), f.buffer.LinesLen()),
-		ValidateTree(name, version, f.tree.Copy()),
+		HighlightTree(name, version, f.Tree.Copy(), f.Buffer.LinesLen()),
+		ValidateTree(name, version, f.Tree.Copy()),
 	)
 }
 
@@ -122,16 +122,16 @@ func (f *File) updateTree() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tree, err := parseTree(ctx, f.buffer, f.tree, f.language, nil)
+	tree, err := parseTree(ctx, f.Buffer, f.Tree, f.Language, nil)
 	if err != nil {
 		return err
 	}
 
-	f.tree = tree
+	f.Tree = tree
 	return nil
 }
 
-func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language *Language, ranges []sitter.Range) (*Tree, error) {
+func parseTree(ctx context.Context, buff buffer.Buffer, oldTree *Tree, language *Language, ranges []sitter.Range) (*Tree, error) {
 	now := time.Now()
 	defer func() {
 		log.Println("parse tree time: ", time.Since(now))
@@ -187,8 +187,14 @@ func parseTree(ctx context.Context, buff *buffer.Buffer, oldTree *Tree, language
 		languageRanges[subLanguage] = append(languageRanges[subLanguage], sitter.Range{
 			StartPoint: capture.StartPoint(),
 			EndPoint:   capture.EndPoint(),
-			StartByte:  uint32(buff.ByteIndex(int(start.Row), int(start.Column))),
-			EndByte:    uint32(buff.ByteIndex(int(end.Row), int(end.Column))),
+			StartByte: uint32(buff.ByteIndex(buffer.Point{
+				Row: int(start.Row),
+				Col: int(start.Column),
+			})),
+			EndByte: uint32(buff.ByteIndex(buffer.Point{
+				Row: int(end.Row),
+				Col: int(end.Column),
+			})),
 		})
 	}
 

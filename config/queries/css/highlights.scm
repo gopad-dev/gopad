@@ -38,7 +38,7 @@
 (feature_name) @variable.other.member
 (function_name) @function
 (id_name) @label
-(namespace_name) @namespace
+(namespace_name) @section
 (property_name) @variable.other.member
 
 [

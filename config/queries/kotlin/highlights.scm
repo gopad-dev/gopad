@@ -84,7 +84,7 @@
 ))
 
 (package_header
-	. (identifier)) @namespace
+	. (identifier)) @section
 
 (import_header
 	"import" @include)
