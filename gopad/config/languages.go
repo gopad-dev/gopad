@@ -52,12 +52,18 @@ type LanguageConfig struct {
 	LineCommentTokens  []string                   `toml:"line_comment_tokens"`
 	BlockCommentTokens []buffer.BlockCommentToken `toml:"block_comment_tokens"`
 	AutoPairs          []LanguageAutoPairs        `toml:"auto_pairs"`
+	Indent             Indent                     `toml:"indent"`
 	Grammar            *GrammarConfig             `toml:"grammar"`
 }
 
 type LanguageAutoPairs struct {
 	Open  string `toml:"open"`
 	Close string `toml:"close"`
+}
+
+type Indent struct {
+	TabWidth int  `toml:"tab_width"`
+	Unit     byte `toml:"unit"`
 }
 
 type GrammarConfig struct {

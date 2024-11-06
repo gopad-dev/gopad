@@ -1,5 +1,8 @@
 name = 'dark'
 
+foreground = '$text'
+background = '$background'
+
 # Color configuration
 [colors]
 black = "0"
@@ -26,7 +29,7 @@ background = ""
 overlay0 = "235"
 overlay1 = "234"
 
-text = "15"
+text = "7"
 subtext = "8"
 
 primary = "6"
@@ -118,8 +121,6 @@ unknown_type = { icon = 0xeb63 }
 
 # UI Style configuration
 [ui]
-background = '$background'
-foreground = '$text'
 
 # App Bar Style configuration
 [ui.app_bar]
@@ -152,6 +153,16 @@ selected_entry_unfocused = { foreground = '$primary', reverse = true }
 # Basic Overlay Style configuration
 [ui.overlay]
 style = { background = '$surface0' }
+
+# Cursor Style configuration
+[ui.cursor]
+block = { foreground = '$red', reverse = true }
+underline = { underline = true, underline_color = '$red' }
+
+# Button Style configuration
+[ui.button]
+style = { foreground = '$primary', reverse = true }
+focused = { foreground = '$primary_selected', reverse = true }
 
 # File Tree Style configuration
 [ui.file_tree]
@@ -204,11 +215,6 @@ prompt = { foreground = '$primary' }
 focused_prompt = { foreground = '$primary_selected' }
 text = { foreground = '$text' }
 placeholder = { foreground = '$subtext' }
-
-# Cursor Style configuration
-[ui.cursor]
-block = { foreground = '$red', reverse = true }
-underline = { underline = true, underline_color = '$red' }
 
 # Diagnostic Style configuration
 [diagnostic]

@@ -1,4 +1,4 @@
-package file
+package editor
 
 import (
 	"fmt"
@@ -10,51 +10,57 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func Save() tea.Msg {
-	return SaveMsg{}
+func SaveAction() tea.Msg {
+	return SaveActionMsg{}
 }
 
-type SaveMsg struct{}
+type SaveActionMsg struct{}
 
-func SaveAll() tea.Msg {
-	return saveAllMsg{}
+func SaveAllAction() tea.Msg {
+	return SaveAllActionMsg{}
 }
 
-type saveAllMsg struct{}
+type SaveAllActionMsg struct{}
 
-func Close() tea.Msg {
-	return CloseMsg{}
+func CloseAction() tea.Msg {
+	return CloseActionMsg{}
 }
 
-type CloseMsg struct{}
+type CloseActionMsg struct{}
 
-func CloseAll() tea.Msg {
-	return CloseAllMsg{}
+func CloseAllAction() tea.Msg {
+	return CloseAllActionMsg{}
 }
 
-type CloseAllMsg struct{}
+type CloseAllActionMsg struct{}
 
-func Rename() tea.Msg {
-	return RenameMsg{}
+func RenameAction() tea.Msg {
+	return RenameActionMsg{}
 }
 
-type RenameMsg struct{}
+type RenameActionMsg struct{}
 
-func Delete() tea.Msg {
-	return DeleteMsg{}
+func DeleteAction() tea.Msg {
+	return DeleteActionMsg{}
 }
 
-type DeleteMsg struct{}
+type DeleteActionMsg struct{}
 
-func SetLanguage(lang string) tea.Cmd {
+func GoToAction() tea.Msg {
+	return GoToActionMsg{}
+}
+
+type GoToActionMsg struct{}
+
+func SetLanguageAction(lang string) tea.Cmd {
 	return func() tea.Msg {
-		return SetLanguageMsg{
+		return SetLanguageActionMsg{
 			Language: lang,
 		}
 	}
 }
 
-type SetLanguageMsg struct {
+type SetLanguageActionMsg struct {
 	Language string
 }
 
@@ -92,21 +98,21 @@ func Cut(s buffer.Range, b []byte) tea.Cmd {
 
 type CutMsg buffer.Range
 
-func Select(r buffer.Range) tea.Cmd {
+func SelectAction(r buffer.Range) tea.Cmd {
 	return func() tea.Msg {
-		return SelectMsg(r)
+		return SelectActionMsg(r)
 	}
 }
 
-type SelectMsg buffer.Range
+type SelectActionMsg buffer.Range
 
-func Scroll(p buffer.Point) tea.Cmd {
+func ScrollAction(p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
-		return ScrollMsg(p)
+		return ScrollActionMsg(p)
 	}
 }
 
-type ScrollMsg buffer.Point
+type ScrollActionMsg buffer.Point
 
 func OpenDir(name string) tea.Cmd {
 	return func() tea.Msg {
@@ -203,9 +209,3 @@ func DeleteFile(name string) tea.Cmd {
 type DeleteFileMsg struct {
 	Name string
 }
-
-func GoTo() tea.Msg {
-	return GoToMsg{}
-}
-
-type GoToMsg struct{}

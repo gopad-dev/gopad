@@ -89,8 +89,11 @@ type File struct {
 	matchesVersion int32
 	Matches        [][]*Match
 
-	Definitions     []ls.Definition
-	TypeDefinitions []ls.TypeDefinition
+	Declarations    []ls.FileLocation
+	Definitions     []ls.FileLocation
+	TypeDefinitions []ls.FileLocation
+	Implementations []ls.FileLocation
+	References      []ls.FileLocation
 
 	Positions [][]buffer.Point
 	Changes   []Change

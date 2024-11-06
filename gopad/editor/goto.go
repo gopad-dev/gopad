@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -77,7 +76,7 @@ func (o GoToOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 
 			cmds = append(cmds, tea.Sequence(
 				overlay.Close(GoToOverlayID),
-				file.Scroll(buffer.Point{
+				ScrollAction(buffer.Point{
 					Row: row,
 					Col: col,
 				}),

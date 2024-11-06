@@ -9,19 +9,15 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 )
 
-type Cursor struct {
+type fileCursor struct {
+	cursor cursor.Model
+
 	point  buffer.Point
 	mark   *buffer.Point
 	offset buffer.Point
 
 	start bool
 	end   bool
-
-	cursor cursor.Model
-}
-
-func (v *FileView) CursorPosition() (int, int) {
-	return v.cursor.point.Row, v.cursor.point.Col
 }
 
 func (v *FileView) Cursor() buffer.Point {

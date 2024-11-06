@@ -63,7 +63,7 @@ func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			if lang == nil {
 				return s, nil
 			}
-			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), file.SetLanguage(lang.Name))
+			return s, tea.Batch(overlay.Close(SetLanguageOverlayID), SetLanguageAction(lang.Name))
 		}
 	}
 
@@ -72,7 +72,7 @@ func (s SetLanguageOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 
 	if s.l.Clicked() {
 		lang := s.l.Selected()
-		return s, tea.Batch(cmd, overlay.Close(SetLanguageOverlayID), file.SetLanguage(lang.Name))
+		return s, tea.Batch(cmd, overlay.Close(SetLanguageOverlayID), SetLanguageAction(lang.Name))
 	}
 
 	return s, cmd

@@ -1,5 +1,5 @@
 # Key bindings configuration
-name = 'default'
+name = 'linux'
 
 [keys]
 quit = 'ctrl+q'

@@ -1,9 +1,7 @@
 # Language Server Protocol configuration
 # For a list of available language servers, see: https://langserver.org/#implementations-server
 
-use_servers = { only = ['gopls'], except = [] }
-
-[language_servers]
+use_servers = { only = ['gopls', 'golangci-lint', 'superhtml'], except = [] }
 
 [language_servers.gopls]
 command = 'gopls'
@@ -16,7 +14,15 @@ features = ['inlay_hints', 'diagnostics', 'completion', 'go_to_definition']
 [language_servers.gopls.config]
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
-'ui.hints' = { assignVariableTypes = true, compositeLiteralFields = true, compositeLiteralTypes = true, constantValues = true, functionTypeParameters = true, parameterNames = true, rangeVariableTypes = true }
+
+[language_servers.gopls.config.'ui.hints']
+assignVariableTypes = true
+compositeLiteralFields = true
+compositeLiteralTypes = true
+constantValues = true
+functionTypeParameters = true
+parameterNames = true
+rangeVariableTypes = true
 
 [language_servers.golangci-lint]
 command = 'golangci-lint-langserver'
@@ -42,6 +48,12 @@ files = []
 [language_servers.html]
 command = 'vscode-html-language-server'
 args = ['--stdio']
+file_types = ['.html', '.htm']
+files = []
+
+[language_servers.superhtml]
+command = 'superhtml'
+args = ['lsp']
 file_types = ['.html', '.htm']
 files = []
 

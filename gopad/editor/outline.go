@@ -139,7 +139,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			item := o.l.Selected()
 			return o, tea.Batch(
 				overlay.Close(OutlineOverlayID),
-				file.Scroll(item.r.Start),
+				ScrollAction(item.r.Start),
 			)
 		}
 	}
@@ -156,7 +156,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		item := o.l.Selected()
 		return o, tea.Batch(
 			overlay.Close(OutlineOverlayID),
-			file.Scroll(item.r.Start),
+			ScrollAction(item.r.Start),
 		)
 	}
 

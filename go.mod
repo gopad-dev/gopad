@@ -13,7 +13,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.1.0.20241028191104-f7c464793655
 	github.com/charmbracelet/lipgloss v0.13.0
-	github.com/charmbracelet/x/ansi v0.4.1
+	github.com/charmbracelet/x/ansi v0.4.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/lrstanley/bubblezone v0.0.0-20240624011428-67235275f80c
 	github.com/muesli/reflow v0.3.0
@@ -28,9 +28,10 @@ require (
 )
 
 require (
-	github.com/charmbracelet/x/cellbuf v0.0.2 // indirect
+	github.com/charmbracelet/colorprofile v0.1.4 // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.3 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
-	github.com/charmbracelet/x/wcwidth v0.0.0-20241029140037-8315017daad4 // indirect
+	github.com/charmbracelet/x/wcwidth v0.0.0-20241030151339-a49550dd4e50 // indirect
 	github.com/charmbracelet/x/windows v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/purego v0.8.1 // indirect

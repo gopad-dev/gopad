@@ -17,6 +17,7 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
+	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/buffer"
 )
@@ -49,10 +50,10 @@ func zoneFileLineDiagnosticID(id int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
 }
 
-func NewFileView(buff buffer.Buffer, mode file.Mode) FileView {
-	return FileView{
+func newFileView(buff buffer.Buffer, mode file.Mode) *FileView {
+	return &FileView{
 		file: file.NewFileWithBuffer(buff, mode),
-		cursor: Cursor{
+		cursor: fileCursor{
 			point: buffer.Point{
 				Row: 0,
 				Col: 0,
@@ -62,14 +63,14 @@ func NewFileView(buff buffer.Buffer, mode file.Mode) FileView {
 	}
 }
 
-func NewFileViewFromName(name string) (FileView, error) {
+func newFileViewFromName(name string) (*FileView, error) {
 	f, err := file.NewFileFromName(name)
 	if err != nil {
-		return FileView{}, err
+		return nil, err
 	}
-	return FileView{
+	return &FileView{
 		file: f,
-		cursor: Cursor{
+		cursor: fileCursor{
 			point: buffer.Point{
 				Row: 0,
 				Col: 0,
@@ -81,7 +82,7 @@ func NewFileViewFromName(name string) (FileView, error) {
 
 type FileView struct {
 	file                  *file.File
-	cursor                Cursor
+	cursor                fileCursor
 	showCurrentDiagnostic bool
 	definitionsIndex      int
 }
@@ -156,6 +157,13 @@ func (v FileView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) buffe
 	return v.GetCursorForCharPos(buffer.Point{Row: row, Col: col})
 }
 
+func (v *FileView) SetLanguage(language string) tea.Cmd {
+	v.file.SetLanguage(language)
+	v.file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
+
+	return v.file.InitTree()
+}
+
 func (v *FileView) refreshCursorViewOffset(width int, height int) {
 	c := v.Cursor()
 
@@ -221,63 +229,99 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 	case ls.RefreshInlayHintMsg:
 		cmds = append(cmds, ls.GetInlayHint(v.Name(), v.file.Buffer.Version(), v.file.Range()))
 		return v, tea.Batch(cmds...)
-	case ls.UpdateDefinitionMsg:
+	case ls.UpdateDeclarationsMsg:
 		if msg.Name != v.Name() {
 			return v, tea.Batch(cmds...)
 		}
-		cmds = append(cmds, v.file.SetDefinitions(msg.Definitions))
-		return v, tea.Batch(cmds...)
+		if len(msg.Declarations) == 0 {
+			cmds = append(cmds, notifications.Add("No declaration found"))
+		} else if len(msg.Declarations) == 1 {
+			declaration := msg.Declarations[0]
+			cmds = append(cmds, OpenFilePosition(declaration.Name, &buffer.Point{
+				Row: declaration.Range.Start.Row,
+				Col: declaration.Range.Start.Col,
+			}), notifications.Add("Found declaration"))
 
-	case file.SetLanguageMsg:
-		v.file.SetLanguage(msg.Language)
-		v.file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
+			return v, tea.Batch(cmds...)
+		}
 
-		if cmd := v.file.InitTree(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		v.file.SetDeclarations(msg.Declarations)
 		return v, tea.Batch(cmds...)
+	case ls.UpdateDefinitionsMsg:
+		if msg.Name != v.Name() {
+			return v, tea.Batch(cmds...)
+		}
 
-	case file.SaveMsg:
-		if v.file.Buffer.Dirty() {
-			cmds = append(cmds, file.SaveFile(v.Name()))
-		}
-		return v, tea.Batch(cmds...)
-	case file.RenameMsg:
-		cmds = append(cmds, overlay.Open(NewRenameOverlay(v.Name())))
-	case file.DeleteMsg:
-		if v.file.Buffer.Dirty() {
-			return v, overlay.Open(NewDeleteOverlay([]string{v.Name()}))
-		}
-		cmds = append(cmds, file.CloseFile(v.Name()))
-		return v, tea.Batch(cmds...)
-	case file.CloseMsg:
-		if v.file.Buffer.Dirty() {
-			return v, overlay.Open(NewCloseOverlay([]string{v.Name()}))
-		}
-		cmds = append(cmds, file.CloseFile(v.Name()))
-		return v, tea.Batch(cmds...)
+		if len(msg.Definitions) == 0 {
+			cmds = append(cmds, notifications.Add("No definition found"))
+		} else if len(msg.Definitions) == 1 {
+			definition := msg.Definitions[0]
+			cmds = append(cmds, OpenFilePosition(definition.Name, &buffer.Point{
+				Row: definition.Range.Start.Row,
+				Col: definition.Range.Start.Col,
+			}), notifications.Add("Found definition"))
 
-	case file.CutMsg:
-		s := buffer.Range(msg)
-		v.file.DeleteRange(s)
-		v.ResetMark()
-	case tea.PasteMsg:
-		s := v.Selection()
-		if s != nil {
-			v.file.Replace(*s, []byte(msg))
-			v.ResetMark()
-		} else {
-			v.file.Insert(v.Cursor(), []byte(msg))
+			return v, tea.Batch(cmds...)
 		}
+		v.file.SetDefinitions(msg.Definitions)
 		return v, tea.Batch(cmds...)
-	case file.SelectMsg:
-		v.SetMark(msg.Start)
-		v.SetCursor(msg.End)
-	case file.GoToMsg:
-		cmds = append(cmds, overlay.Open(NewGoToOverlay(v.Cursor())))
+	case ls.UpdateTypeDefinitionsMsg:
+		if msg.Name != v.Name() {
+			return v, tea.Batch(cmds...)
+		}
+
+		if len(msg.TypeDefinitions) == 0 {
+			cmds = append(cmds, notifications.Add("No type definition found"))
+		} else if len(msg.TypeDefinitions) == 1 {
+			typeDefinition := msg.TypeDefinitions[0]
+			cmds = append(cmds, OpenFilePosition(typeDefinition.Name, &buffer.Point{
+				Row: typeDefinition.Range.Start.Row,
+				Col: typeDefinition.Range.Start.Col,
+			}), notifications.Add("Found type definition"))
+
+			return v, tea.Batch(cmds...)
+		}
+
+		v.file.SetTypeDefinitions(msg.TypeDefinitions)
 		return v, tea.Batch(cmds...)
-	case file.ScrollMsg:
-		v.SetCursor(buffer.Point(msg))
+	case ls.UpdateImplementationsMsg:
+		if msg.Name != v.Name() {
+			return v, tea.Batch(cmds...)
+		}
+
+		if len(msg.Implementations) == 0 {
+			cmds = append(cmds, notifications.Add("No implementation found"))
+		} else if len(msg.Implementations) == 1 {
+			implementation := msg.Implementations[0]
+			cmds = append(cmds, OpenFilePosition(implementation.Name, &buffer.Point{
+				Row: implementation.Range.Start.Row,
+				Col: implementation.Range.Start.Col,
+			}), notifications.Add("Found implementation"))
+
+			return v, tea.Batch(cmds...)
+		}
+
+		v.file.SetImplementations(msg.Implementations)
+		return v, tea.Batch(cmds...)
+	case ls.UpdateReferencesMsg:
+		if msg.Name != v.Name() {
+			return v, tea.Batch(cmds...)
+		}
+
+		if len(msg.References) == 0 {
+			cmds = append(cmds, notifications.Add("No references found"))
+		} else if len(msg.References) == 1 {
+			reference := msg.References[0]
+			cmds = append(cmds, OpenFilePosition(reference.Name, &buffer.Point{
+				Row: reference.Range.Start.Row,
+				Col: reference.Range.Start.Col,
+			}), notifications.Add("Found reference"))
+
+			return v, tea.Batch(cmds...)
+		}
+
+		v.file.SetReferences(msg.References)
+		return v, tea.Batch(cmds...)
 
 	case tea.MouseMsg:
 		switch msg := msg.(type) {
@@ -501,7 +545,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				cmds = append(cmds, overlay.Open(NewOutlineOverlay(v.file)))
 
 			case key.Matches(msg, config.Keys.Editor.File.Close):
-				cmds = append(cmds, file.Close)
+				cmds = append(cmds, CloseAction)
 
 			case key.Matches(msg, config.Keys.Editor.File.Delete):
 				cmds = append(cmds, overlay.Open(NewDeleteOverlay([]string{v.Name()})))
@@ -568,14 +612,14 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.Edit.Copy):
 				selBytes := v.SelectionBytes()
 				if len(selBytes) > 0 {
-					cmds = append(cmds, file.Copy(selBytes))
+					cmds = append(cmds, Copy(selBytes))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.Paste):
-				cmds = append(cmds, file.Paste)
+				cmds = append(cmds, Paste)
 			case key.Matches(msg, config.Keys.Editor.Edit.Cut):
 				s := v.Selection()
 				if s != nil {
-					cmds = append(cmds, file.Cut(*s, v.SelectionBytes()))
+					cmds = append(cmds, Cut(*s, v.SelectionBytes()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectLeft):
 				v.SelectLeft(moveSize)
@@ -589,7 +633,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				v.SelectAll()
 
 			case key.Matches(msg, config.Keys.Editor.File.Save):
-				cmds = append(cmds, file.SaveFile(v.Name()))
+				cmds = append(cmds, SaveFile(v.Name()))
 			case key.Matches(msg, config.Keys.Editor.Edit.Tab):
 				cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.RemoveTab):
@@ -762,16 +806,16 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 
 	v.refreshCursorViewOffset(width-2, height)
 	c := v.Cursor()
-	offsetRow, offsetCol := v.cursor.offset.Point()
-	realCursorRow := c.Row - offsetRow
-	realCursorCol := c.Col - offsetCol
+	offset := v.cursor.offset
+	realCursorRow := c.Row - offset.Row
+	realCursorCol := c.Col - offset.Col
 
 	selection := v.Selection()
 
 	var editorCode string
 	positions := make([][]buffer.Point, max(height, 0))
 	for i := range height {
-		ln := i + offsetRow
+		ln := i + offset.Row
 
 		var linePositions []buffer.Point
 
@@ -802,7 +846,7 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 		prefix += zone.Mark(zoneFileLineNumberID(ln), codePrefixStyle.Render(strings.Repeat(" ", prefixWidth-lipgloss.Width(prefixLn))+prefixLn))
 
 		line := v.file.Buffer.Line(ln)
-		if line.Len() < offsetCol {
+		if line.Len() < offset.Col {
 			editorCode += borderStyle(codeLineStyle.Render(prefix)) + "\n"
 			continue
 		}
@@ -812,7 +856,7 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 		var codeLine []byte
 		// always draw one character off the screen to ensure the cursor is visible
 		for ii := range width - prefixWidth + 1 {
-			col := ii + offsetCol
+			col := ii + offset.Col
 
 			if col <= line.Len() {
 				for len(linePositions) <= ii+colOffset {

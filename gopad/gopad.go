@@ -49,8 +49,7 @@ type Gopad struct {
 }
 
 func (g *Gopad) Focus() tea.Cmd {
-	//return g.editor.Focus(editor.ModelTypeFile)
-	return nil
+	return g.editor.Focus(editor.ModelTypeFile)
 }
 
 func (g *Gopad) Blur() {
@@ -72,8 +71,8 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{
 		cmd,
 		tea.SetWindowTitle("gopad"),
-		tea.SetBackgroundColor(config.Theme.UI.Background),
-		tea.SetForegroundColor(config.Theme.UI.Foreground),
+		tea.SetBackgroundColor(config.Theme.Background),
+		tea.SetForegroundColor(config.Theme.Foreground),
 	}
 
 	g.overlays = config.NewOverlays()
@@ -83,7 +82,7 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	//log.Printf("Msg: %T: %v\n", msg, msg)
+	log.Printf("Msg: %T: %v\n", msg, msg)
 	//now := time.Now()
 	//defer func() {
 	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
@@ -108,6 +107,9 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case overlay.TakeFocusMsg, tea.BlurMsg:
 		g.Blur()
 		return g, tea.Batch(cmds...)
+
+	case OpenLSPOverlayMsg:
+		cmds = append(cmds, overlay.Open(NewLSPOverlay(g.lsClient.Servers(), g.workspace)))
 
 	case tea.MouseMsg:
 		log.Printf("MouseMsg: %#v\n", msg)

@@ -18,6 +18,9 @@ type Keymap struct {
 	OK     key.Binding
 	Cancel key.Binding
 
+	FocusNext key.Binding
+	FocusPrev key.Binding
+
 	Left  key.Binding
 	Right key.Binding
 	Up    key.Binding
@@ -48,6 +51,9 @@ func (k Keymap) HelpView() []help.KeyMapCategory {
 				k.Help,
 				k.OK,
 				k.Cancel,
+				emptyKeyBind,
+				k.FocusNext,
+				k.FocusPrev,
 				emptyKeyBind,
 				k.Left,
 				k.Right,
@@ -400,6 +406,10 @@ type KeymapConfig struct {
 	Keys KeysConfig `toml:"keys"`
 }
 
+func (k KeymapConfig) ID() string {
+	return k.Name
+}
+
 func (k KeymapConfig) KeyMap() Keymap {
 	return k.Keys.KeyMap()
 }
@@ -442,6 +452,14 @@ func (k KeysConfig) KeyMap() Keymap {
 		Cancel: key.NewBinding(
 			key.WithKeys(k.Cancel),
 			key.WithHelp(k.Cancel, "cancel"),
+		),
+		FocusNext: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "focus next"),
+		),
+		FocusPrev: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "focus prev"),
 		),
 		Left: key.NewBinding(
 			key.WithKeys(k.Left),

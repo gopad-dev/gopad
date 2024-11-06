@@ -11,7 +11,6 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
@@ -19,22 +18,22 @@ import (
 const ZoneID = "editor.search-bar"
 
 func onSelect(result Result) tea.Cmd {
-	return file.Scroll(result.Start)
+	return ScrollAction(result.Start)
 }
 
 type Result buffer.Range
 
-func NewSearchBar() SearchBar {
+func newSearchBar() searchBar {
 	ti := config.NewTextInput()
 	ti.Placeholder = "type to search"
 	ti.Width = 20
 
-	return SearchBar{
+	return searchBar{
 		TextInput: ti,
 	}
 }
 
-type SearchBar struct {
+type searchBar struct {
 	TextInput textinput.Model
 	focus     bool
 	show      bool
@@ -43,33 +42,33 @@ type SearchBar struct {
 	resultIndex int
 }
 
-func (m *SearchBar) Visible() bool {
+func (m *searchBar) Visible() bool {
 	return m.show
 }
 
-func (m *SearchBar) Show() {
+func (m *searchBar) Show() {
 	m.show = true
 }
 
-func (m *SearchBar) Hide() {
+func (m *searchBar) Hide() {
 	m.show = false
 }
 
-func (m *SearchBar) Focused() bool {
+func (m *searchBar) Focused() bool {
 	return m.focus
 }
 
-func (m *SearchBar) Focus() tea.Cmd {
+func (m *searchBar) Focus() tea.Cmd {
 	m.focus = true
 	return m.TextInput.Focus()
 }
 
-func (m *SearchBar) Blur() {
+func (m *searchBar) Blur() {
 	m.focus = false
 	m.TextInput.Blur()
 }
 
-func (m SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
+func (m searchBar) Update(msg tea.Msg) (searchBar, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -137,7 +136,7 @@ func (m SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m SearchBar) View() string {
+func (m searchBar) View() string {
 	results := "0 results"
 	if len(m.results) > 0 {
 		results = fmt.Sprintf(" %d/%d 🠅🠇", m.resultIndex+1, len(m.results))

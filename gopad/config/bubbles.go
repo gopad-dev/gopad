@@ -9,6 +9,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/label"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -77,4 +78,10 @@ func NewNotifications() notifications.Model {
 	n.Styles = Theme.UI.NotificationStyle
 	n.Margin = 1
 	return n
+}
+
+func NewLabel(text string) label.Model {
+	l := label.New(text)
+	l.Styles = Theme.UI.Label
+	return l
 }

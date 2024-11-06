@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -81,9 +80,9 @@ func (o OpenOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			return o, tea.Batch(cmds...)
 		}
 		if stat.IsDir() {
-			cmd = file.OpenDir(f)
+			cmd = OpenDir(f)
 		} else {
-			cmd = file.OpenFile(f)
+			cmd = OpenFile(f)
 		}
 		cmds = append(cmds, tea.Sequence(overlay.Close(OpenOverlayID), cmd))
 	}

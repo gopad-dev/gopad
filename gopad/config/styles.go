@@ -10,6 +10,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/label"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -17,7 +18,9 @@ import (
 )
 
 type ThemeStyles struct {
-	Name string
+	Name       string
+	Foreground color.Color
+	Background color.Color
 
 	Colors     bubbles.ColorStyles
 	Icons      IconStyles
@@ -58,9 +61,6 @@ func (c IconStyles) TypeIcon(name string) lipgloss.Style {
 }
 
 type UiStyles struct {
-	Background color.Color
-	Foreground color.Color
-
 	AppBar  AppBarStyles
 	CodeBar CodeBarStyles
 
@@ -79,6 +79,7 @@ type UiStyles struct {
 	Help              help.Styles
 	NotificationStyle notifications.Styles
 	List              list.Styles
+	Label             label.Styles
 }
 
 type AppBarStyles struct {
