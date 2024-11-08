@@ -11,7 +11,7 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {
+func UpdateFileDiagnostic(name string, dType DiagnosticType, version uint64, diagnostics []Diagnostic) tea.Cmd {
 	return func() tea.Msg {
 		return UpdateFileDiagnosticMsg{
 			Name:        name,
@@ -25,7 +25,7 @@ func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diag
 type UpdateFileDiagnosticMsg struct {
 	Name        string
 	Type        DiagnosticType
-	Version     int32
+	Version     uint64
 	Diagnostics []Diagnostic
 }
 

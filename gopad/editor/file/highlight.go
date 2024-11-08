@@ -1,10 +1,8 @@
-package highlight
+package file
 
 import (
 	"context"
 	"fmt"
-	"iter"
-	"log"
 	"slices"
 
 	"github.com/tree-sitter/go-tree-sitter"
@@ -20,32 +18,30 @@ const (
 	captureLocalScopeInherits       = "local.scope-inherits"
 )
 
-type Event interface {
+type HighlightEvent interface {
 	highlightEvent()
 }
 
-type EventSource struct {
-	Start uint
-	End   uint
+type HighlightEventSource struct {
+	StartByte uint
+	EndByte   uint
 }
 
-func (EventSource) highlightEvent() {}
+func (HighlightEventSource) highlightEvent() {}
 
-type EventStart struct {
+type HighlightEventStart struct {
 	CaptureName  string
 	LanguageName string
 }
 
-func (EventStart) highlightEvent() {}
+func (HighlightEventStart) highlightEvent() {}
 
-type EventEnd struct{}
+type HighlightEventEnd struct{}
 
-func (EventEnd) highlightEvent() {}
+func (HighlightEventEnd) highlightEvent() {}
 
-func NewConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (*Config, error) {
-	querySource := injectionQuery
-	localsQueryOffset := uint(len(querySource))
-	querySource = append(querySource, localsQuery...)
+func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (*HighlightConfig, error) {
+	querySource := localsQuery
 	highlightsQueryOffset := uint(len(querySource))
 	querySource = append(querySource, highlightsQuery...)
 
@@ -54,38 +50,26 @@ func NewConfig(language *tree_sitter.Language, languageName string, highlightsQu
 		return nil, fmt.Errorf("error creating query: %w", err)
 	}
 
-	localsPatternIndex := uint(0)
 	highlightsPatternIndex := uint(0)
 	for i := range query.PatternCount() {
 		patternOffset := query.StartByteForPattern(i)
 		if patternOffset < highlightsQueryOffset {
-			if patternOffset < highlightsQueryOffset {
-				highlightsPatternIndex++
-			}
-			if patternOffset < localsQueryOffset {
-				localsPatternIndex++
-			}
+			highlightsPatternIndex++
 		}
 	}
 
-	combinedInjectionsQuery, err := tree_sitter.NewQuery(language, string(injectionQuery))
+	injectionsQuery, err := tree_sitter.NewQuery(language, string(injectionQuery))
 	if err != nil {
 		return nil, fmt.Errorf("error creating combined injections query: %w", err)
 	}
-	var hasCombinedQueries bool
-	for i := range localsPatternIndex {
-		settings := combinedInjectionsQuery.PropertySettings(i)
+	var combinedInjectionsPatterns []uint
+	for i := range injectionsQuery.PatternCount() {
+		settings := injectionsQuery.PropertySettings(i)
 		if slices.ContainsFunc(settings, func(setting tree_sitter.QueryProperty) bool {
 			return setting.Key == captureInjectionCombined
 		}) {
-			hasCombinedQueries = true
-			query.DisablePattern(i)
-		} else {
-			combinedInjectionsQuery.DisablePattern(i)
+			combinedInjectionsPatterns = append(combinedInjectionsPatterns, i)
 		}
-	}
-	if !hasCombinedQueries {
-		combinedInjectionsQuery = nil
 	}
 
 	nonLocalVariablePatterns := make([]bool, 0)
@@ -128,12 +112,12 @@ func NewConfig(language *tree_sitter.Language, languageName string, highlightsQu
 		}
 	}
 
-	return &Config{
+	return &HighlightConfig{
 		Language:                      language,
 		LanguageName:                  languageName,
 		Query:                         query,
-		CombinedInjectionsQuery:       combinedInjectionsQuery,
-		LocalsPatternIndex:            localsPatternIndex,
+		InjectionsQuery:               injectionsQuery,
+		CombinedInjectionsPatterns:    combinedInjectionsPatterns,
 		HighlightsPatternIndex:        highlightsPatternIndex,
 		HighlightIndices:              highlightIndices,
 		NonLocalVariablePatterns:      nonLocalVariablePatterns,
@@ -146,12 +130,12 @@ func NewConfig(language *tree_sitter.Language, languageName string, highlightsQu
 	}, nil
 }
 
-type Config struct {
+type HighlightConfig struct {
 	Language                      *tree_sitter.Language
 	LanguageName                  string
 	Query                         *tree_sitter.Query
-	CombinedInjectionsQuery       *tree_sitter.Query
-	LocalsPatternIndex            uint
+	InjectionsQuery               *tree_sitter.Query
+	CombinedInjectionsPatterns    []uint
 	HighlightsPatternIndex        uint
 	HighlightIndices              []string
 	NonLocalVariablePatterns      []bool
@@ -163,19 +147,19 @@ type Config struct {
 	LocalRefCaptureIndex          *uint
 }
 
-type localDef struct {
+type LocalDef struct {
 	Name      string
-	Range     tree_sitter.Range
+	Range     ByteRange
 	Highlight *string
 }
 
-type localScope struct {
+type LocalScope struct {
 	Inherits  bool
-	Range     tree_sitter.Range
-	LocalDefs []localDef
+	Range     ByteRange
+	LocalDefs []LocalDef
 }
 
-type InjectionCallback func(name string) *Config
+type InjectionCallback func(name string) *HighlightConfig
 
 type iterRange struct {
 	Start uint
@@ -186,21 +170,19 @@ type iterRange struct {
 type highlightIter struct {
 	Ctx                context.Context
 	Source             []byte
-	LanguageName       string
 	ByteOffset         uint
-	Highlighter        *Highlighter
-	InjectionCallback  InjectionCallback
-	Layers             []*iterLayer
-	NextEvent          Event
+	Layers             []*highlightIterLayer
+	NextEvent          HighlightEvent
 	LastHighlightRange *iterRange
+	Syntax             *SyntaxLayers
 }
 
-func (h *highlightIter) emitEvent(offset uint, event Event) (Event, error) {
-	var result Event
+func (h *highlightIter) emitEvent(offset uint, event HighlightEvent) (HighlightEvent, error) {
+	var result HighlightEvent
 	if h.ByteOffset < offset {
-		result = EventSource{
-			Start: h.ByteOffset,
-			End:   offset,
+		result = HighlightEventSource{
+			StartByte: h.ByteOffset,
+			EndByte:   offset,
 		}
 		h.ByteOffset = offset
 		h.NextEvent = event
@@ -211,7 +193,33 @@ func (h *highlightIter) emitEvent(offset uint, event Event) (Event, error) {
 	return result, nil
 }
 
-func (h *highlightIter) next() (Event, error) {
+func (h *highlightIter) sortLayers() {
+	for len(h.Layers) > 0 {
+		sortKey := h.Layers[0].sortKey()
+		if sortKey != nil {
+			var i int
+			for i+1 < len(h.Layers) {
+				nextOffset := h.Layers[i+1].sortKey()
+				if nextOffset != nil {
+					if nextOffset.position < sortKey.position {
+						i++
+						continue
+					}
+				}
+				break
+			}
+			if i > 0 {
+				h.Layers = append(h.Layers[:i], append([]*highlightIterLayer{h.Layers[0]}, h.Layers[i:]...)...)
+			}
+			break
+		}
+		layer := h.Layers[0]
+		h.Layers = h.Layers[1:]
+		h.Syntax.parser.pushCursor(layer.Cursor)
+	}
+}
+
+func (h *highlightIter) next() (HighlightEvent, error) {
 main:
 	for {
 		if h.NextEvent != nil {
@@ -230,14 +238,13 @@ main:
 		// If none of the layers have any more highlight boundaries, terminate.
 		if len(h.Layers) == 0 {
 			if h.ByteOffset < uint(len(h.Source)) {
-				event := EventSource{
-					Start: h.ByteOffset,
-					End:   uint(len(h.Source)),
+				event := HighlightEventSource{
+					StartByte: h.ByteOffset,
+					EndByte:   uint(len(h.Source)),
 				}
 				h.ByteOffset = uint(len(h.Source))
 				return event, nil
 			}
-			log.Println("we are done")
 			return nil, nil
 		}
 
@@ -256,48 +263,23 @@ main:
 				endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
 				if endByte <= r.StartByte {
 					layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
-					return h.emitEvent(endByte, EventEnd{})
+					return h.emitEvent(endByte, HighlightEventEnd{})
 				}
 			}
-		} else {
+		} else if len(layer.HighlightEndStack) > 0 {
 			// If there are no more captures, then emit any remaining highlight end events.
 			// And if there are none of those, then just advance to the end of the document.
-			if len(layer.HighlightEndStack) > 0 {
-				endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
-				layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
-				return h.emitEvent(endByte, EventEnd{})
-			}
+
+			endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
+			layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
+			return h.emitEvent(endByte, HighlightEventEnd{})
+		} else {
 			return h.emitEvent(uint(len(h.Source)), nil)
 		}
 
 		match := layer.Captures[0]
 		layer.Captures = layer.Captures[1:]
 		capture := match.Match.Captures[match.Index]
-
-		if match.Match.PatternIndex < layer.Config.LocalsPatternIndex {
-			languageName, contentNode, includeChildren := injectionForMatch(layer.Config, h.LanguageName, match.Match, h.Source)
-
-			match.Match.Remove()
-
-			if languageName != "" && contentNode != nil {
-				newConfig := h.InjectionCallback(languageName)
-				if newConfig != nil {
-					ranges := intersectRanges(h.Layers[0].Ranges, []*tree_sitter.Node{contentNode}, includeChildren)
-					if len(ranges) > 0 {
-						newLayers, err := newIterLayers(h.Ctx, h.Source, h.LanguageName, h.Highlighter, h.InjectionCallback, *newConfig, h.Layers[0].Depth+1, ranges)
-						if err != nil {
-							return nil, err
-						}
-						for _, newLayer := range newLayers {
-							h.insertLayer(newLayer)
-						}
-					}
-				}
-			}
-
-			h.sortLayers()
-			continue main
-		}
 
 		// Remove from the local scope stack any local scopes that have already ended.
 		for r.StartByte > layer.ScopeStack[len(layer.ScopeStack)-1].Range.EndByte {
@@ -311,11 +293,11 @@ main:
 		for match.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
-			if layer.Config.LocalScopeCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalScopeCaptureIndex {
+			if layer.Config.LocalScopeCaptureIndex != nil && capture.Index == *layer.Config.LocalScopeCaptureIndex {
 				definitionHighlight = nil
-				scope := localScope{
+				scope := LocalScope{
 					Inherits:  true,
-					Range:     r,
+					Range:     ByteRangeFromRange(r),
 					LocalDefs: nil,
 				}
 				for _, prop := range layer.Config.Query.PropertySettings(match.Match.PatternIndex) {
@@ -324,7 +306,7 @@ main:
 					}
 				}
 				layer.ScopeStack = append(layer.ScopeStack, scope)
-			} else if layer.Config.LocalDefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalDefCaptureIndex {
+			} else if layer.Config.LocalDefCaptureIndex != nil && capture.Index == *layer.Config.LocalDefCaptureIndex {
 				// If the node represents a definition, add a new definition to the
 				// local scope at the top of the scope stack.
 				referenceHighlight = nil
@@ -333,7 +315,7 @@ main:
 
 				var valueRange tree_sitter.Range
 				for _, matchCapture := range match.Match.Captures {
-					if layer.Config.LocalDefValueCaptureIndex != nil && uint(matchCapture.Index) == *layer.Config.LocalDefValueCaptureIndex {
+					if layer.Config.LocalDefValueCaptureIndex != nil && matchCapture.Index == *layer.Config.LocalDefValueCaptureIndex {
 						valueRange = matchCapture.Node.Range()
 					}
 				}
@@ -341,14 +323,14 @@ main:
 				if len(h.Source) > int(r.StartByte) && len(h.Source) > int(valueRange.EndByte) {
 					name := string(h.Source[r.StartByte:r.EndByte])
 
-					scope.LocalDefs = append(scope.LocalDefs, localDef{
+					scope.LocalDefs = append(scope.LocalDefs, LocalDef{
 						Name:      name,
-						Range:     r,
+						Range:     ByteRangeFromRange(r),
 						Highlight: nil,
 					})
 					definitionHighlight = scope.LocalDefs[len(scope.LocalDefs)-1].Highlight
 				}
-			} else if layer.Config.LocalRefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
+			} else if layer.Config.LocalRefCaptureIndex != nil && capture.Index == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
 				// If the node represents a reference, then try to find the corresponding
 				// definition in the scope stack.
 				definitionHighlight = nil
@@ -445,7 +427,7 @@ main:
 				Depth: layer.Depth,
 			}
 			layer.HighlightEndStack = append(layer.HighlightEndStack, r.EndByte)
-			return h.emitEvent(r.StartByte, EventStart{
+			return h.emitEvent(r.StartByte, HighlightEventStart{
 				CaptureName:  *highlight,
 				LanguageName: layer.Config.LanguageName,
 			})
@@ -453,184 +435,6 @@ main:
 
 		h.sortLayers()
 	}
-}
-
-func (h *highlightIter) sortLayers() {
-	for len(h.Layers) > 1 {
-		sortKey := h.Layers[0].sortKey()
-		if sortKey != nil {
-			var i int
-			for i+1 < len(h.Layers) {
-				nextOffset := h.Layers[i+1].sortKey()
-				if nextOffset != nil {
-					if nextOffset.position < sortKey.position {
-						i++
-						continue
-					}
-				}
-				break
-			}
-			if i > 0 {
-				h.Layers = append(h.Layers[:i], append([]*iterLayer{h.Layers[0]}, h.Layers[i:]...)...)
-			}
-			break
-		}
-		layer := h.Layers[0]
-		h.Layers = h.Layers[1:]
-		h.Highlighter.cursors = append(h.Highlighter.cursors, layer.Cursor)
-	}
-}
-
-func (h *highlightIter) insertLayer(layer *iterLayer) {
-	sortKey := layer.sortKey()
-	if sortKey != nil {
-		i := 1
-		for i < len(h.Layers) {
-			sortKeyI := h.Layers[i].sortKey()
-			if sortKeyI != nil {
-				if sortKeyI.position > sortKey.position {
-					h.Layers = slices.Insert(h.Layers, i, layer)
-					return
-				}
-				i++
-			} else {
-				h.Layers = slices.Delete(h.Layers, i, i+1)
-			}
-		}
-		h.Layers = append(h.Layers, layer)
-	}
-}
-
-type highlightQueueItem struct {
-	config Config
-	depth  int
-	ranges []tree_sitter.Range
-}
-
-type injectionItem struct {
-	languageName    string
-	nodes           []*tree_sitter.Node
-	includeChildren bool
-}
-
-func newIterLayers(
-	ctx context.Context,
-	source []byte,
-	parentName string,
-	highlighter *Highlighter,
-	injectionCallback InjectionCallback,
-	config Config,
-	depth int,
-	ranges []tree_sitter.Range,
-) ([]*iterLayer, error) {
-	var result []*iterLayer
-	var queue []highlightQueueItem
-	for {
-		if err := highlighter.Parser.SetIncludedRanges(ranges); err == nil {
-			if err = highlighter.Parser.SetLanguage(config.Language); err != nil {
-				return nil, fmt.Errorf("error setting language: %w", err)
-			}
-			tree := highlighter.Parser.ParseCtx(ctx, source, nil)
-
-			cursor := highlighter.popCursor()
-			if cursor == nil {
-				cursor = tree_sitter.NewQueryCursor()
-			}
-
-			if config.CombinedInjectionsQuery != nil {
-				injectionsByPatternIndex := make([]injectionItem, config.CombinedInjectionsQuery.PatternCount())
-
-				matches := cursor.Matches(config.CombinedInjectionsQuery, tree.RootNode(), source)
-				for {
-					match := matches.Next()
-					if match == nil {
-						break
-					}
-
-					languageName, contentNode, includeChildren := injectionForMatch(config, parentName, match, source)
-					if languageName == "" {
-						injectionsByPatternIndex[match.PatternIndex].languageName = languageName
-					}
-					if contentNode != nil {
-						injectionsByPatternIndex[match.PatternIndex].nodes = append(injectionsByPatternIndex[match.PatternIndex].nodes, contentNode)
-					}
-					injectionsByPatternIndex[match.PatternIndex].includeChildren = includeChildren
-				}
-
-				for _, injection := range injectionsByPatternIndex {
-					if injection.languageName != "" && len(injection.nodes) > 0 {
-						nextConfig := injectionCallback(injection.languageName)
-						if nextConfig != nil {
-							nextRanges := intersectRanges(ranges, injection.nodes, injection.includeChildren)
-							if len(nextRanges) > 0 {
-								queue = append(queue, highlightQueueItem{
-									config: *nextConfig,
-									depth:  depth + 1,
-									ranges: nextRanges,
-								})
-							}
-						}
-
-					}
-				}
-
-			}
-
-			captures := make([]queryCapture, 0)
-			queryCaptures := cursor.Captures(config.Query, tree.RootNode(), source)
-			for {
-				capture, i := queryCaptures.Next()
-				if capture == nil {
-					break
-				}
-				captures = append(captures, queryCapture{
-					Match: capture,
-					Index: i,
-				})
-			}
-
-			result = append(result, &iterLayer{
-				Tree:              tree,
-				Cursor:            cursor,
-				Config:            config,
-				HighlightEndStack: nil,
-				ScopeStack: []localScope{
-					{
-						Inherits: false,
-						Range: tree_sitter.Range{
-							StartByte: 0,
-							StartPoint: tree_sitter.Point{
-								Row:    0,
-								Column: 0,
-							},
-							EndByte: ^uint(0),
-							EndPoint: tree_sitter.Point{
-								Row:    ^uint(0),
-								Column: ^uint(0),
-							},
-						},
-						LocalDefs: nil,
-					},
-				},
-				Captures: captures,
-				Ranges:   ranges,
-				Depth:    depth,
-			})
-		}
-
-		if len(queue) == 0 {
-			break
-		}
-
-		var next highlightQueueItem
-		next, queue = queue[0], append(queue, queue[1:]...)
-
-		config = next.config
-		depth = next.depth
-		ranges = next.ranges
-	}
-
-	return result, nil
 }
 
 func intersectRanges(parentRanges []tree_sitter.Range, nodes []*tree_sitter.Node, includesChildren bool) []tree_sitter.Range {
@@ -731,15 +535,18 @@ func intersectRanges(parentRanges []tree_sitter.Range, nodes []*tree_sitter.Node
 	return results
 }
 
-func injectionForMatch(config Config, parentName string, match *tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
-	contentCaptureIndex := *config.InjectionContentCaptureIndex
-	languageCaptureIndex := *config.InjectionLanguageCaptureIndex
+func (c HighlightConfig) injectionForMatch(query *tree_sitter.Query, match *tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
+	if c.InjectionContentCaptureIndex == nil || c.InjectionLanguageCaptureIndex == nil {
+		return "", nil, false
+	}
+	contentCaptureIndex := *c.InjectionContentCaptureIndex
+	languageCaptureIndex := *c.InjectionLanguageCaptureIndex
 
 	var languageName string
 	var contentNode *tree_sitter.Node
 
 	for _, capture := range match.Captures {
-		index := uint(capture.Index)
+		index := capture.Index
 		if index == languageCaptureIndex {
 			languageName = capture.Node.Utf8Text(source)
 		} else if index == contentCaptureIndex {
@@ -748,7 +555,7 @@ func injectionForMatch(config Config, parentName string, match *tree_sitter.Quer
 	}
 
 	var includeChildren bool
-	for _, property := range config.Query.PropertySettings(match.PatternIndex) {
+	for _, property := range query.PropertySettings(match.PatternIndex) {
 		switch property.Key {
 		case captureInjectionLanguage:
 			if languageName == "" {
@@ -756,11 +563,7 @@ func injectionForMatch(config Config, parentName string, match *tree_sitter.Quer
 			}
 		case captureInjectionSelf:
 			if languageName == "" {
-				languageName = config.LanguageName
-			}
-		case captureInjectionParent:
-			if languageName == "" {
-				languageName = parentName
+				languageName = c.LanguageName
 			}
 		case captureInjectionIncludeChildren:
 			includeChildren = true
@@ -775,14 +578,13 @@ type queryCapture struct {
 	Index uint
 }
 
-type iterLayer struct {
+type highlightIterLayer struct {
 	Tree              *tree_sitter.Tree
 	Cursor            *tree_sitter.QueryCursor
-	Config            Config
+	Config            HighlightConfig
 	HighlightEndStack []uint
-	ScopeStack        []localScope
+	ScopeStack        []LocalScope
 	Captures          []queryCapture
-	Ranges            []tree_sitter.Range
 	Depth             int
 }
 
@@ -792,7 +594,7 @@ type sortKeyResult struct {
 	depth    int
 }
 
-func (h *iterLayer) sortKey() *sortKeyResult {
+func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	depth := -h.Depth
 
 	var nextStart *uint
@@ -837,74 +639,5 @@ func (h *iterLayer) sortKey() *sortKeyResult {
 		}
 	default:
 		return nil
-	}
-}
-
-func New() *Highlighter {
-	return &Highlighter{
-		Parser: tree_sitter.NewParser(),
-	}
-}
-
-type Highlighter struct {
-	Parser  *tree_sitter.Parser
-	cursors []*tree_sitter.QueryCursor
-}
-
-func (h *Highlighter) popCursor() *tree_sitter.QueryCursor {
-	if len(h.cursors) == 0 {
-		return nil
-	}
-
-	cursor := h.cursors[len(h.cursors)-1]
-	h.cursors = h.cursors[:len(h.cursors)-1]
-	return cursor
-}
-
-func (h *Highlighter) Highlight(
-	ctx context.Context,
-	cfg Config,
-	source []byte,
-	injectionCallback InjectionCallback,
-) iter.Seq2[Event, error] {
-	layers, err := newIterLayers(ctx, source, "", h, injectionCallback, cfg, 0, nil)
-	if err != nil {
-		return func(yield func(Event, error) bool) {
-			yield(nil, err)
-		}
-	}
-
-	return func(yield func(Event, error) bool) {
-		hIter := &highlightIter{
-			Ctx:                ctx,
-			Source:             source,
-			LanguageName:       cfg.LanguageName,
-			ByteOffset:         0,
-			Highlighter:        h,
-			InjectionCallback:  injectionCallback,
-			Layers:             layers,
-			NextEvent:          nil,
-			LastHighlightRange: nil,
-		}
-		hIter.sortLayers()
-
-		for {
-			event, err := hIter.next()
-			// error we are done
-			if err != nil {
-				yield(nil, err)
-				return
-			}
-
-			// we're done if there are no more events
-			if event == nil {
-				return
-			}
-
-			// yield the event
-			if !yield(event, nil) {
-				return
-			}
-		}
 	}
 }

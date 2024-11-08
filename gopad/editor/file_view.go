@@ -3,7 +3,6 @@ package editor
 import (
 	"fmt"
 	"log"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -50,9 +49,14 @@ func zoneFileLineDiagnosticID(id int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
 }
 
-func newFileView(buff buffer.Buffer, mode file.Mode) *FileView {
+func newFileView(buff buffer.Buffer, mode file.Mode) (*FileView, error) {
+	f, err := file.NewFileWithBuffer(buff, mode)
+	if err != nil {
+		return nil, err
+	}
+
 	return &FileView{
-		file: file.NewFileWithBuffer(buff, mode),
+		file: f,
 		cursor: fileCursor{
 			point: buffer.Point{
 				Row: 0,
@@ -60,7 +64,7 @@ func newFileView(buff buffer.Buffer, mode file.Mode) *FileView {
 			},
 			cursor: config.NewCursor(),
 		},
-	}
+	}, nil
 }
 
 func newFileViewFromName(name string) (*FileView, error) {
@@ -96,7 +100,18 @@ func (v *FileView) RelativeName(workspace string) string {
 }
 
 func (v *FileView) Language() *file.Language {
-	return v.file.Language
+	if v.file.Syntax == nil {
+		return nil
+	}
+	return v.file.Syntax.Language
+}
+
+func (v *FileView) LanguageName() string {
+	language := v.Language()
+	if language == nil {
+		return ""
+	}
+	return language.Name
 }
 
 func (v *FileView) LineEnding() buffer.LineEnding {
@@ -158,10 +173,12 @@ func (v FileView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) buffe
 }
 
 func (v *FileView) SetLanguage(language string) tea.Cmd {
-	v.file.SetLanguage(language)
+	if err := v.file.SetLanguage(language); err != nil {
+		return notifications.Add(fmt.Sprintf("failed to set language: %s", err.Error()))
+	}
 	v.file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
 
-	return v.file.InitTree()
+	return nil
 }
 
 func (v *FileView) refreshCursorViewOffset(width int, height int) {
@@ -219,12 +236,6 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 			return v, tea.Batch(cmds...)
 		}
 		v.file.SetInlayHint(msg.Version, msg.Hints)
-		return v, tea.Batch(cmds...)
-	case file.UpdateMatchesMsg:
-		if msg.Name != v.Name() {
-			return v, tea.Batch(cmds...)
-		}
-		v.file.SetMatches(msg.Version, msg.Matches)
 		return v, tea.Batch(cmds...)
 	case ls.RefreshInlayHintMsg:
 		cmds = append(cmds, ls.GetInlayHint(v.Name(), v.file.Buffer.Version(), v.file.Range()))
@@ -502,9 +513,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				v.file.Autocomplete.ClearCompletions()
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
-				if cmd := v.file.InitTree(); cmd != nil {
-					cmds = append(cmds, cmd)
-				}
+				// TODO: refresh syntax highlight
 
 			case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
 				// TODO: decide where to put this
@@ -763,7 +772,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 
 				// handle auto pairs
-				if lang := v.file.Language; lang != nil && len(lang.Config.AutoPairs) > 0 {
+				if lang := v.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
 					for _, pair := range lang.Config.AutoPairs {
 						if string(k.Code) == pair.Open {
 							c := v.Cursor()
@@ -881,7 +890,8 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 				char = " "
 			}
 
-			style := v.file.HighestMatchStyle(codeLineCharStyle, ln, col)
+			//style := v.file.HighestMatchStyle(codeLineCharStyle, ln, col)
+			style := codeLineCharStyle
 			style = v.file.HighestLineColDiagnosticStyle(style, ln, col)
 
 			if ln == c.Row && ii == realCursorCol {
@@ -955,17 +965,17 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 	}
 
 	if debug {
-		matches := v.file.MatchesForLineCol(c.Row, realCursorCol)
-		slices.Reverse(matches)
-		var currentMatches []string
-		for _, match := range matches {
-			var currentRef string
-			if match.ReferenceType != "" {
-				currentRef = fmt.Sprintf(" ref: %s", match.ReferenceType)
-			}
-			currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]%s)", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, currentRef))
-		}
-		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
+		//matches := v.file.MatchesForLineCol(c.Row, realCursorCol)
+		//slices.Reverse(matches)
+		//var currentMatches []string
+		//for _, match := range matches {
+		//	var currentRef string
+		//	if match.ReferenceType != "" {
+		//		currentRef = fmt.Sprintf(" ref: %s", match.ReferenceType)
+		//	}
+		//	currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]%s)", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, currentRef))
+		//}
+		//editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 
 		diagnostics := v.file.DiagnosticsForLineCol(c.Row, realCursorCol)
 		var currentDiagnostics []string

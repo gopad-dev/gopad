@@ -366,7 +366,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 				TextDocument: protocol.TextDocumentItem{
 					URI:        protocol.DocumentURI("file://" + msg.Name),
 					LanguageID: protocol.LanguageIdentifier(msg.Language),
-					Version:    msg.Version,
+					Version:    int32(msg.Version),
 					Text:       string(msg.Text),
 				},
 			}); err != nil {
@@ -437,7 +437,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 					TextDocumentIdentifier: protocol.TextDocumentIdentifier{
 						URI: protocol.DocumentURI("file://" + msg.Name),
 					},
-					Version: msg.Version,
+					Version: int32(msg.Version),
 				},
 				ContentChanges: []protocol.TextDocumentContentChangeEvent{
 					{
@@ -513,7 +513,7 @@ func (c *Server) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 			Priority:        110,
 		})
 	}
-	c.send(UpdateFileDiagnostic(params.URI.Filename(), DiagnosticTypeLanguageServer, int32(params.Version), diagnostics))
+	c.send(UpdateFileDiagnostic(params.URI.Filename(), DiagnosticTypeLanguageServer, uint64(params.Version), diagnostics))
 	return nil
 }
 

@@ -16,7 +16,8 @@ import (
 
 func Outline(f *file.File) tea.Cmd {
 	return func() tea.Msg {
-		return outlineMsg(f.OutlineTree())
+		//return outlineMsg(f.OutlineTree()) TODO: readd this
+		return outlineMsg(nil)
 	}
 }
 
@@ -54,10 +55,11 @@ func renderOutlineItem(file *file.File, itemStyle lipgloss.Style, item file.Outl
 			continue
 		}
 
-		style := file.HighestMatchStyle(codeCharStyle, char.Pos.Row, char.Pos.Col)
-		style = style.Inherit(itemStyle)
+		// TODO: highlight the current line
+		//style := file.HighestMatchStyle(codeCharStyle, char.Pos.Row, char.Pos.Col)
+		//style = style.Inherit(itemStyle)
 
-		title += style.Render(char.Char)
+		title += itemStyle.Render(char.Char)
 		rawTitle += char.Char
 	}
 

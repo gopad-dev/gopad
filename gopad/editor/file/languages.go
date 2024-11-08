@@ -13,8 +13,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ebitengine/purego"
-	sitter "github.com/tree-sitter/go-tree-sitter"
-	"github.com/tree-sitter/go-tree-sitter/highlight"
+	"github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/cmd/grammar"
 	"go.gopad.dev/gopad/gopad/config"
@@ -47,12 +46,12 @@ func (l *Language) Description() string {
 }
 
 type GrammarConfig struct {
-	Highlight *highlight.Config
+	Highlight HighlightConfig
 	Outline   *OutlineQueryConfig
 }
 
 type OutlineQueryConfig struct {
-	Query                 *sitter.Query
+	Query                 *tree_sitter.Query
 	ItemCaptureID         uint
 	NameCaptureID         uint
 	ContextCaptureID      *uint
@@ -132,7 +131,7 @@ func newHighlightConfig(languageName string, cfg config.GrammarConfig, defaultCo
 		return nil, fmt.Errorf("error reading locals query: %w", err)
 	}
 
-	highlightConfig, err := highlight.NewConfig(language, languageName, highlightsQuery, injectionQuery, localsQuery)
+	highlightConfig, err := NewHighlightConfig(language, languageName, highlightsQuery, injectionQuery, localsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error creating highlight config: %w", err)
 	}
@@ -144,7 +143,7 @@ func newHighlightConfig(languageName string, cfg config.GrammarConfig, defaultCo
 
 	var outlineQueryConfig *OutlineQueryConfig
 	if len(outlineQuery) > 0 {
-		query, err := sitter.NewQuery(language, string(outlineQuery))
+		query, err := tree_sitter.NewQuery(language, string(outlineQuery))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing outline query: %w", err)
 		}
@@ -166,12 +165,12 @@ func newHighlightConfig(languageName string, cfg config.GrammarConfig, defaultCo
 	}
 
 	return &GrammarConfig{
-		Highlight: highlightConfig,
+		Highlight: *highlightConfig,
 		Outline:   outlineQueryConfig,
 	}, nil
 }
 
-func loadLanguage(symbolName string, path string) (*sitter.Language, error) {
+func loadLanguage(symbolName string, path string) (*tree_sitter.Language, error) {
 	lib, err := purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open language library: %w", err)
@@ -180,10 +179,10 @@ func loadLanguage(symbolName string, path string) (*sitter.Language, error) {
 	var newTreeSitter func() uintptr
 	purego.RegisterLibFunc(&newTreeSitter, lib, "tree_sitter_"+symbolName)
 
-	return sitter.NewLanguage(unsafe.Pointer(newTreeSitter())), nil
+	return tree_sitter.NewLanguage(unsafe.Pointer(newTreeSitter())), nil
 }
 
-func getCaptureIndexes(query *sitter.Query, captureNames []string) []*uint {
+func getCaptureIndexes(query *tree_sitter.Query, captureNames []string) []*uint {
 	indexes := make([]*uint, len(captureNames))
 	for i, name := range captureNames {
 		id, ok := query.CaptureIndexForName(name)

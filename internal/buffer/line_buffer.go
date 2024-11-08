@@ -93,7 +93,7 @@ type lineBuffer struct {
 	name       string
 	encoding   string
 	lineEnding LineEnding
-	version    int32
+	version    uint64
 	lines      []Line
 	checksum   []byte
 	onDisk     bool
@@ -152,7 +152,7 @@ func (b *lineBuffer) SetLineEnding(lineEnding LineEnding) {
 	b.lineEnding = lineEnding
 }
 
-func (b *lineBuffer) Version() int32 {
+func (b *lineBuffer) Version() uint64 {
 	return b.version
 }
 

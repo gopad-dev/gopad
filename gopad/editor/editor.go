@@ -174,20 +174,19 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := newFileView(buff, file.ModeWrite)
+	v, err := newFileView(buff, file.ModeWrite)
+	if err != nil {
+		return nil, err
+	}
 
 	e.fileViews = append(e.fileViews, v)
 
 	cmds := []tea.Cmd{
 		tea.Sequence(
 			ls.FileCreated(v.file.Buffer.Name(), v.file.Buffer.Bytes()),
-			ls.FileOpened(v.file.Buffer.Name(), v.file.Buffer.Version(), v.file.Language.Name, v.file.Buffer.Bytes()),
+			ls.FileOpened(v.file.Buffer.Name(), v.file.Buffer.Version(), v.LanguageName(), v.file.Buffer.Bytes()),
 			ls.GetInlayHint(v.file.Buffer.Name(), v.file.Buffer.Version(), v.file.Range()),
 		),
-	}
-
-	if cmd := v.file.InitTree(); cmd != nil {
-		cmds = append(cmds, cmd)
 	}
 
 	return tea.Batch(cmds...), nil
@@ -207,12 +206,8 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	e.fileViews = append(e.fileViews, v)
 
 	cmds := []tea.Cmd{
-		ls.FileOpened(v.file.Buffer.Name(), v.file.Buffer.Version(), v.file.Language.Name, v.file.Buffer.Bytes()),
+		ls.FileOpened(v.file.Buffer.Name(), v.file.Buffer.Version(), v.LanguageName(), v.file.Buffer.Bytes()),
 		ls.GetInlayHint(v.file.Buffer.Name(), v.file.Buffer.Version(), v.file.Range()),
-	}
-
-	if cmd := v.file.InitTree(); cmd != nil {
-		cmds = append(cmds, cmd)
 	}
 
 	return tea.Batch(cmds...), nil
@@ -720,10 +715,7 @@ func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
 func (e *Editor) FileTabsView(width int) string {
 	var fileNames []string
 	for i, f := range e.fileViews {
-		var languageName string
-		if f.file.Language != nil {
-			languageName = f.file.Language.Name
-		}
+		languageName := f.LanguageName()
 		icon := config.Theme.Icons.FileIcon(languageName).Render()
 
 		style := config.Theme.UI.AppBar.Files.FileStyle

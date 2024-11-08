@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/tree-sitter/go-tree-sitter/highlight"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/buffer"
@@ -26,24 +27,40 @@ const (
 )
 
 type Change struct {
-	StartIndex  uint32
-	OldEndIndex uint32
-	NewEndIndex uint32
+	StartByte   uint32
+	OldEndByte  uint32
+	NewEndByte  uint32
+	StartPoint  buffer.Point
+	OldEndPoint buffer.Point
+	NewEndPoint buffer.Point
 
-	Text []byte
+	Text    []byte
+	Version uint64
 }
 
-func NewFileWithBuffer(b buffer.Buffer, mode Mode) *File {
+func NewFileWithBuffer(b buffer.Buffer, mode Mode) (*File, error) {
+	var syntax *Syntax
+	if language := GetLanguageByFilename(b.Name()); language != nil {
+		layers, err := NewSyntaxLayers(b.Bytes(), language.Grammar.Highlight)
+		if err != nil {
+			return nil, fmt.Errorf("error creating syntax layers: %w", err)
+		}
+		syntax, err = NewSyntax(language, layers)
+		if err != nil {
+			return nil, fmt.Errorf("error creating syntax: %w", err)
+		}
+	}
+
 	f := &File{
 		Buffer:             b,
 		Mode:               mode,
-		Language:           GetLanguageByFilename(b.Name()),
-		diagnosticVersions: map[ls.DiagnosticType]int32{},
+		Syntax:             syntax,
+		diagnosticVersions: map[ls.DiagnosticType]uint64{},
 	}
 
 	f.Autocomplete = NewAutocompleter(f)
 
-	return f
+	return f, nil
 }
 
 func NewFileFromName(name string) (*File, error) {
@@ -70,20 +87,19 @@ func NewFileFromName(name string) (*File, error) {
 		mode = ModeReadOnly
 	}
 
-	return NewFileWithBuffer(b, mode), nil
+	return NewFileWithBuffer(b, mode)
 }
 
 type File struct {
 	Buffer       buffer.Buffer
 	Mode         Mode
-	Language     *Language
-	Highlighter  *highlight.Highlighter
+	Syntax       *Syntax
 	Autocomplete *Autocompleter
 
-	diagnosticVersions map[ls.DiagnosticType]int32
+	diagnosticVersions map[ls.DiagnosticType]uint64
 	Diagnostics        []ls.Diagnostic
 
-	inlayHintsVersion int32
+	inlayHintsVersion uint64
 	InlayHints        []ls.InlayHint
 
 	Declarations    []ls.FileLocation
@@ -105,15 +121,24 @@ func (f *File) RelativeName(workspace string) string {
 	return relName
 }
 
-func (f *File) SetLanguage(name string) {
+func (f *File) SetLanguage(name string) error {
 	language := GetLanguage(name)
 	if language == nil {
-		return
+		return fmt.Errorf("language with name %q not found", name)
 	}
-	f.Language = language
 
-	// reset tree and matches when changing language
-	f.Highlighter = nil
+	layers, err := NewSyntaxLayers(f.Buffer.Bytes(), language.Grammar.Highlight)
+	if err != nil {
+		return fmt.Errorf("error creating syntax layers: %w", err)
+	}
+
+	syntax, err := NewSyntax(language, layers)
+	if err != nil {
+		return fmt.Errorf("error creating syntax: %w", err)
+	}
+
+	f.Syntax = syntax
+	return nil
 }
 
 func (f *File) Range() buffer.Range {
@@ -131,6 +156,32 @@ func (f *File) recordChange(change Change) tea.Cmd {
 
 	f.Changes = append(f.Changes, change)
 
+	edits := []SyntaxEdit{
+		{
+			&tree_sitter.InputEdit{
+				StartByte:  uint(change.StartByte),
+				OldEndByte: uint(change.OldEndByte),
+				NewEndByte: uint(change.NewEndByte),
+				StartPosition: tree_sitter.Point{
+					Row:    uint(change.StartPoint.Row),
+					Column: uint(change.StartPoint.Col),
+				},
+				OldEndPosition: tree_sitter.Point{
+					Row:    uint(change.OldEndPoint.Row),
+					Column: uint(change.OldEndPoint.Col),
+				},
+				NewEndPosition: tree_sitter.Point{
+					Row:    uint(change.NewEndPoint.Row),
+					Column: uint(change.NewEndPoint.Col),
+				},
+			},
+		},
+	}
+	if f.Syntax != nil {
+		ctx := context.Background()
+		f.Syntax.Parse(ctx, f.Buffer.Version(), f.Buffer.Bytes(), edits)
+	}
+
 	var cmds []tea.Cmd
 	cmds = append(cmds, tea.Sequence(
 		ls.FileChanged(f.Buffer.Name(), f.Buffer.Version(), change.Text),
@@ -145,10 +196,11 @@ func (f *File) InsertNewLine(p buffer.Point) tea.Cmd {
 	f.Buffer.InsertNewLine(p)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + 2),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + 1),
+		NewEndByte: uint32(startIndex + 2),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -162,10 +214,20 @@ func (f *File) Insert(p buffer.Point, text []byte) tea.Cmd {
 	f.Buffer.Insert(p, text)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + len(text) + 1),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + 1),
+		NewEndByte: uint32(startIndex + len(text) + 1),
+		StartPoint: p,
+		OldEndPoint: buffer.Point{
+			Row: p.Row,
+			Col: p.Col,
+		},
+		NewEndPoint: buffer.Point{
+			Row: p.Row,
+			Col: p.Col + len(text),
+		},
+		Text:    f.Buffer.Bytes(),
+		Version: f.Buffer.Version(),
 	})
 }
 
@@ -181,10 +243,11 @@ func (f *File) Replace(r buffer.Range, text []byte) tea.Cmd {
 	f.Buffer.Replace(r, text)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(endIndex),
-		NewEndIndex: uint32(startIndex + len(text)),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(endIndex),
+		NewEndByte: uint32(startIndex + len(text)),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -197,10 +260,11 @@ func (f *File) DuplicateLine(row int) tea.Cmd {
 	f.Buffer.DuplicateLine(row)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + line.LenBytes() + 1),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + 1),
+		NewEndByte: uint32(startIndex + line.LenBytes() + 1),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -214,10 +278,11 @@ func (f *File) DeleteLine(row int) tea.Cmd {
 	f.Buffer.DeleteLine(row)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + line.LenBytes() + 1),
-		NewEndIndex: uint32(startIndex + 1),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+		NewEndByte: uint32(startIndex + 1),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -226,10 +291,11 @@ func (f *File) DeleteBefore(p buffer.Point) tea.Cmd {
 	f.Buffer.DeleteBefore(p)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex - 1),
-		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex - 1),
+		OldEndByte: uint32(startIndex + 1),
+		NewEndByte: uint32(startIndex),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -239,10 +305,11 @@ func (f *File) DeleteAfter(p buffer.Point) tea.Cmd {
 	f.Buffer.DeleteAfter(p)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + 1),
-		NewEndIndex: uint32(startIndex + 2),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + 1),
+		NewEndByte: uint32(startIndex + 2),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -252,10 +319,11 @@ func (f *File) DeleteRange(r buffer.Range) tea.Cmd {
 	f.Buffer.DeleteRange(r)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(endIndex),
-		NewEndIndex: uint32(startIndex),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(endIndex),
+		NewEndByte: uint32(startIndex),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -269,10 +337,11 @@ func (f *File) DeleteWordLeft(p buffer.Point) tea.Cmd {
 	})
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(endIndex),
-		NewEndIndex: uint32(startIndex),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(endIndex),
+		NewEndByte: uint32(startIndex),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -286,10 +355,11 @@ func (f *File) DeleteWordRight(p buffer.Point) tea.Cmd {
 	})
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(endIndex),
-		NewEndIndex: uint32(startIndex),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(endIndex),
+		NewEndByte: uint32(startIndex),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -302,10 +372,11 @@ func (f *File) AddTab(row int) tea.Cmd {
 	f.Buffer.AddTab(row)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + line.LenBytes() + 1),
-		NewEndIndex: uint32(startIndex + line.LenBytes() + 2),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+		NewEndByte: uint32(startIndex + line.LenBytes() + 2),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 
@@ -318,10 +389,11 @@ func (f *File) RemoveTab(row int) tea.Cmd {
 	f.Buffer.RemoveTab(row)
 
 	return f.recordChange(Change{
-		StartIndex:  uint32(startIndex),
-		OldEndIndex: uint32(startIndex + line.LenBytes() + 1),
-		NewEndIndex: uint32(startIndex + line.LenBytes() - 1),
-		Text:        f.Buffer.Bytes(),
+		StartByte:  uint32(startIndex),
+		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+		NewEndByte: uint32(startIndex + line.LenBytes() - 1),
+		Text:       f.Buffer.Bytes(),
+		Version:    f.Buffer.Version(),
 	})
 }
 

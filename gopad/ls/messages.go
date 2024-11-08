@@ -74,7 +74,7 @@ type FileCreatedMsg struct {
 	Text []byte
 }
 
-func FileOpened(name string, version int32, language string, text []byte) tea.Cmd {
+func FileOpened(name string, version uint64, language string, text []byte) tea.Cmd {
 	return func() tea.Msg {
 		return FileOpenedMsg{
 			Name:     name,
@@ -87,7 +87,7 @@ func FileOpened(name string, version int32, language string, text []byte) tea.Cm
 
 type FileOpenedMsg struct {
 	Name     string
-	Version  int32
+	Version  uint64
 	Language string
 	Text     []byte
 }
@@ -104,7 +104,7 @@ type FileClosedMsg struct {
 	Name string
 }
 
-func FileChanged(name string, version int32, text []byte) tea.Cmd {
+func FileChanged(name string, version uint64, text []byte) tea.Cmd {
 	return func() tea.Msg {
 		return FileChangedMsg{
 			Name:    name,
@@ -116,7 +116,7 @@ func FileChanged(name string, version int32, text []byte) tea.Cmd {
 
 type FileChangedMsg struct {
 	Name    string
-	Version int32
+	Version uint64
 	Text    []byte
 }
 

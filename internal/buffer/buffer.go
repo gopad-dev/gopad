@@ -29,7 +29,7 @@ type Buffer interface {
 	// SetLineEnding sets the line ending of the buffer.
 	SetLineEnding(lineEnding LineEnding)
 	// Version returns the version of the buffer.
-	Version() int32
+	Version() uint64
 	// Checksum returns the sha256 checksum of the buffer.
 	Checksum() []byte
 	// Dirty returns whether the buffer has unsaved changes.

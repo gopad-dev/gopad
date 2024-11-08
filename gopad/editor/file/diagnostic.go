@@ -10,7 +10,7 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func (f *File) SetDiagnostic(dType ls.DiagnosticType, version int32, diagnostics []ls.Diagnostic) {
+func (f *File) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostics []ls.Diagnostic) {
 	// ignore outdated diagnostics
 	if version < f.diagnosticVersions[dType] {
 		log.Printf("skipping outdated diagnostics: %d < %d", version, f.diagnosticVersions[dType])

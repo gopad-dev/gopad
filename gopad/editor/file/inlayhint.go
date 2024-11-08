@@ -6,7 +6,7 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func (f *File) SetInlayHint(version int32, hints []ls.InlayHint) {
+func (f *File) SetInlayHint(version uint64, hints []ls.InlayHint) {
 	if version < f.inlayHintsVersion {
 		log.Printf("skipping outdated inlay hints: %d < %d", version, f.inlayHintsVersion)
 		return

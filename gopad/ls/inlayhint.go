@@ -6,7 +6,7 @@ import (
 	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func GetInlayHint(name string, version int32, r buffer.Range) tea.Cmd {
+func GetInlayHint(name string, version uint64, r buffer.Range) tea.Cmd {
 	return func() tea.Msg {
 		return GetInlayHintMsg{
 			Name:    name,
@@ -18,11 +18,11 @@ func GetInlayHint(name string, version int32, r buffer.Range) tea.Cmd {
 
 type GetInlayHintMsg struct {
 	Name    string
-	Version int32
+	Version uint64
 	Range   buffer.Range
 }
 
-func UpdateInlayHint(name string, version int32, hints []InlayHint) tea.Msg {
+func UpdateInlayHint(name string, version uint64, hints []InlayHint) tea.Msg {
 	return UpdateInlayHintMsg{
 		Name:    name,
 		Version: version,
@@ -32,7 +32,7 @@ func UpdateInlayHint(name string, version int32, hints []InlayHint) tea.Msg {
 
 type UpdateInlayHintMsg struct {
 	Name    string
-	Version int32
+	Version uint64
 	Hints   []InlayHint
 }
 
