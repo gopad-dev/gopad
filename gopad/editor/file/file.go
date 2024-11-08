@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"go.gopad.dev/go-tree-sitter"
+	"github.com/tree-sitter/go-tree-sitter/highlight"
 
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/buffer"
@@ -77,7 +77,7 @@ type File struct {
 	Buffer       buffer.Buffer
 	Mode         Mode
 	Language     *Language
-	Tree         *Tree
+	Highlighter  *highlight.Highlighter
 	Autocomplete *Autocompleter
 
 	diagnosticVersions map[ls.DiagnosticType]int32
@@ -85,9 +85,6 @@ type File struct {
 
 	inlayHintsVersion int32
 	InlayHints        []ls.InlayHint
-
-	matchesVersion int32
-	Matches        [][]*Match
 
 	Declarations    []ls.FileLocation
 	Definitions     []ls.FileLocation
@@ -116,8 +113,7 @@ func (f *File) SetLanguage(name string) {
 	f.Language = language
 
 	// reset tree and matches when changing language
-	f.Tree = nil
-	f.Matches = nil
+	f.Highlighter = nil
 }
 
 func (f *File) Range() buffer.Range {
@@ -133,17 +129,9 @@ func (f *File) recordChange(change Change) tea.Cmd {
 		log.Println("record change time: ", time.Since(now))
 	}()
 
-	var cmds []tea.Cmd
-	if cmd := f.UpdateTree(sitter.EditInput{
-		StartIndex:  change.StartIndex,
-		OldEndIndex: change.OldEndIndex,
-		NewEndIndex: change.NewEndIndex,
-	}); cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-
 	f.Changes = append(f.Changes, change)
 
+	var cmds []tea.Cmd
 	cmds = append(cmds, tea.Sequence(
 		ls.FileChanged(f.Buffer.Name(), f.Buffer.Version(), change.Text),
 		ls.GetInlayHint(f.Buffer.Name(), f.Buffer.Version(), f.Range()),
@@ -155,16 +143,6 @@ func (f *File) recordChange(change Change) tea.Cmd {
 func (f *File) InsertNewLine(p buffer.Point) tea.Cmd {
 	startIndex := f.Buffer.ByteIndex(p)
 	f.Buffer.InsertNewLine(p)
-
-	if len(f.Matches) > p.Row {
-		for _, lineMatches := range f.Matches[p.Row:] {
-			for _, match := range lineMatches {
-				match.Range.Start.Row++
-				match.Range.End.Row++
-			}
-		}
-		f.Matches = slices.Insert(f.Matches, p.Row, make([]*Match, 0))
-	}
 
 	return f.recordChange(Change{
 		StartIndex:  uint32(startIndex),
