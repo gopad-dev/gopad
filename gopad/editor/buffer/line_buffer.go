@@ -5,29 +5,22 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io"
+	"os"
 	"path/filepath"
 	"slices"
 	unicode2 "unicode"
-
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/htmlindex"
-	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/text/transform"
 
 	"go.gopad.dev/gopad/internal/xbytes"
 )
 
 // New creates a new buffer from an io.Reader.
-func New(name string, r io.Reader, encoding string, lineEnding LineEnding, onDisk bool) (Buffer, error) {
-	fileEncoding, err := htmlindex.Get(encoding)
-	if err != nil {
-		fileEncoding = unicode.UTF8
-	}
-
+func New(r io.Reader, lineEnding LineEnding) (Buffer, error) {
 	hasher := sha256.New()
+	defer hasher.Reset()
 
-	br := bufio.NewReader(io.TeeReader(transform.NewReader(r, fileEncoding.NewDecoder()), hasher))
+	br := bufio.NewReader(io.TeeReader(r, hasher))
 	var lines []Line
 	for {
 		data, err := br.ReadBytes('\n')
@@ -58,27 +51,26 @@ func New(name string, r io.Reader, encoding string, lineEnding LineEnding, onDis
 			return nil, fmt.Errorf("error reading file: %w", err)
 		}
 	}
+	checksum := hasher.Sum(nil)
 
 	b := &lineBuffer{
-		name:       name,
-		encoding:   encoding,
 		lineEnding: lineEnding,
 		lines:      lines,
-		checksum:   hasher.Sum(nil),
-		onDisk:     onDisk,
+		checksum:   checksum,
+		hasher:     hasher,
 	}
 
 	return b, nil
 }
 
 // NewFromFile creates a new buffer from a file on disk.
-func NewFromFile(name string, encoding string, lineEnding LineEnding) (Buffer, error) {
+func NewFromFile(fileName string, lineEnding LineEnding) (Buffer, error) {
 	var err error
-	name, err = filepath.Abs(name)
+	fileName, err = filepath.Abs(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute file path: %w", err)
 	}
-	file, err := readFile(name)
+	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -86,22 +78,33 @@ func NewFromFile(name string, encoding string, lineEnding LineEnding) (Buffer, e
 		_ = file.Close()
 	}()
 
-	return New(name, file, encoding, lineEnding, true)
+	return New(file, lineEnding)
 }
 
 type lineBuffer struct {
-	name       string
-	encoding   string
 	lineEnding LineEnding
 	version    uint64
 	lines      []Line
 	checksum   []byte
-	onDisk     bool
-	dirty      bool
+	hasher     hash.Hash
 }
 
-func (b *lineBuffer) Name() string {
-	return b.name
+func (b *lineBuffer) WriteTo(w io.Writer) (int64, error) {
+	var n int64
+	for _, line := range b.lines {
+		n1, err := w.Write(line.Bytes())
+		if err != nil {
+			return n, err
+		}
+		n += int64(n1)
+
+		n2, err := w.Write([]byte{byte(b.lineEnding)})
+		if err != nil {
+			return n, err
+		}
+		n += int64(n2)
+	}
+	return n, nil
 }
 
 func (b *lineBuffer) Copy() Buffer {
@@ -113,35 +116,11 @@ func (b *lineBuffer) Copy() Buffer {
 	copy(checksum, b.checksum)
 
 	return &lineBuffer{
-		name:       b.name,
-		encoding:   b.encoding,
 		lineEnding: b.lineEnding,
 		version:    b.version,
 		lines:      lines,
 		checksum:   checksum,
-		onDisk:     b.onDisk,
-		dirty:      b.dirty,
 	}
-}
-
-func (b *lineBuffer) FileName() string {
-	return filepath.Base(b.name)
-}
-
-func (b *lineBuffer) Encoding() encoding.Encoding {
-	fileEncoding, err := htmlindex.Get(b.encoding)
-	if err != nil {
-		return unicode.UTF8
-	}
-	return fileEncoding
-}
-
-func (b *lineBuffer) EncodingName() string {
-	return b.encoding
-}
-
-func (b *lineBuffer) SetEncoding(encoding string) {
-	b.encoding = encoding
 }
 
 func (b *lineBuffer) LineEnding() LineEnding {
@@ -160,69 +139,24 @@ func (b *lineBuffer) Checksum() []byte {
 	return b.checksum
 }
 
+func (b *lineBuffer) UpdateChecksum() error {
+	defer b.hasher.Reset()
+
+	for _, line := range b.lines {
+		if _, err := b.hasher.Write(line.Bytes()); err != nil {
+			return fmt.Errorf("failed to update checksum: %w", err)
+		}
+		if _, err := b.hasher.Write([]byte{byte(b.lineEnding)}); err != nil {
+			return fmt.Errorf("failed to update checksum: %w", err)
+		}
+	}
+	b.checksum = b.hasher.Sum(nil)
+
+	return nil
+}
+
 func (b *lineBuffer) Dirty() bool {
-	if !b.onDisk {
-		return true
-	}
-	return b.dirty
-}
-
-func (b *lineBuffer) Save() error {
-	file, err := writeFile(b.name)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
-	}
-
-	hasher := sha256.New()
-	fileEncoding := b.Encoding()
-	eol := b.lineEnding.Bytes()
-
-	w := bufio.NewWriter(transform.NewWriter(io.MultiWriter(hasher, file), fileEncoding.NewEncoder()))
-	defer func() {
-		_ = w.Flush()
-		_ = file.Sync()
-	}()
-
-	for i, line := range b.lines {
-		if line.Len() > 0 {
-			if _, err = w.Write(line.Bytes()); err != nil {
-				return fmt.Errorf("error writing line: %w", err)
-			}
-		}
-
-		if i < len(b.lines)-1 {
-			if _, err = w.Write(eol); err != nil {
-				return fmt.Errorf("error writing line ending: %w", err)
-			}
-		}
-	}
-
-	b.dirty = false
-	b.onDisk = true
-	b.checksum = hasher.Sum(nil)
-
-	return nil
-}
-
-func (b *lineBuffer) Rename(name string) error {
-	if err := b.Save(); err != nil {
-		return fmt.Errorf("failed to save new file: %w", err)
-	}
-
-	if err := renameFile(b.name, name); err != nil {
-		return fmt.Errorf("failed to delete old file: %w", err)
-	}
-
-	b.name = name
-	return nil
-}
-
-func (b *lineBuffer) Delete() error {
-	if err := deleteFile(b.name); err != nil {
-		return fmt.Errorf("failed to delete file: %w", err)
-	}
-
-	return nil
+	return !bytes.Equal(b.checksum, b.Checksum())
 }
 
 func (b *lineBuffer) ByteIndex(p Point) int {
@@ -285,37 +219,6 @@ func (b *lineBuffer) String() string {
 	return string(b.Bytes())
 }
 
-func (b *lineBuffer) refreshDirty() {
-	hasher := sha256.New()
-	fileEncoding := b.Encoding()
-	eol := b.lineEnding.Bytes()
-
-	w := transform.NewWriter(hasher, fileEncoding.NewEncoder())
-
-	for i, line := range b.lines {
-		_, _ = w.Write(line.Bytes())
-
-		if i < len(b.lines)-1 {
-			_, _ = w.Write(eol)
-		}
-	}
-
-	checksum := hasher.Sum(nil)
-
-	b.dirty = !bytes.Equal(b.checksum, checksum)
-}
-
-func (b *lineBuffer) Index(index int) (int, int) {
-	var n int
-	for i, line := range b.lines {
-		if n+len(line.Bytes()) >= index {
-			return i, index - n
-		}
-		n += len(line.Bytes()) + 1
-	}
-	return len(b.lines) - 1, b.lines[len(b.lines)-1].Len()
-}
-
 func (b *lineBuffer) LinesLen() int {
 	return len(b.lines)
 }
@@ -343,11 +246,7 @@ func (b *lineBuffer) LineLen(row int) int {
 	return b.lines[row].Len()
 }
 
-func (b *lineBuffer) InsertNewLine(p Point) {
-	defer func() {
-		b.version++
-		b.refreshDirty()
-	}()
+func (b *lineBuffer) insertNewLine(p Point) {
 
 	line := b.lines[p.Row]
 	b.lines[p.Row] = line.CutEnd(p.Col)
@@ -356,10 +255,18 @@ func (b *lineBuffer) InsertNewLine(p Point) {
 }
 
 func (b *lineBuffer) Insert(p Point, text []byte) {
+	if len(text) == 0 {
+		return
+	}
+
 	defer func() {
 		b.version++
-		b.refreshDirty()
 	}()
+
+	if len(text) == 1 && text[0] == '\n' {
+		b.insertNewLine(p)
+		return
+	}
 
 	for _, r := range xbytes.Runes(text) {
 		if r == '\n' {
@@ -378,7 +285,7 @@ func (b *lineBuffer) Insert(p Point, text []byte) {
 func (b *lineBuffer) Replace(r Range, text []byte) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	b.DeleteRange(r)
@@ -391,7 +298,7 @@ func (b *lineBuffer) Replace(r Range, text []byte) {
 func (b *lineBuffer) DuplicateLine(row int) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	line := b.lines[row]
@@ -401,7 +308,7 @@ func (b *lineBuffer) DuplicateLine(row int) {
 func (b *lineBuffer) DeleteLine(row int) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	if row == 0 && len(b.lines) == 1 {
@@ -421,7 +328,7 @@ func (b *lineBuffer) DeleteBefore(p Point) {
 	}
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	if p.Col == 0 {
@@ -447,7 +354,7 @@ func (b *lineBuffer) DeleteAfter(p Point) {
 	}
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	if p.Col == b.LineLen(p.Row) {
@@ -461,7 +368,7 @@ func (b *lineBuffer) DeleteAfter(p Point) {
 func (b *lineBuffer) DeleteRange(r Range) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	if r.Start.Row == r.End.Row {
@@ -475,7 +382,7 @@ func (b *lineBuffer) DeleteRange(r Range) {
 func (b *lineBuffer) AddTab(row int) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	b.lines[row] = b.lines[row].Insert(0, []byte("\t"))
@@ -484,7 +391,6 @@ func (b *lineBuffer) AddTab(row int) {
 func (b *lineBuffer) RemoveTab(row int) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
 	}()
 
 	if b.lines[row].Rune(0) == '\t' {
@@ -495,7 +401,7 @@ func (b *lineBuffer) RemoveTab(row int) {
 func (b *lineBuffer) ToggleBlockComment(r Range, tokens []BlockCommentToken) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
+
 	}()
 
 	if r.Start.Row == r.End.Row {
@@ -578,7 +484,6 @@ func (b *lineBuffer) ToggleBlockComment(r Range, tokens []BlockCommentToken) {
 func (b *lineBuffer) ToggleLineComment(row int, tokens []string) {
 	defer func() {
 		b.version++
-		b.refreshDirty()
 	}()
 
 	line := b.lines[row]

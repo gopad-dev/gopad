@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
+	"github.com/tree-sitter/go-tree-sitter"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
-	"go.gopad.dev/gopad/internal/buffer"
 	"go.gopad.dev/gopad/internal/xrunes"
 )
 
@@ -38,7 +38,7 @@ type Change struct {
 	Version uint64
 }
 
-func NewFileWithBuffer(b buffer.Buffer, mode Mode) (*File, error) {
+func NewDocumentWithBuffer(b buffer.Buffer, mode Mode) (*Document, error) {
 	var syntax *Syntax
 	if language := GetLanguageByFilename(b.Name()); language != nil {
 		layers, err := NewSyntaxLayers(b.Bytes(), language.Grammar.Highlight)
@@ -51,7 +51,7 @@ func NewFileWithBuffer(b buffer.Buffer, mode Mode) (*File, error) {
 		}
 	}
 
-	f := &File{
+	f := &Document{
 		Buffer:             b,
 		Mode:               mode,
 		Syntax:             syntax,
@@ -63,7 +63,7 @@ func NewFileWithBuffer(b buffer.Buffer, mode Mode) (*File, error) {
 	return f, nil
 }
 
-func NewFileFromName(name string) (*File, error) {
+func NewDocumentFromName(name string) (*Document, error) {
 	stat, err := os.Stat(name)
 	if err != nil {
 		return nil, fmt.Errorf("error getting file info: %w", err)
@@ -87,10 +87,10 @@ func NewFileFromName(name string) (*File, error) {
 		mode = ModeReadOnly
 	}
 
-	return NewFileWithBuffer(b, mode)
+	return NewDocumentWithBuffer(b, mode)
 }
 
-type File struct {
+type Document struct {
 	Buffer       buffer.Buffer
 	Mode         Mode
 	Syntax       *Syntax
@@ -112,7 +112,7 @@ type File struct {
 	Changes   []Change
 }
 
-func (f *File) RelativeName(workspace string) string {
+func (f *Document) RelativeName(workspace string) string {
 	relName, err := filepath.Rel(workspace, f.Buffer.Name())
 	if err != nil {
 		return f.Buffer.Name()
@@ -121,7 +121,7 @@ func (f *File) RelativeName(workspace string) string {
 	return relName
 }
 
-func (f *File) SetLanguage(name string) error {
+func (f *Document) SetLanguage(name string) error {
 	language := GetLanguage(name)
 	if language == nil {
 		return fmt.Errorf("language with name %q not found", name)
@@ -141,14 +141,14 @@ func (f *File) SetLanguage(name string) error {
 	return nil
 }
 
-func (f *File) Range() buffer.Range {
+func (f *Document) Range() buffer.Range {
 	return buffer.Range{
 		Start: buffer.Point{Row: 0, Col: 0},
 		End:   buffer.Point{Row: f.Buffer.LinesLen(), Col: f.Buffer.LineLen(max(f.Buffer.LinesLen()-1, 0))},
 	}
 }
 
-func (f *File) recordChange(change Change) tea.Cmd {
+func (f *Document) recordChange(change Change) tea.Cmd {
 	now := time.Now()
 	defer func() {
 		log.Println("record change time: ", time.Since(now))
@@ -191,7 +191,7 @@ func (f *File) recordChange(change Change) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (f *File) InsertNewLine(p buffer.Point) tea.Cmd {
+func (f *Document) InsertNewLine(p buffer.Point) tea.Cmd {
 	startIndex := f.Buffer.ByteIndex(p)
 	f.Buffer.InsertNewLine(p)
 
@@ -204,7 +204,7 @@ func (f *File) InsertNewLine(p buffer.Point) tea.Cmd {
 	})
 }
 
-func (f *File) Insert(p buffer.Point, text []byte) tea.Cmd {
+func (f *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 	if len(text) == 0 {
 		return nil
@@ -231,11 +231,11 @@ func (f *File) Insert(p buffer.Point, text []byte) tea.Cmd {
 	})
 }
 
-func (f *File) InsertRunes(p buffer.Point, text []rune) tea.Cmd {
+func (f *Document) InsertRunes(p buffer.Point, text []rune) tea.Cmd {
 	return f.Insert(p, []byte(string(text)))
 }
 
-func (f *File) Replace(r buffer.Range, text []byte) tea.Cmd {
+func (f *Document) Replace(r buffer.Range, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 
 	startIndex := f.Buffer.ByteIndex(r.Start)
@@ -251,7 +251,7 @@ func (f *File) Replace(r buffer.Range, text []byte) tea.Cmd {
 	})
 }
 
-func (f *File) DuplicateLine(row int) tea.Cmd {
+func (f *Document) DuplicateLine(row int) tea.Cmd {
 	line := f.Buffer.Line(row)
 	startIndex := f.Buffer.ByteIndex(buffer.Point{
 		Row: row,
@@ -268,7 +268,7 @@ func (f *File) DuplicateLine(row int) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteLine(row int) tea.Cmd {
+func (f *Document) DeleteLine(row int) tea.Cmd {
 	line := f.Buffer.Line(row)
 	startIndex := f.Buffer.ByteIndex(buffer.Point{
 		Row: row,
@@ -286,7 +286,7 @@ func (f *File) DeleteLine(row int) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteBefore(p buffer.Point) tea.Cmd {
+func (f *Document) DeleteBefore(p buffer.Point) tea.Cmd {
 	startIndex := f.Buffer.ByteIndex(p)
 	f.Buffer.DeleteBefore(p)
 
@@ -299,7 +299,7 @@ func (f *File) DeleteBefore(p buffer.Point) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteAfter(p buffer.Point) tea.Cmd {
+func (f *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 	startIndex := f.Buffer.ByteIndex(p)
 
 	f.Buffer.DeleteAfter(p)
@@ -313,7 +313,7 @@ func (f *File) DeleteAfter(p buffer.Point) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteRange(r buffer.Range) tea.Cmd {
+func (f *Document) DeleteRange(r buffer.Range) tea.Cmd {
 	startIndex := f.Buffer.ByteIndex(r.Start)
 	endIndex := f.Buffer.ByteIndex(r.End)
 	f.Buffer.DeleteRange(r)
@@ -327,7 +327,7 @@ func (f *File) DeleteRange(r buffer.Range) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteWordLeft(p buffer.Point) tea.Cmd {
+func (f *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
 	startPoint := f.NextWordLeft(p)
 	startIndex := f.Buffer.ByteIndex(startPoint)
 	endIndex := f.Buffer.ByteIndex(p)
@@ -345,7 +345,7 @@ func (f *File) DeleteWordLeft(p buffer.Point) tea.Cmd {
 	})
 }
 
-func (f *File) DeleteWordRight(p buffer.Point) tea.Cmd {
+func (f *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
 	endPoint := f.NextWordRight(p)
 	startIndex := f.Buffer.ByteIndex(p)
 	endIndex := f.Buffer.ByteIndex(endPoint)
@@ -363,7 +363,7 @@ func (f *File) DeleteWordRight(p buffer.Point) tea.Cmd {
 	})
 }
 
-func (f *File) AddTab(row int) tea.Cmd {
+func (f *Document) AddTab(row int) tea.Cmd {
 	line := f.Buffer.Line(row)
 	startIndex := f.Buffer.ByteIndex(buffer.Point{
 		Row: row,
@@ -380,7 +380,7 @@ func (f *File) AddTab(row int) tea.Cmd {
 	})
 }
 
-func (f *File) RemoveTab(row int) tea.Cmd {
+func (f *Document) RemoveTab(row int) tea.Cmd {
 	line := f.Buffer.Line(row)
 	startIndex := f.Buffer.ByteIndex(buffer.Point{
 		Row: row,
@@ -397,7 +397,7 @@ func (f *File) RemoveTab(row int) tea.Cmd {
 	})
 }
 
-func (f *File) NextWordLeft(p buffer.Point) buffer.Point {
+func (f *Document) NextWordLeft(p buffer.Point) buffer.Point {
 	if p.Col == 0 {
 		if p.Row == 0 {
 			return p
@@ -421,7 +421,7 @@ func (f *File) NextWordLeft(p buffer.Point) buffer.Point {
 	return p
 }
 
-func (f *File) NextWordRight(p buffer.Point) buffer.Point {
+func (f *Document) NextWordRight(p buffer.Point) buffer.Point {
 	if p.Col == f.Buffer.LineLen(p.Row) {
 		if p.Row == f.Buffer.LinesLen()-1 {
 			return p

@@ -7,8 +7,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/internal/bubbles/key"
-	"go.gopad.dev/gopad/internal/buffer"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"

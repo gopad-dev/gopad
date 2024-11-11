@@ -7,18 +7,18 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func NewAutocompleter(f *File) *Autocompleter {
+func NewAutocompleter(f *Document) *Autocompleter {
 	return &Autocompleter{
 		file: f,
 	}
 }
 
 type Autocompleter struct {
-	file        *File
+	file        *Document
 	completions []ls.CompletionItem
 	completion  int
 	offset      int

@@ -4,7 +4,7 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"go.lsp.dev/protocol"
 
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 func ParseLocations(locations []protocol.Location) []FileLocation {

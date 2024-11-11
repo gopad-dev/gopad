@@ -5,8 +5,9 @@ import (
 
 	"github.com/charmbracelet/bubbletea/v2"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type fileCursor struct {
@@ -20,7 +21,7 @@ type fileCursor struct {
 	end   bool
 }
 
-func (v *FileView) Cursor() buffer.Point {
+func (v *DocumentView) Cursor() buffer.Point {
 	if v.cursor.start {
 		return buffer.Point{
 			Row: 0,
@@ -41,7 +42,7 @@ func (v *FileView) Cursor() buffer.Point {
 	}
 }
 
-func (v *FileView) SetCursor(newCursor buffer.Point) {
+func (v *DocumentView) SetCursor(newCursor buffer.Point) {
 	if newCursor.Row > -1 {
 		v.cursor.point.Row = min(max(newCursor.Row, 0), v.file.Buffer.LinesLen()-1)
 		v.cursor.start = false
@@ -55,24 +56,24 @@ func (v *FileView) SetCursor(newCursor buffer.Point) {
 	}
 }
 
-func (v *FileView) CursorBlinkCmd() tea.Cmd {
+func (v *DocumentView) CursorBlinkCmd() tea.Cmd {
 	v.cursor.cursor.Blink = false
 	return v.cursor.cursor.BlinkCmd()
 }
 
-func (v *FileView) SetMark(p buffer.Point) {
+func (v *DocumentView) SetMark(p buffer.Point) {
 	v.cursor.mark = &p
 }
 
-func (v *FileView) HasMark() bool {
+func (v *DocumentView) HasMark() bool {
 	return v.cursor.mark != nil
 }
 
-func (v *FileView) ResetMark() {
+func (v *DocumentView) ResetMark() {
 	v.cursor.mark = nil
 }
 
-func (v *FileView) checkMark() {
+func (v *DocumentView) checkMark() {
 	if v.cursor.mark != nil {
 		c := v.Cursor()
 
@@ -82,7 +83,7 @@ func (v *FileView) checkMark() {
 	}
 }
 
-func (v *FileView) Selection() *buffer.Range {
+func (v *DocumentView) Selection() *buffer.Range {
 	if v.cursor.mark == nil {
 		return nil
 	}
@@ -117,7 +118,7 @@ func (v *FileView) Selection() *buffer.Range {
 	}
 }
 
-func (v *FileView) SelectionBytes() []byte {
+func (v *DocumentView) SelectionBytes() []byte {
 	s := v.Selection()
 	if s == nil || s.Start.Row == s.End.Row && s.Start.Col == s.End.Col {
 		return nil
@@ -125,7 +126,7 @@ func (v *FileView) SelectionBytes() []byte {
 	return v.file.Buffer.BytesRange(*s)
 }
 
-func (v *FileView) SelectAll() {
+func (v *DocumentView) SelectAll() {
 	v.cursor.start = false
 	v.cursor.end = false
 
@@ -137,7 +138,7 @@ func (v *FileView) SelectAll() {
 	v.cursor.point.Col = v.file.Buffer.LineLen(v.cursor.point.Row)
 }
 
-func (v *FileView) SelectUp(count int) {
+func (v *DocumentView) SelectUp(count int) {
 	if v.cursor.mark == nil {
 		c := v.Cursor()
 
@@ -151,7 +152,7 @@ func (v *FileView) SelectUp(count int) {
 	v.checkMark()
 }
 
-func (v *FileView) MoveCursorUp(count int) {
+func (v *DocumentView) MoveCursorUp(count int) {
 	if v.cursor.mark != nil {
 		v.SetCursor(*v.cursor.mark)
 		v.ResetMark()
@@ -160,7 +161,7 @@ func (v *FileView) MoveCursorUp(count int) {
 	v.moveCursorUp(count)
 }
 
-func (v *FileView) moveCursorUp(count int) {
+func (v *DocumentView) moveCursorUp(count int) {
 	if v.cursor.point.Row == 0 {
 		v.cursor.start = true
 		return
@@ -170,7 +171,7 @@ func (v *FileView) moveCursorUp(count int) {
 	v.cursor.point.Row = max(0, v.cursor.point.Row-count)
 }
 
-func (v *FileView) SelectDown(count int) {
+func (v *DocumentView) SelectDown(count int) {
 	if v.cursor.mark == nil {
 		c := v.Cursor()
 
@@ -184,7 +185,7 @@ func (v *FileView) SelectDown(count int) {
 	v.checkMark()
 }
 
-func (v *FileView) MoveCursorDown(count int) {
+func (v *DocumentView) MoveCursorDown(count int) {
 	if v.cursor.mark != nil {
 		v.cursor.mark = nil
 	}
@@ -192,7 +193,7 @@ func (v *FileView) MoveCursorDown(count int) {
 	v.moveCursorDown(count)
 }
 
-func (v *FileView) moveCursorDown(count int) {
+func (v *DocumentView) moveCursorDown(count int) {
 	if v.cursor.point.Row == v.file.Buffer.LinesLen()-1 {
 		v.cursor.end = true
 		return
@@ -202,7 +203,7 @@ func (v *FileView) moveCursorDown(count int) {
 	v.cursor.point.Row = min(v.file.Buffer.LinesLen()-1, v.cursor.point.Row+count)
 }
 
-func (v *FileView) SelectLeft(count int) {
+func (v *DocumentView) SelectLeft(count int) {
 	if v.cursor.mark == nil {
 		c := v.Cursor()
 
@@ -216,7 +217,7 @@ func (v *FileView) SelectLeft(count int) {
 	v.checkMark()
 }
 
-func (v *FileView) MoveCursorLeft(count int) {
+func (v *DocumentView) MoveCursorLeft(count int) {
 	if v.cursor.mark != nil {
 		v.SetCursor(*v.cursor.mark)
 		v.ResetMark()
@@ -225,7 +226,7 @@ func (v *FileView) MoveCursorLeft(count int) {
 	v.moveCursorLeft(count)
 }
 
-func (v *FileView) moveCursorLeft(count int) {
+func (v *DocumentView) moveCursorLeft(count int) {
 	for range count {
 		c := v.Cursor()
 
@@ -242,7 +243,7 @@ func (v *FileView) moveCursorLeft(count int) {
 	}
 }
 
-func (v *FileView) SelectRight(count int) {
+func (v *DocumentView) SelectRight(count int) {
 	if v.cursor.mark == nil {
 		c := v.Cursor()
 
@@ -256,7 +257,7 @@ func (v *FileView) SelectRight(count int) {
 	v.checkMark()
 }
 
-func (v *FileView) MoveCursorRight(count int) {
+func (v *DocumentView) MoveCursorRight(count int) {
 	if v.cursor.mark != nil {
 		v.cursor.mark = nil
 	}
@@ -264,7 +265,7 @@ func (v *FileView) MoveCursorRight(count int) {
 	v.moveCursorRight(count)
 }
 
-func (v *FileView) moveCursorRight(count int) {
+func (v *DocumentView) moveCursorRight(count int) {
 	for range count {
 		c := v.Cursor()
 
@@ -281,7 +282,7 @@ func (v *FileView) moveCursorRight(count int) {
 	}
 }
 
-func (v *FileView) MoveCursorWordUp() {
+func (v *DocumentView) MoveCursorWordUp() {
 	c := v.Cursor()
 
 	if c.Row == 0 {
@@ -302,7 +303,7 @@ func (v *FileView) MoveCursorWordUp() {
 	v.cursor.point.Row = c.Row
 }
 
-func (v *FileView) MoveCursorWordDown() {
+func (v *DocumentView) MoveCursorWordDown() {
 	c := v.Cursor()
 
 	if c.Row == v.file.Buffer.LinesLen()-1 {

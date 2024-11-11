@@ -3,7 +3,7 @@ package ls
 import (
 	"github.com/charmbracelet/bubbletea/v2"
 
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 func GetInlayHint(name string, version uint64, r buffer.Range) tea.Cmd {

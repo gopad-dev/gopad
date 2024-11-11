@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 func UpdateFileDiagnostic(name string, dType DiagnosticType, version uint64, diagnostics []Diagnostic) tea.Cmd {

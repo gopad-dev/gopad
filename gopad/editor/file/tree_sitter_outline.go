@@ -1,7 +1,7 @@
 package file
 
 import (
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 type OutlineItem struct {

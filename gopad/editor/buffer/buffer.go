@@ -1,7 +1,7 @@
 package buffer
 
 import (
-	"golang.org/x/text/encoding"
+	"io"
 )
 
 // BlockCommentToken represents how block comments are represented in a file.
@@ -14,16 +14,8 @@ type BlockCommentToken struct {
 
 // Buffer keeps track of the contents of a file.
 type Buffer interface {
-	// Name returns the full path of the buffer.
-	Name() string
-	// FileName returns the file name of the buffer.
-	FileName() string
-	// Encoding returns the encoding of the buffer. If the encoding is not recognized, UTF-8 is returned.
-	Encoding() encoding.Encoding
-	// EncodingName returns the name of the encoding of the buffer.
-	EncodingName() string
-	// SetEncoding sets the encoding of the buffer.
-	SetEncoding(encoding string)
+	io.WriterTo
+
 	// LineEnding returns the line ending of the buffer.
 	LineEnding() LineEnding
 	// SetLineEnding sets the line ending of the buffer.
@@ -32,62 +24,42 @@ type Buffer interface {
 	Version() uint64
 	// Checksum returns the sha256 checksum of the buffer.
 	Checksum() []byte
-	// Dirty returns whether the buffer has unsaved changes.
+	// UpdateChecksum recalculates the sha256 checksum of the buffer.
+	UpdateChecksum() error
+	// Dirty returns whether the buffer has been modified.
 	Dirty() bool
 
-	// Copy returns a copy of the buffer.
-	Copy() Buffer
-	// Save saves the buffer to the file it represents.
-	Save() error
-	// Rename renames the buffer and the file it represents.
-	Rename(name string) error
-	// Delete deletes the buffer and the file it represents.
-	Delete() error
+	// Clone returns a copy of the buffer.
+	Clone() Buffer
 
 	// Bytes returns the buffer as a byte slice. This uses \n as the line ending.
 	Bytes() []byte
 	// BytesRange returns the buffer as a byte slice from the given range. This uses \n as the line ending.
 	BytesRange(r Range) []byte
-	// String returns the buffer as a string. This uses \n as the line ending.
-	String() string
 
-	// ByteIndex returns the byte index in the buffer for the given row and col.
+	// ByteIndex returns the byte index in the buffer for the given point.
 	ByteIndex(p Point) int
-	// Position returns the row and column for the given byte index.
+	// Position returns the point for the given byte index.
 	Position(i int) Point
-	// Index returns the row and column for the given byte index.
-	Index(i int) (int, int)
+
+	// Len returns the rune length of the buffer. The actual byte length may be different due to line endings & encoding.
+	Len() int
 	// LinesLen returns the number of lines in the buffer.
 	LinesLen() int
 	// Lines returns the lines in the buffer.
 	Lines() []Line
-	// Len returns the rune length of the buffer. The actual byte length may be different due to line endings & encoding.
-	Len() int
+
 	// Line returns the line at the given row.
-	Line(row int) Line
+	Line(l int) Line
 	// LineLen returns the rune length of the line at the given row.
-	LineLen(row int) int
+	LineLen(l int) int
 
 	// Insert inserts text at the given position.
 	Insert(p Point, text []byte)
-	// InsertNewLine inserts a new line at the given position.
-	InsertNewLine(p Point)
 	// Replace replaces the text in the given range with the given text.
 	Replace(r Range, text []byte)
-	// DuplicateLine duplicates the line at the given row.
-	DuplicateLine(row int)
-	// DeleteLine deletes the line at the given row.
-	DeleteLine(row int)
-	// DeleteBefore deletes count characters before the current position.
-	DeleteBefore(p Point)
-	// DeleteAfter deletes count characters after the current position.
-	DeleteAfter(p Point)
-	// DeleteRange deletes the range of text between the two positions.
-	DeleteRange(r Range)
-	// AddTab adds a tab character at the front of the current line.
-	AddTab(row int)
-	// RemoveTab removes a tab character at the front of the current line.
-	RemoveTab(row int)
+	// Delete deletes the range of text between the two positions.
+	Delete(r Range)
 }
 
 // Line represents a line in a buffer.
@@ -96,13 +68,13 @@ type Line interface {
 	Copy() Line
 	// Len returns the rune length of the line.
 	Len() int
-	// LenBytes returns the byte length of the line.
-	LenBytes() int
-	// RuneIndex returns the byte index in the line for the given rune index.
-	RuneIndex(index int) int
+	// BytesLen returns the byte length of the line.
+	BytesLen() int
+	// Index returns the byte index in the line for the given rune index.
+	Index(i int) int
 
 	// Rune returns the rune at the given index.
-	Rune(index int) rune
+	Rune(i int) rune
 	// Runes returns the runes in the line.
 	Runes() []rune
 	// RunesRange returns the runes in the line from the given range.
@@ -130,14 +102,15 @@ type Line interface {
 	CutEnd(index int) Line
 	// CutRange returns a new line with the text between the given start and end indexes.
 	CutRange(start int, end int) Line
-	// Append appends the given line to the current line.
-	Append(line Line) Line
-	// AppendLines appends the given lines to the current line.
-	AppendLines(lines ...Line) Line
+
+	// Append appends the given lines to the current line.
+	Append(lines ...Line) Line
+	// Prepend prepends the given lines to the current line.
+	Prepend(lines ...Line) Line
 	// Insert inserts text at the given index.
-	Insert(index int, text []byte) Line
-	// Replace replaces the text at the given index with the given text.
-	Replace(index int, text []byte) Line
-	// ReplaceRange replaces the text between the given start and end indexes with the given text.
-	ReplaceRange(start int, end int, text []byte) Line
+	Insert(i int, text []byte) Line
+	// Replace replaces the text between the given start and end indexes with the given text.
+	Replace(start int, end int, text []byte) Line
+	// Delete deletes the text between the given start and end indexes.
+	Delete(start int, end int) Line
 }

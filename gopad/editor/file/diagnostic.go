@@ -6,11 +6,12 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/gopad/ls"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
-func (f *File) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostics []ls.Diagnostic) {
+func (f *Document) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostics []ls.Diagnostic) {
 	// ignore outdated diagnostics
 	if version < f.diagnosticVersions[dType] {
 		log.Printf("skipping outdated diagnostics: %d < %d", version, f.diagnosticVersions[dType])
@@ -29,13 +30,13 @@ func (f *File) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostic
 	f.Diagnostics = append(f.Diagnostics, diagnostics...)
 }
 
-func (f *File) ClearDiagnosticsByType(dType ls.DiagnosticType) {
+func (f *Document) ClearDiagnosticsByType(dType ls.DiagnosticType) {
 	f.Diagnostics = slices.DeleteFunc(f.Diagnostics, func(diag ls.Diagnostic) bool {
 		return diag.Type == dType
 	})
 }
 
-func (f *File) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
+func (f *Document) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostics []ls.Diagnostic
@@ -47,7 +48,7 @@ func (f *File) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
 	return diagnostics
 }
 
-func (f *File) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
+func (f *Document) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
 	var (
 		diagnostic ls.Diagnostic
 		index      int
@@ -61,7 +62,7 @@ func (f *File) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
 	return diagnostic, index
 }
 
-func (f *File) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
+func (f *Document) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic
@@ -74,7 +75,7 @@ func (f *File) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 	return diagnostic
 }
 
-func (f *File) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
+func (f *Document) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic

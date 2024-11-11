@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/ls"
@@ -18,7 +20,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 const (
@@ -49,13 +50,13 @@ func zoneFileLineDiagnosticID(id int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
 }
 
-func newFileView(buff buffer.Buffer, mode file.Mode) (*FileView, error) {
-	f, err := file.NewFileWithBuffer(buff, mode)
+func newDocumentView(buff buffer.Buffer, mode file.Mode) (*DocumentView, error) {
+	f, err := file.NewDocumentWithBuffer(buff, mode)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FileView{
+	return &DocumentView{
 		file: f,
 		cursor: fileCursor{
 			point: buffer.Point{
@@ -67,12 +68,12 @@ func newFileView(buff buffer.Buffer, mode file.Mode) (*FileView, error) {
 	}, nil
 }
 
-func newFileViewFromName(name string) (*FileView, error) {
-	f, err := file.NewFileFromName(name)
+func newDocumentViewFromName(name string) (*DocumentView, error) {
+	f, err := file.NewDocumentFromName(name)
 	if err != nil {
 		return nil, err
 	}
-	return &FileView{
+	return &DocumentView{
 		file: f,
 		cursor: fileCursor{
 			point: buffer.Point{
@@ -84,29 +85,29 @@ func newFileViewFromName(name string) (*FileView, error) {
 	}, nil
 }
 
-type FileView struct {
-	file                  *file.File
+type DocumentView struct {
+	file                  *file.Document
 	cursor                fileCursor
 	showCurrentDiagnostic bool
 	definitionsIndex      int
 }
 
-func (v *FileView) Name() string {
+func (v *DocumentView) Name() string {
 	return v.file.Buffer.Name()
 }
 
-func (v *FileView) RelativeName(workspace string) string {
+func (v *DocumentView) RelativeName(workspace string) string {
 	return v.file.RelativeName(workspace)
 }
 
-func (v *FileView) Language() *file.Language {
+func (v *DocumentView) Language() *file.Language {
 	if v.file.Syntax == nil {
 		return nil
 	}
 	return v.file.Syntax.Language
 }
 
-func (v *FileView) LanguageName() string {
+func (v *DocumentView) LanguageName() string {
 	language := v.Language()
 	if language == nil {
 		return ""
@@ -114,39 +115,39 @@ func (v *FileView) LanguageName() string {
 	return language.Name
 }
 
-func (v *FileView) LineEnding() buffer.LineEnding {
+func (v *DocumentView) LineEnding() buffer.LineEnding {
 	return v.file.Buffer.LineEnding()
 }
 
-func (v *FileView) EncodingName() string {
+func (v *DocumentView) EncodingName() string {
 	return v.file.Buffer.EncodingName()
 }
 
-func (v *FileView) Focus() tea.Cmd {
+func (v *DocumentView) Focus() tea.Cmd {
 	return v.cursor.cursor.Focus()
 }
 
-func (v *FileView) Blur() {
+func (v *DocumentView) Blur() {
 	v.cursor.cursor.Blur()
 }
 
-func (v FileView) Focused() bool {
+func (v DocumentView) Focused() bool {
 	return v.cursor.cursor.Focused()
 }
 
-func (v *FileView) ShowsCurrentDiagnostic() bool {
+func (v *DocumentView) ShowsCurrentDiagnostic() bool {
 	return v.showCurrentDiagnostic
 }
 
-func (v *FileView) ShowCurrentDiagnostic() {
+func (v *DocumentView) ShowCurrentDiagnostic() {
 	v.showCurrentDiagnostic = true
 }
 
-func (v *FileView) HideCurrentDiagnostic() {
+func (v *DocumentView) HideCurrentDiagnostic() {
 	v.showCurrentDiagnostic = false
 }
 
-func (v FileView) GetCursorForCharPos(p buffer.Point) buffer.Point {
+func (v DocumentView) GetCursorForCharPos(p buffer.Point) buffer.Point {
 	positionRow := max(p.Row-v.cursor.offset.Row, 0)
 	if positionRow >= len(v.file.Positions) {
 		return buffer.Point{
@@ -166,13 +167,13 @@ func (v FileView) GetCursorForCharPos(p buffer.Point) buffer.Point {
 	return linePositions[p.Col]
 }
 
-func (v FileView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) buffer.Point {
+func (v DocumentView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) buffer.Point {
 	row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLinePrefix))
 	col, _ := z.Pos(msg)
 	return v.GetCursorForCharPos(buffer.Point{Row: row, Col: col})
 }
 
-func (v *FileView) SetLanguage(language string) tea.Cmd {
+func (v *DocumentView) SetLanguage(language string) tea.Cmd {
 	if err := v.file.SetLanguage(language); err != nil {
 		return notifications.Add(fmt.Sprintf("failed to set language: %s", err.Error()))
 	}
@@ -181,7 +182,7 @@ func (v *FileView) SetLanguage(language string) tea.Cmd {
 	return nil
 }
 
-func (v *FileView) refreshCursorViewOffset(width int, height int) {
+func (v *DocumentView) refreshCursorViewOffset(width int, height int) {
 	c := v.Cursor()
 
 	// TODO: figure out how to handle inlay hints when scrolling horizontally
@@ -212,7 +213,7 @@ func (v *FileView) refreshCursorViewOffset(width int, height int) {
 	}
 }
 
-func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
+func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	var cmds []tea.Cmd
 	var overwriteCursorBlink bool
 
@@ -527,7 +528,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 				//	return v, tea.Batch(cmds...)
 				// }
 				//
-				// debugFile := file.NewFileWithBuffer(buff, file.ModeReadOnly)
+				// debugFile := file.NewDocumentWithBuffer(buff, file.ModeReadOnly)
 				//
 				// e.files = append(e.files, debugFile)
 				// e.activeFile = len(e.files) - 1
@@ -798,7 +799,7 @@ func (v FileView) Update(msg tea.Msg) (FileView, tea.Cmd) {
 	return v, tea.Batch(cmds...)
 }
 
-func (v FileView) View(width int, height int, border bool, debug bool) string {
+func (v DocumentView) View(width int, height int, border bool, debug bool) string {
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -890,7 +891,7 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 				char = " "
 			}
 
-			//style := v.file.HighestMatchStyle(codeLineCharStyle, ln, col)
+			// style := v.file.HighestMatchStyle(codeLineCharStyle, ln, col)
 			style := codeLineCharStyle
 			style = v.file.HighestLineColDiagnosticStyle(style, ln, col)
 
@@ -965,17 +966,17 @@ func (v FileView) View(width int, height int, border bool, debug bool) string {
 	}
 
 	if debug {
-		//matches := v.file.MatchesForLineCol(c.Row, realCursorCol)
-		//slices.Reverse(matches)
-		//var currentMatches []string
-		//for _, match := range matches {
+		// matches := v.file.MatchesForLineCol(c.Row, realCursorCol)
+		// slices.Reverse(matches)
+		// var currentMatches []string
+		// for _, match := range matches {
 		//	var currentRef string
 		//	if match.ReferenceType != "" {
 		//		currentRef = fmt.Sprintf(" ref: %s", match.ReferenceType)
 		//	}
 		//	currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]%s)", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, currentRef))
-		//}
-		//editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
+		// }
+		// editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
 
 		diagnostics := v.file.DiagnosticsForLineCol(c.Row, realCursorCol)
 		var currentDiagnostics []string

@@ -63,7 +63,7 @@ func (l byteLine) Len() int {
 	return utf8.RuneCount(l.data)
 }
 
-func (l byteLine) LenBytes() int {
+func (l byteLine) BytesLen() int {
 	return len(l.data)
 }
 
@@ -112,7 +112,7 @@ func (l byteLine) RuneStrings() []string {
 	return strs
 }
 
-func (l byteLine) RuneIndex(index int) int {
+func (l byteLine) Index(index int) int {
 	return xbytes.RuneIndex(l.data, index)
 }
 

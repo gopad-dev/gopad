@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 type ModelType int

@@ -6,8 +6,9 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbletea/v2"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 func SaveAction() tea.Msg {

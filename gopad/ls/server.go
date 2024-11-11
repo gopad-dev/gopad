@@ -16,8 +16,8 @@ import (
 	"go.lsp.dev/protocol"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type ServerConfig struct {

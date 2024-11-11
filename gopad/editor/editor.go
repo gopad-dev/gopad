@@ -15,6 +15,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lrstanley/bubblezone"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
+
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/ls"
@@ -23,7 +25,6 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 const (
@@ -60,7 +61,7 @@ type Editor struct {
 
 	fileTree   fileTree
 	searchBar  searchBar
-	fileViews  []*FileView
+	fileViews  []*DocumentView
 	activeFile int
 	fileOffset int
 
@@ -164,7 +165,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 		name = filepath.Join(e.workspace, name)
 		name, _ = filepath.Abs(name)
 	}
-	if slices.ContainsFunc(e.fileViews, func(b *FileView) bool {
+	if slices.ContainsFunc(e.fileViews, func(b *DocumentView) bool {
 		return b.file.Buffer.Name() == name
 	}) {
 		return nil, nil
@@ -174,7 +175,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, err := newFileView(buff, file.ModeWrite)
+	v, err := newDocumentView(buff, file.ModeWrite)
 	if err != nil {
 		return nil, err
 	}
@@ -193,13 +194,13 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 }
 
 func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
-	if slices.ContainsFunc(e.fileViews, func(b *FileView) bool {
+	if slices.ContainsFunc(e.fileViews, func(b *DocumentView) bool {
 		return b.file.Buffer.Name() == name
 	}) {
 		return nil, nil
 	}
 
-	v, err := newFileViewFromName(name)
+	v, err := newDocumentViewFromName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +243,7 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 }
 
 func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.fileViews, func(file *FileView) bool {
+	index := slices.IndexFunc(e.fileViews, func(file *DocumentView) bool {
 		return file.file.Buffer.Name() == name
 	})
 	if index == -1 {
@@ -262,7 +263,7 @@ func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
 }
 
 func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.fileViews, func(file *FileView) bool {
+	index := slices.IndexFunc(e.fileViews, func(file *DocumentView) bool {
 		return file.file.Buffer.Name() == name
 	})
 	if index == -1 {
@@ -285,7 +286,7 @@ func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
 	return ls.FileDeleted(f.file.Buffer.Name()), nil
 }
 
-func (e *Editor) FileView() *FileView {
+func (e *Editor) FileView() *DocumentView {
 	if len(e.fileViews) == 0 {
 		return nil
 	}
@@ -305,7 +306,7 @@ func (e *Editor) SetFileByName(name string) {
 	}
 }
 
-func (e *Editor) FileByName(name string) *FileView {
+func (e *Editor) FileByName(name string) *DocumentView {
 	for _, f := range e.fileViews {
 		if f.file.Buffer.Name() == name {
 			return f
