@@ -149,6 +149,10 @@ func Append(s []byte, b ...byte) []byte {
 	return append(s, b...)
 }
 
+func Prepend(s []byte, b ...byte) []byte {
+	return append(b, s...)
+}
+
 func Insert(s []byte, i int, b ...byte) []byte {
 	if i == 0 {
 		return append(b, s...)
@@ -162,18 +166,7 @@ func Insert(s []byte, i int, b ...byte) []byte {
 	return slices.Insert(s, ri, b...)
 }
 
-func Replace(s []byte, i int, b ...byte) []byte {
-	ri := RuneIndex(s, i)
-	if ri == -1 || ri == len(s) {
-		return append(s, b...)
-	}
-
-	rl := RuneLen(s, i)
-
-	return slices.Replace(s, ri, ri+rl, b...)
-}
-
-func ReplaceRange(s []byte, start int, end int, b ...byte) []byte {
+func Replace(s []byte, start int, end int, b ...byte) []byte {
 	startIndex := RuneIndex(s, start)
 	endIndex := RuneIndex(s, end)
 	if startIndex == -1 || endIndex == -1 {
@@ -181,6 +174,16 @@ func ReplaceRange(s []byte, start int, end int, b ...byte) []byte {
 	}
 
 	return slices.Replace(s, startIndex, endIndex, b...)
+}
+
+func Delete(s []byte, start int, end int) []byte {
+	startIndex := RuneIndex(s, start)
+	endIndex := RuneIndex(s, end)
+	if startIndex == -1 || endIndex == -1 {
+		return s
+	}
+
+	return slices.Delete(s, startIndex, endIndex)
 }
 
 func RuneCount(s []byte) int {

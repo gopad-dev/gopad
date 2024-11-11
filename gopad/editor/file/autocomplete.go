@@ -11,14 +11,14 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func NewAutocompleter(f *Document) *Autocompleter {
+func NewAutocompleter(d *Document) *Autocompleter {
 	return &Autocompleter{
-		file: f,
+		document: d,
 	}
 }
 
 type Autocompleter struct {
-	file        *Document
+	document    *Document
 	completions []ls.CompletionItem
 	completion  int
 	offset      int
@@ -28,7 +28,7 @@ type Autocompleter struct {
 
 func (s *Autocompleter) Update(p buffer.Point) tea.Cmd {
 	if s.Visible() {
-		return ls.GetAutocompletion(s.file.Buffer.Name(), p)
+		return ls.GetAutocompletion(s.document.Name, p)
 	}
 
 	return nil

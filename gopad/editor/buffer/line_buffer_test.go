@@ -9,7 +9,7 @@ import (
 
 func TestBuffer_BytesRange(t *testing.T) {
 	r := bytes.NewReader([]byte("hello\nworld\n"))
-	b, err := New("test.txt", r, "utf-8", LineEndingLF, false)
+	b, err := New(r, LineEndingLF)
 	assert.NoError(t, err)
 
 	data := []struct {
@@ -52,7 +52,7 @@ func TestBuffer_BytesRange(t *testing.T) {
 
 func TestBuffer_Replace(t *testing.T) {
 	r := bytes.NewReader([]byte("lol\n()\n"))
-	b, err := New("test.txt", r, "utf-8", LineEndingLF, false)
+	b, err := New(r, LineEndingLF)
 	assert.NoError(t, err)
 
 	data := []struct {

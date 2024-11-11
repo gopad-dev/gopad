@@ -6,24 +6,24 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func (f *Document) SetInlayHint(version uint64, hints []ls.InlayHint) {
-	if version < f.inlayHintsVersion {
-		log.Printf("skipping outdated inlay hints: %d < %d", version, f.inlayHintsVersion)
+func (d *Document) SetInlayHint(version uint64, hints []ls.InlayHint) {
+	if version < d.inlayHintsVersion {
+		log.Printf("skipping outdated inlay hints: %d < %d", version, d.inlayHintsVersion)
 		return
 	}
-	if version > f.inlayHintsVersion {
-		f.inlayHintsVersion = version
+	if version > d.inlayHintsVersion {
+		d.inlayHintsVersion = version
 	}
-	f.InlayHints = hints
+	d.InlayHints = hints
 }
 
-func (f *Document) ClearInlayHints() {
-	f.InlayHints = nil
+func (d *Document) ClearInlayHints() {
+	d.InlayHints = nil
 }
 
-func (f *Document) InlayHintsForLineCol(row int, col int) []ls.InlayHint {
+func (d *Document) InlayHintsForLineCol(row int, col int) []ls.InlayHint {
 	var hints []ls.InlayHint
-	for _, hint := range f.InlayHints {
+	for _, hint := range d.InlayHints {
 		if hint.Position.Row == row && hint.Position.Col == col {
 			hints = append(hints, hint)
 		}
@@ -31,9 +31,9 @@ func (f *Document) InlayHintsForLineCol(row int, col int) []ls.InlayHint {
 	return hints
 }
 
-func (f *Document) InlayHintsForLine(row int) []ls.InlayHint {
+func (d *Document) InlayHintsForLine(row int) []ls.InlayHint {
 	var hints []ls.InlayHint
-	for _, hint := range f.InlayHints {
+	for _, hint := range d.InlayHints {
 		if hint.Position.Row == row {
 			hints = append(hints, hint)
 		}

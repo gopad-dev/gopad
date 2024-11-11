@@ -26,10 +26,10 @@ const (
 	ModeWrite
 )
 
-type Change struct {
-	StartByte   uint32
-	OldEndByte  uint32
-	NewEndByte  uint32
+type Changee struct {
+	StartByte   int
+	OldEndByte  int
+	NewEndByte  int
 	StartPoint  buffer.Point
 	OldEndPoint buffer.Point
 	NewEndPoint buffer.Point
@@ -38,9 +38,9 @@ type Change struct {
 	Version uint64
 }
 
-func NewDocumentWithBuffer(b buffer.Buffer, mode Mode) (*Document, error) {
+func NewDocumentWithBuffer(name string, b buffer.Buffer, mode Mode) (*Document, error) {
 	var syntax *Syntax
-	if language := GetLanguageByFilename(b.Name()); language != nil {
+	if language := GetLanguageByFilename(name); language != nil {
 		layers, err := NewSyntaxLayers(b.Bytes(), language.Grammar.Highlight)
 		if err != nil {
 			return nil, fmt.Errorf("error creating syntax layers: %w", err)
@@ -51,16 +51,16 @@ func NewDocumentWithBuffer(b buffer.Buffer, mode Mode) (*Document, error) {
 		}
 	}
 
-	f := &Document{
+	d := &Document{
 		Buffer:             b,
 		Mode:               mode,
 		Syntax:             syntax,
 		diagnosticVersions: map[ls.DiagnosticType]uint64{},
 	}
 
-	f.Autocomplete = NewAutocompleter(f)
+	d.Autocomplete = NewAutocompleter(d)
 
-	return f, nil
+	return d, nil
 }
 
 func NewDocumentFromName(name string) (*Document, error) {
@@ -77,7 +77,7 @@ func NewDocumentFromName(name string) (*Document, error) {
 		return nil, fmt.Errorf("file is not readable")
 	}
 
-	b, err := buffer.NewFromFile(name, "UTF-8", buffer.LineEndingAuto)
+	b, err := buffer.NewFromFile(name, buffer.LineEndingAuto)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +87,12 @@ func NewDocumentFromName(name string) (*Document, error) {
 		mode = ModeReadOnly
 	}
 
-	return NewDocumentWithBuffer(b, mode)
+	return NewDocumentWithBuffer(name, b, mode)
 }
 
 type Document struct {
 	Buffer       buffer.Buffer
+	Name         string
 	Mode         Mode
 	Syntax       *Syntax
 	Autocomplete *Autocompleter
@@ -112,22 +113,22 @@ type Document struct {
 	Changes   []Change
 }
 
-func (f *Document) RelativeName(workspace string) string {
-	relName, err := filepath.Rel(workspace, f.Buffer.Name())
+func (d *Document) RelativeName(workspace string) string {
+	relName, err := filepath.Rel(workspace, d.Name)
 	if err != nil {
-		return f.Buffer.Name()
+		return d.Name
 	}
 
 	return relName
 }
 
-func (f *Document) SetLanguage(name string) error {
+func (d *Document) SetLanguage(name string) error {
 	language := GetLanguage(name)
 	if language == nil {
 		return fmt.Errorf("language with name %q not found", name)
 	}
 
-	layers, err := NewSyntaxLayers(f.Buffer.Bytes(), language.Grammar.Highlight)
+	layers, err := NewSyntaxLayers(d.Buffer.Bytes(), language.Grammar.Highlight)
 	if err != nil {
 		return fmt.Errorf("error creating syntax layers: %w", err)
 	}
@@ -137,24 +138,24 @@ func (f *Document) SetLanguage(name string) error {
 		return fmt.Errorf("error creating syntax: %w", err)
 	}
 
-	f.Syntax = syntax
+	d.Syntax = syntax
 	return nil
 }
 
-func (f *Document) Range() buffer.Range {
+func (d *Document) Range() buffer.Range {
 	return buffer.Range{
 		Start: buffer.Point{Row: 0, Col: 0},
-		End:   buffer.Point{Row: f.Buffer.LinesLen(), Col: f.Buffer.LineLen(max(f.Buffer.LinesLen()-1, 0))},
+		End:   buffer.Point{Row: d.Buffer.LinesLen(), Col: d.Buffer.LineLen(max(d.Buffer.LinesLen()-1, 0))},
 	}
 }
 
-func (f *Document) recordChange(change Change) tea.Cmd {
+func (d *Document) recordChange(change Change) tea.Cmd {
 	now := time.Now()
 	defer func() {
 		log.Println("record change time: ", time.Since(now))
 	}()
 
-	f.Changes = append(f.Changes, change)
+	d.Changes = append(d.Changes, change)
 
 	edits := []SyntaxEdit{
 		{
@@ -177,43 +178,52 @@ func (f *Document) recordChange(change Change) tea.Cmd {
 			},
 		},
 	}
-	if f.Syntax != nil {
+	if d.Syntax != nil {
 		ctx := context.Background()
-		f.Syntax.Parse(ctx, f.Buffer.Version(), f.Buffer.Bytes(), edits)
+		d.Syntax.Parse(ctx, d.Buffer.Version(), d.Buffer.Bytes(), edits)
 	}
 
 	var cmds []tea.Cmd
 	cmds = append(cmds, tea.Sequence(
-		ls.FileChanged(f.Buffer.Name(), f.Buffer.Version(), change.Text),
-		ls.GetInlayHint(f.Buffer.Name(), f.Buffer.Version(), f.Range()),
+		ls.FileChanged(d.Name, d.Buffer.Version(), change.Text),
+		ls.GetInlayHint(d.Name, d.Buffer.Version(), d.Range()),
 	))
 
 	return tea.Batch(cmds...)
 }
 
-func (f *Document) InsertNewLine(p buffer.Point) tea.Cmd {
-	startIndex := f.Buffer.ByteIndex(p)
-	f.Buffer.InsertNewLine(p)
+func (d *Document) InsertNewLine(p buffer.Point) tea.Cmd {
+	startIndex := d.Buffer.ByteIndex(p)
+	d.Buffer.Insert(p, []byte{'\n'})
 
-	return f.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + 1),
-		NewEndByte: uint32(startIndex + 2),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+	return d.recordChange(Change{
+		StartByte:  startIndex,
+		OldEndByte: startIndex + 1,
+		NewEndByte: startIndex + 2,
+		StartPoint: p,
+		OldEndPoint: buffer.Point{
+			Row: 0,
+			Col: 0,
+		},
+		NewEndPoint: buffer.Point{
+			Row: 0,
+			Col: 0,
+		},
+		Text:    d.Buffer.Bytes(),
+		Version: d.Buffer.Version(),
 	})
 }
 
-func (f *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
+func (d *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 	if len(text) == 0 {
 		return nil
 	}
 
-	startIndex := f.Buffer.ByteIndex(p)
-	f.Buffer.Insert(p, text)
+	startIndex := d.Buffer.ByteIndex(p)
+	d.Buffer.Insert(p, text)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + 1),
 		NewEndByte: uint32(startIndex + len(text) + 1),
@@ -226,194 +236,194 @@ func (f *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
 			Row: p.Row,
 			Col: p.Col + len(text),
 		},
-		Text:    f.Buffer.Bytes(),
-		Version: f.Buffer.Version(),
+		Text:    d.Buffer.Bytes(),
+		Version: d.Buffer.Version(),
 	})
 }
 
-func (f *Document) InsertRunes(p buffer.Point, text []rune) tea.Cmd {
-	return f.Insert(p, []byte(string(text)))
+func (d *Document) InsertRunes(p buffer.Point, text []rune) tea.Cmd {
+	return d.Insert(p, []byte(string(text)))
 }
 
-func (f *Document) Replace(r buffer.Range, text []byte) tea.Cmd {
+func (d *Document) Replace(r buffer.Range, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 
-	startIndex := f.Buffer.ByteIndex(r.Start)
-	endIndex := f.Buffer.ByteIndex(r.End)
-	f.Buffer.Replace(r, text)
+	startIndex := d.Buffer.ByteIndex(r.Start)
+	endIndex := d.Buffer.ByteIndex(r.End)
+	d.Buffer.Replace(r, text)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(endIndex),
 		NewEndByte: uint32(startIndex + len(text)),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DuplicateLine(row int) tea.Cmd {
-	line := f.Buffer.Line(row)
-	startIndex := f.Buffer.ByteIndex(buffer.Point{
+func (d *Document) DuplicateLine(row int) tea.Cmd {
+	line := d.Buffer.Line(row)
+	startIndex := d.Buffer.ByteIndex(buffer.Point{
 		Row: row,
 		Col: 0,
 	})
-	f.Buffer.DuplicateLine(row)
+	d.Buffer.DuplicateLine(row)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + 1),
 		NewEndByte: uint32(startIndex + line.LenBytes() + 1),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteLine(row int) tea.Cmd {
-	line := f.Buffer.Line(row)
-	startIndex := f.Buffer.ByteIndex(buffer.Point{
+func (d *Document) DeleteLine(row int) tea.Cmd {
+	line := d.Buffer.Line(row)
+	startIndex := d.Buffer.ByteIndex(buffer.Point{
 		Row: row,
 		Col: 0,
 	})
 
-	f.Buffer.DeleteLine(row)
+	d.Buffer.DeleteLine(row)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
 		NewEndByte: uint32(startIndex + 1),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteBefore(p buffer.Point) tea.Cmd {
-	startIndex := f.Buffer.ByteIndex(p)
-	f.Buffer.DeleteBefore(p)
+func (d *Document) DeleteBefore(p buffer.Point) tea.Cmd {
+	startIndex := d.Buffer.ByteIndex(p)
+	d.Buffer.DeleteBefore(p)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex - 1),
 		OldEndByte: uint32(startIndex + 1),
 		NewEndByte: uint32(startIndex),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteAfter(p buffer.Point) tea.Cmd {
-	startIndex := f.Buffer.ByteIndex(p)
+func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
+	startIndex := d.Buffer.ByteIndex(p)
 
-	f.Buffer.DeleteAfter(p)
+	d.Buffer.DeleteAfter(p)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + 1),
 		NewEndByte: uint32(startIndex + 2),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteRange(r buffer.Range) tea.Cmd {
-	startIndex := f.Buffer.ByteIndex(r.Start)
-	endIndex := f.Buffer.ByteIndex(r.End)
-	f.Buffer.DeleteRange(r)
+func (d *Document) DeleteRange(r buffer.Range) tea.Cmd {
+	startIndex := d.Buffer.ByteIndex(r.Start)
+	endIndex := d.Buffer.ByteIndex(r.End)
+	d.Buffer.DeleteRange(r)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(endIndex),
 		NewEndByte: uint32(startIndex),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
-	startPoint := f.NextWordLeft(p)
-	startIndex := f.Buffer.ByteIndex(startPoint)
-	endIndex := f.Buffer.ByteIndex(p)
-	f.Buffer.DeleteRange(buffer.Range{
+func (d *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
+	startPoint := d.NextWordLeft(p)
+	startIndex := d.Buffer.ByteIndex(startPoint)
+	endIndex := d.Buffer.ByteIndex(p)
+	d.Buffer.DeleteRange(buffer.Range{
 		Start: startPoint,
 		End:   p,
 	})
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(endIndex),
 		NewEndByte: uint32(startIndex),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
-	endPoint := f.NextWordRight(p)
-	startIndex := f.Buffer.ByteIndex(p)
-	endIndex := f.Buffer.ByteIndex(endPoint)
-	f.Buffer.DeleteRange(buffer.Range{
+func (d *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
+	endPoint := d.NextWordRight(p)
+	startIndex := d.Buffer.ByteIndex(p)
+	endIndex := d.Buffer.ByteIndex(endPoint)
+	d.Buffer.DeleteRange(buffer.Range{
 		Start: p,
 		End:   endPoint,
 	})
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(endIndex),
 		NewEndByte: uint32(startIndex),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) AddTab(row int) tea.Cmd {
-	line := f.Buffer.Line(row)
-	startIndex := f.Buffer.ByteIndex(buffer.Point{
+func (d *Document) AddTab(row int) tea.Cmd {
+	line := d.Buffer.Line(row)
+	startIndex := d.Buffer.ByteIndex(buffer.Point{
 		Row: row,
 		Col: 0,
 	})
-	f.Buffer.AddTab(row)
+	d.Buffer.AddTab(row)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
 		NewEndByte: uint32(startIndex + line.LenBytes() + 2),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) RemoveTab(row int) tea.Cmd {
-	line := f.Buffer.Line(row)
-	startIndex := f.Buffer.ByteIndex(buffer.Point{
+func (d *Document) RemoveTab(row int) tea.Cmd {
+	line := d.Buffer.Line(row)
+	startIndex := d.Buffer.ByteIndex(buffer.Point{
 		Row: row,
 		Col: 0,
 	})
-	f.Buffer.RemoveTab(row)
+	d.Buffer.RemoveTab(row)
 
-	return f.recordChange(Change{
+	return d.recordChange(Change{
 		StartByte:  uint32(startIndex),
 		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
 		NewEndByte: uint32(startIndex + line.LenBytes() - 1),
-		Text:       f.Buffer.Bytes(),
-		Version:    f.Buffer.Version(),
+		Text:       d.Buffer.Bytes(),
+		Version:    d.Buffer.Version(),
 	})
 }
 
-func (f *Document) NextWordLeft(p buffer.Point) buffer.Point {
+func (d *Document) NextWordLeft(p buffer.Point) buffer.Point {
 	if p.Col == 0 {
 		if p.Row == 0 {
 			return p
 		}
 		p.Row--
-		p.Col = f.Buffer.LineLen(p.Row - 1)
+		p.Col = d.Buffer.LineLen(p.Row - 1)
 		return p
 	}
 
 	var ready bool
 	for {
-		if p.Col == 0 || (ready && slices.Contains(wordBreakers, f.Buffer.Line(p.Row).Rune(p.Col))) {
+		if p.Col == 0 || (ready && slices.Contains(wordBreakers, d.Buffer.Line(p.Row).Rune(p.Col))) {
 			break
 		}
 		p.Col--
-		if f.Buffer.Line(p.Row).Rune(p.Col) != ' ' {
+		if d.Buffer.Line(p.Row).Rune(p.Col) != ' ' {
 			ready = true
 		}
 	}
@@ -421,9 +431,9 @@ func (f *Document) NextWordLeft(p buffer.Point) buffer.Point {
 	return p
 }
 
-func (f *Document) NextWordRight(p buffer.Point) buffer.Point {
-	if p.Col == f.Buffer.LineLen(p.Row) {
-		if p.Row == f.Buffer.LinesLen()-1 {
+func (d *Document) NextWordRight(p buffer.Point) buffer.Point {
+	if p.Col == d.Buffer.LineLen(p.Row) {
+		if p.Row == d.Buffer.LinesLen()-1 {
 			return p
 		}
 		p.Row++
@@ -432,11 +442,11 @@ func (f *Document) NextWordRight(p buffer.Point) buffer.Point {
 
 	var ready bool
 	for {
-		if p.Col == f.Buffer.LineLen(p.Row) || (ready && slices.Contains(wordBreakers, f.Buffer.Line(p.Row).Rune(p.Col))) {
+		if p.Col == d.Buffer.LineLen(p.Row) || (ready && slices.Contains(wordBreakers, d.Buffer.Line(p.Row).Rune(p.Col))) {
 			break
 		}
 		p.Col++
-		if f.Buffer.Line(p.Row).Rune(p.Col-1) != ' ' {
+		if d.Buffer.Line(p.Row).Rune(p.Col-1) != ' ' {
 			ready = true
 		}
 	}

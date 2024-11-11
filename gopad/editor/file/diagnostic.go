@@ -11,36 +11,36 @@ import (
 	"go.gopad.dev/gopad/gopad/ls"
 )
 
-func (f *Document) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostics []ls.Diagnostic) {
+func (d *Document) SetDiagnostic(dType ls.DiagnosticType, version uint64, diagnostics []ls.Diagnostic) {
 	// ignore outdated diagnostics
-	if version < f.diagnosticVersions[dType] {
-		log.Printf("skipping outdated diagnostics: %d < %d", version, f.diagnosticVersions[dType])
+	if version < d.diagnosticVersions[dType] {
+		log.Printf("skipping outdated diagnostics: %d < %d", version, d.diagnosticVersions[dType])
 		return
 	}
 
 	// if we have a new version of diagnostics, update the version
-	if version > f.diagnosticVersions[dType] {
-		f.diagnosticVersions[dType] = version
+	if version > d.diagnosticVersions[dType] {
+		d.diagnosticVersions[dType] = version
 	}
 
 	// always clear diagnostics of this type
-	f.ClearDiagnosticsByType(dType)
+	d.ClearDiagnosticsByType(dType)
 
 	// add new diagnostics
-	f.Diagnostics = append(f.Diagnostics, diagnostics...)
+	d.Diagnostics = append(d.Diagnostics, diagnostics...)
 }
 
-func (f *Document) ClearDiagnosticsByType(dType ls.DiagnosticType) {
-	f.Diagnostics = slices.DeleteFunc(f.Diagnostics, func(diag ls.Diagnostic) bool {
+func (d *Document) ClearDiagnosticsByType(dType ls.DiagnosticType) {
+	d.Diagnostics = slices.DeleteFunc(d.Diagnostics, func(diag ls.Diagnostic) bool {
 		return diag.Type == dType
 	})
 }
 
-func (f *Document) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
+func (d *Document) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostics []ls.Diagnostic
-	for _, diag := range f.Diagnostics {
+	for _, diag := range d.Diagnostics {
 		if diag.Range.Contains(p) {
 			diagnostics = append(diagnostics, diag)
 		}
@@ -48,12 +48,12 @@ func (f *Document) DiagnosticsForLineCol(row int, col int) []ls.Diagnostic {
 	return diagnostics
 }
 
-func (f *Document) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
+func (d *Document) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
 	var (
 		diagnostic ls.Diagnostic
 		index      int
 	)
-	for i, diag := range f.Diagnostics {
+	for i, diag := range d.Diagnostics {
 		if diag.Range.ContainsRow(row) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
 			index = i
@@ -62,11 +62,11 @@ func (f *Document) HighestLineDiagnostic(row int) (ls.Diagnostic, int) {
 	return diagnostic, index
 }
 
-func (f *Document) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
+func (d *Document) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic
-	for _, diag := range f.Diagnostics {
+	for _, diag := range d.Diagnostics {
 		if diag.Range.Contains(p) && (diagnostic.Severity == 0 || (diag.Severity < diagnostic.Severity || (diag.Severity <= diagnostic.Severity && diag.Priority > diagnostic.Priority))) {
 			diagnostic = diag
 		}
@@ -75,11 +75,11 @@ func (f *Document) HighestLineColDiagnostic(row int, col int) ls.Diagnostic {
 	return diagnostic
 }
 
-func (f *Document) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
+func (d *Document) HighestLineColDiagnosticStyle(style lipgloss.Style, row int, col int) lipgloss.Style {
 	p := buffer.Point{Row: row, Col: col}
 
 	var diagnostic ls.Diagnostic
-	for _, diag := range f.Diagnostics {
+	for _, diag := range d.Diagnostics {
 		if diag.Range.Contains(p) && (diag.Severity > diagnostic.Severity || (diag.Severity >= diagnostic.Severity && diag.Priority > diagnostic.Priority)) {
 			diagnostic = diag
 		}

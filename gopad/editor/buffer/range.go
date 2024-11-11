@@ -1,6 +1,7 @@
 package buffer
 
 import (
+	"github.com/tree-sitter/go-tree-sitter"
 	"go.lsp.dev/protocol"
 )
 
@@ -8,6 +9,13 @@ func ParseRange(r protocol.Range) Range {
 	return Range{
 		Start: ParsePoint(r.Start),
 		End:   ParsePoint(r.End),
+	}
+}
+
+func NewRange(start Point, end Point) Range {
+	return Range{
+		Start: start,
+		End:   end,
 	}
 }
 
@@ -44,13 +52,6 @@ func (r Range) IsEmpty() bool {
 	return r.Start.Equal(r.End)
 }
 
-func (r Range) ToProtocol() protocol.Range {
-	return protocol.Range{
-		Start: r.Start.ToProtocol(),
-		End:   r.End.ToProtocol(),
-	}
-}
-
 func (r Range) Lines() int {
 	return r.End.Row - r.Start.Row + 1
 }
@@ -62,6 +63,16 @@ func (r Range) Compare(start Range) int {
 	return r.End.Compare(start.End)
 }
 
-func (r Range) Zero() bool {
-	return r.Start.Equal(r.End)
+func (r Range) ToProtocol() protocol.Range {
+	return protocol.Range{
+		Start: r.Start.ToProtocol(),
+		End:   r.End.ToProtocol(),
+	}
+}
+
+func (r Range) ToTreeSitter() tree_sitter.Range {
+	return tree_sitter.Range{
+		StartPoint: r.Start.ToTreeSitter(),
+		EndPoint:   r.End.ToTreeSitter(),
+	}
 }

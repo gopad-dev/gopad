@@ -1,15 +1,44 @@
 package buffer
 
 import (
+	"fmt"
 	"io"
 )
 
-// BlockCommentToken represents how block comments are represented in a file.
-type BlockCommentToken struct {
-	// Start is the token that starts a block comment.
-	Start string
-	// End is the token that ends a block comment.
-	End string
+var (
+	lineEndingCRLF = []byte("\r\n")
+	lineEndingLF   = []byte("\n")
+)
+
+type LineEnding int
+
+const (
+	LineEndingAuto LineEnding = iota
+	LineEndingLF
+	LineEndingCRLF
+)
+
+func (l LineEnding) String() string {
+	switch l {
+	case LineEndingAuto:
+		return "Auto"
+	case LineEndingLF:
+		return "LF"
+	case LineEndingCRLF:
+		return "CRLF"
+	}
+	return "Unknown"
+}
+
+func (l LineEnding) Bytes() []byte {
+	switch l {
+	case LineEndingCRLF:
+		return lineEndingCRLF
+	case LineEndingLF:
+		return lineEndingLF
+	default:
+		panic(fmt.Sprintf("unknown line ending: %d", l))
+	}
 }
 
 // Buffer keeps track of the contents of a file.
@@ -64,8 +93,8 @@ type Buffer interface {
 
 // Line represents a line in a buffer.
 type Line interface {
-	// Copy returns a copy of the line.
-	Copy() Line
+	// Clone returns a copy of the line.
+	Clone() Line
 	// Len returns the rune length of the line.
 	Len() int
 	// BytesLen returns the byte length of the line.
@@ -97,9 +126,9 @@ type Line interface {
 	StringRange(start int, end int) string
 
 	// CutStart returns a new line with the text before the given index.
-	CutStart(index int) Line
+	CutStart(i int) Line
 	// CutEnd returns a new line with the text after the given index.
-	CutEnd(index int) Line
+	CutEnd(i int) Line
 	// CutRange returns a new line with the text between the given start and end indexes.
 	CutRange(start int, end int) Line
 

@@ -1,47 +1,10 @@
 package buffer
 
 import (
-	"fmt"
 	"unicode/utf8"
 
 	"go.gopad.dev/gopad/internal/xbytes"
 )
-
-var (
-	lineEndingCRLF = []byte("\r\n")
-	lineEndingLF   = []byte("\n")
-)
-
-type LineEnding int
-
-const (
-	LineEndingAuto LineEnding = iota
-	LineEndingLF
-	LineEndingCRLF
-)
-
-func (l LineEnding) String() string {
-	switch l {
-	case LineEndingAuto:
-		return "Auto"
-	case LineEndingLF:
-		return "LF"
-	case LineEndingCRLF:
-		return "CRLF"
-	}
-	return "Unknown"
-}
-
-func (l LineEnding) Bytes() []byte {
-	switch l {
-	case LineEndingCRLF:
-		return lineEndingCRLF
-	case LineEndingLF:
-		return lineEndingLF
-	default:
-		panic(fmt.Sprintf("unknown line ending: %d", l))
-	}
-}
 
 func NewLine(data []byte) Line {
 	return byteLine{
@@ -59,6 +22,14 @@ type byteLine struct {
 	data []byte
 }
 
+func (l byteLine) Clone() Line {
+	data := make([]byte, len(l.data))
+	copy(data, l.data)
+	return byteLine{
+		data: data,
+	}
+}
+
 func (l byteLine) Len() int {
 	return utf8.RuneCount(l.data)
 }
@@ -67,12 +38,12 @@ func (l byteLine) BytesLen() int {
 	return len(l.data)
 }
 
-func (l byteLine) Bytes() []byte {
-	return l.data
+func (l byteLine) Index(index int) int {
+	return xbytes.RuneIndex(l.data, index)
 }
 
-func (l byteLine) String() string {
-	return string(l.data)
+func (l byteLine) Rune(index int) rune {
+	return xbytes.Rune(l.data, index)
 }
 
 func (l byteLine) Runes() []rune {
@@ -83,12 +54,12 @@ func (l byteLine) RunesRange(start int, end int) []rune {
 	return xbytes.RunesRange(l.data, start, end)
 }
 
-func (l byteLine) Rune(index int) rune {
-	return xbytes.Rune(l.data, index)
-}
-
 func (l byteLine) RuneBytes(index int) []byte {
 	return []byte(string(xbytes.Rune(l.data, index)))
+}
+
+func (l byteLine) Bytes() []byte {
+	return l.data
 }
 
 func (l byteLine) RunesBytesRange(start int, end int) []byte {
@@ -99,8 +70,8 @@ func (l byteLine) RuneString(index int) string {
 	return string(xbytes.Rune(l.data, index))
 }
 
-func (l byteLine) StringRange(start int, end int) string {
-	return string(xbytes.CutRange(l.data, start, end))
+func (l byteLine) String() string {
+	return string(l.data)
 }
 
 func (l byteLine) RuneStrings() []string {
@@ -112,8 +83,8 @@ func (l byteLine) RuneStrings() []string {
 	return strs
 }
 
-func (l byteLine) Index(index int) int {
-	return xbytes.RuneIndex(l.data, index)
+func (l byteLine) StringRange(start int, end int) string {
+	return string(xbytes.CutRange(l.data, start, end))
 }
 
 func (l byteLine) CutStart(index int) Line {
@@ -131,14 +102,16 @@ func (l byteLine) CutRange(start int, end int) Line {
 	return l
 }
 
-func (l byteLine) Append(line Line) Line {
-	l.data = xbytes.Append(l.data, line.Bytes()...)
+func (l byteLine) Append(lines ...Line) Line {
+	for _, line := range lines {
+		l.data = xbytes.Append(l.data, line.Bytes()...)
+	}
 	return l
 }
 
-func (l byteLine) AppendLines(lines ...Line) Line {
+func (l byteLine) Prepend(lines ...Line) Line {
 	for _, line := range lines {
-		l.data = xbytes.Append(l.data, line.Bytes()...)
+		l.data = xbytes.Prepend(l.data, line.Bytes()...)
 	}
 	return l
 }
@@ -148,20 +121,12 @@ func (l byteLine) Insert(index int, b []byte) Line {
 	return l
 }
 
-func (l byteLine) Replace(index int, b []byte) Line {
-	l.data = xbytes.Replace(l.data, index, b...)
+func (l byteLine) Replace(start int, end int, b []byte) Line {
+	l.data = xbytes.Replace(l.data, start, end, b...)
 	return l
 }
 
-func (l byteLine) ReplaceRange(start int, end int, b []byte) Line {
-	l.data = xbytes.ReplaceRange(l.data, start, end, b...)
+func (l byteLine) Delete(start int, end int) Line {
+	l.data = xbytes.Delete(l.data, start, end)
 	return l
-}
-
-func (l byteLine) Copy() Line {
-	data := make([]byte, len(l.data))
-	copy(data, l.data)
-	return byteLine{
-		data: data,
-	}
 }
