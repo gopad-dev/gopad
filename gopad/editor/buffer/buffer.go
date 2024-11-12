@@ -49,8 +49,6 @@ type Buffer interface {
 	LineEnding() LineEnding
 	// SetLineEnding sets the line ending of the buffer.
 	SetLineEnding(lineEnding LineEnding)
-	// Version returns the version of the buffer.
-	Version() uint64
 	// Checksum returns the sha256 checksum of the buffer.
 	Checksum() []byte
 	// UpdateChecksum recalculates the sha256 checksum of the buffer.
@@ -66,8 +64,10 @@ type Buffer interface {
 	// BytesRange returns the buffer as a byte slice from the given range. This uses \n as the line ending.
 	BytesRange(r Range) []byte
 
-	// ByteIndex returns the byte index in the buffer for the given point.
-	ByteIndex(p Point) int
+	// ByteIndex returns the byte index in the buffer for the rune index.
+	ByteIndex(i int) int
+	// ByteIndexByPoint returns the byte index in the buffer for the given point.
+	ByteIndexByPoint(p Point) int
 	// Position returns the point for the given byte index.
 	Position(i int) Point
 

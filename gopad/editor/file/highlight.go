@@ -3,9 +3,16 @@ package file
 import (
 	"context"
 	"fmt"
+	"iter"
+	"log"
 	"slices"
+	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/tree-sitter/go-tree-sitter"
+
+	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 const (
@@ -293,7 +300,7 @@ main:
 		for match.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
-			if layer.Config.LocalScopeCaptureIndex != nil && capture.Index == *layer.Config.LocalScopeCaptureIndex {
+			if layer.Config.LocalScopeCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalScopeCaptureIndex {
 				definitionHighlight = nil
 				scope := LocalScope{
 					Inherits:  true,
@@ -306,7 +313,7 @@ main:
 					}
 				}
 				layer.ScopeStack = append(layer.ScopeStack, scope)
-			} else if layer.Config.LocalDefCaptureIndex != nil && capture.Index == *layer.Config.LocalDefCaptureIndex {
+			} else if layer.Config.LocalDefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalDefCaptureIndex {
 				// If the node represents a definition, add a new definition to the
 				// local scope at the top of the scope stack.
 				referenceHighlight = nil
@@ -315,7 +322,7 @@ main:
 
 				var valueRange tree_sitter.Range
 				for _, matchCapture := range match.Match.Captures {
-					if layer.Config.LocalDefValueCaptureIndex != nil && matchCapture.Index == *layer.Config.LocalDefValueCaptureIndex {
+					if layer.Config.LocalDefValueCaptureIndex != nil && uint(matchCapture.Index) == *layer.Config.LocalDefValueCaptureIndex {
 						valueRange = matchCapture.Node.Range()
 					}
 				}
@@ -330,7 +337,7 @@ main:
 					})
 					definitionHighlight = scope.LocalDefs[len(scope.LocalDefs)-1].Highlight
 				}
-			} else if layer.Config.LocalRefCaptureIndex != nil && capture.Index == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
+			} else if layer.Config.LocalRefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
 				// If the node represents a reference, then try to find the corresponding
 				// definition in the scope stack.
 				definitionHighlight = nil
@@ -437,7 +444,7 @@ main:
 	}
 }
 
-func intersectRanges(parentRanges []tree_sitter.Range, nodes []*tree_sitter.Node, includesChildren bool) []tree_sitter.Range {
+func intersectRanges(parentRanges []tree_sitter.Range, nodes []tree_sitter.Node, includesChildren bool) []tree_sitter.Range {
 	cursor := nodes[0].Walk()
 	results := make([]tree_sitter.Range, 0)
 	if len(parentRanges) == 0 {
@@ -547,10 +554,10 @@ func (c HighlightConfig) injectionForMatch(query *tree_sitter.Query, match *tree
 
 	for _, capture := range match.Captures {
 		index := capture.Index
-		if index == languageCaptureIndex {
+		if uint(index) == languageCaptureIndex {
 			languageName = capture.Node.Utf8Text(source)
-		} else if index == contentCaptureIndex {
-			contentNode = capture.Node
+		} else if uint(index) == contentCaptureIndex {
+			contentNode = &capture.Node
 		}
 	}
 
@@ -639,5 +646,85 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 		}
 	default:
 		return nil
+	}
+}
+
+func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer) iter.Seq[CharStyle] {
+	iterator := styleIterator{
+		textStyle:        lipgloss.NewStyle().Foreground(config.Theme.Foreground).Background(config.Theme.Background),
+		activeHighlights: nil,
+		highlightIter:    highlightIter,
+		buf:              buf,
+		theme:            config.Theme.CodeStyles,
+	}
+
+	return iterator.iter()
+}
+
+type highlight struct {
+	captureName  string
+	languageName string
+}
+
+type styleIterator struct {
+	textStyle        lipgloss.Style
+	activeHighlights []highlight
+	highlightIter    iter.Seq2[HighlightEvent, error]
+	buf              buffer.Buffer
+	theme            map[string]lipgloss.Style
+}
+
+func (i *styleIterator) highlight(captureName string, languageName string) lipgloss.Style {
+	var style lipgloss.Style
+
+	for {
+		codeStyle, ok := i.theme[fmt.Sprintf("%s.%s", captureName, languageName)]
+		if ok {
+			style = codeStyle
+			break
+		}
+		codeStyle, ok = i.theme[captureName]
+		if ok {
+			style = codeStyle
+			break
+		}
+		lastDot := strings.LastIndex(captureName, ".")
+		if lastDot == -1 {
+			break
+		}
+		captureName = captureName[:lastDot]
+	}
+
+	return style
+}
+
+func (i *styleIterator) iter() iter.Seq[CharStyle] {
+	return func(yield func(CharStyle) bool) {
+		for event, err := range i.highlightIter {
+			if err != nil {
+				log.Printf("error getting highlight event: %v", err)
+				continue
+			}
+
+			switch event := event.(type) {
+			case HighlightEventStart:
+				i.activeHighlights = append(i.activeHighlights, highlight{
+					captureName:  event.CaptureName,
+					languageName: event.LanguageName,
+				})
+			case HighlightEventEnd:
+				i.activeHighlights = i.activeHighlights[:len(i.activeHighlights)-1]
+			case HighlightEventSource:
+				var style lipgloss.Style
+				for _, h := range i.activeHighlights {
+					style = i.textStyle.Inherit(i.highlight(h.captureName, h.languageName))
+				}
+				end := i.buf.ByteIndex(int(event.EndByte))
+				yield(CharStyle{
+					Style: style,
+					End:   end,
+				})
+			}
+		}
 	}
 }

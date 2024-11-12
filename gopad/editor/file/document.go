@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/tree-sitter/go-tree-sitter"
+	"github.com/charmbracelet/lipgloss"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
@@ -25,18 +25,6 @@ const (
 	ModeReadOnly Mode = iota
 	ModeWrite
 )
-
-type Changee struct {
-	StartByte   int
-	OldEndByte  int
-	NewEndByte  int
-	StartPoint  buffer.Point
-	OldEndPoint buffer.Point
-	NewEndPoint buffer.Point
-
-	Text    []byte
-	Version uint64
-}
 
 func NewDocumentWithBuffer(name string, b buffer.Buffer, mode Mode) (*Document, error) {
 	var syntax *Syntax
@@ -53,9 +41,24 @@ func NewDocumentWithBuffer(name string, b buffer.Buffer, mode Mode) (*Document, 
 
 	d := &Document{
 		Buffer:             b,
+		Name:               name,
 		Mode:               mode,
 		Syntax:             syntax,
+		oldState:           nil,
+		changes:            NewChangeSetFromBuf(b),
+		History:            NewHistory(),
+		Autocomplete:       nil,
+		version:            0,
 		diagnosticVersions: map[ls.DiagnosticType]uint64{},
+		Diagnostics:        nil,
+		inlayHintsVersion:  0,
+		InlayHints:         nil,
+		Declarations:       nil,
+		Definitions:        nil,
+		TypeDefinitions:    nil,
+		Implementations:    nil,
+		References:         nil,
+		Positions:          nil,
 	}
 
 	d.Autocomplete = NewAutocompleter(d)
@@ -91,11 +94,16 @@ func NewDocumentFromName(name string) (*Document, error) {
 }
 
 type Document struct {
-	Buffer       buffer.Buffer
-	Name         string
-	Mode         Mode
-	Syntax       *Syntax
+	Buffer buffer.Buffer
+	Name   string
+	Mode   Mode
+	Syntax *Syntax
+
+	oldState     buffer.Buffer
+	changes      ChangeSet
+	History      *History
 	Autocomplete *Autocompleter
+	version      uint64
 
 	diagnosticVersions map[ls.DiagnosticType]uint64
 	Diagnostics        []ls.Diagnostic
@@ -110,7 +118,14 @@ type Document struct {
 	References      []ls.FileLocation
 
 	Positions [][]buffer.Point
-	Changes   []Change
+}
+
+func (d *Document) Version() uint64 {
+	return d.version
+}
+
+func (d *Document) FileName() string {
+	return filepath.Base(d.Name)
 }
 
 func (d *Document) RelativeName(workspace string) string {
@@ -149,69 +164,83 @@ func (d *Document) Range() buffer.Range {
 	}
 }
 
-func (d *Document) recordChange(change Change) tea.Cmd {
+func (d *Document) Apply(t Transaction) tea.Cmd {
+	cmd, success := d.applyInner(t)
+	if success {
+		d.appendChangesToHistory()
+	}
+	return cmd
+}
+
+func (d *Document) applyInner(t Transaction) (tea.Cmd, bool) {
 	now := time.Now()
 	defer func() {
 		log.Println("record change time: ", time.Since(now))
 	}()
 
-	d.Changes = append(d.Changes, change)
-
-	edits := []SyntaxEdit{
-		{
-			&tree_sitter.InputEdit{
-				StartByte:  uint(change.StartByte),
-				OldEndByte: uint(change.OldEndByte),
-				NewEndByte: uint(change.NewEndByte),
-				StartPosition: tree_sitter.Point{
-					Row:    uint(change.StartPoint.Row),
-					Column: uint(change.StartPoint.Col),
-				},
-				OldEndPosition: tree_sitter.Point{
-					Row:    uint(change.OldEndPoint.Row),
-					Column: uint(change.OldEndPoint.Col),
-				},
-				NewEndPosition: tree_sitter.Point{
-					Row:    uint(change.NewEndPoint.Row),
-					Column: uint(change.NewEndPoint.Col),
-				},
-			},
-		},
+	if d.changes.IsEmpty() && !t.Changes.IsEmpty() {
+		d.oldState = d.Buffer.Clone()
 	}
+
+	cmd, success := d.apply(t)
+	if !t.Changes.IsEmpty() {
+		d.changes = d.changes.Merge(t.Changes)
+	}
+
+	return cmd, success
+}
+
+func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
+	oldBuf := d.Buffer.Clone()
+	changes := t.Changes
+
+	success := changes.Apply(d.Buffer)
+	if !success {
+		log.Printf("error applying changes: %v", changes)
+		return nil, false
+	}
+
+	if changes.IsEmpty() {
+		return nil, true
+	}
+
+	d.version++
+
+	cmds := []tea.Cmd{
+		ls.FileChanged(d.Name, d.Version(), d.Buffer.Bytes()),
+		ls.GetInlayHint(d.Name, d.Version(), d.Range()),
+	}
+
 	if d.Syntax != nil {
 		ctx := context.Background()
-		d.Syntax.Parse(ctx, d.Buffer.Version(), d.Buffer.Bytes(), edits)
+		if err := d.Syntax.Update(ctx, d.version, d.Buffer, oldBuf, t.Changes); err != nil {
+			log.Printf("error updating syntax: %v", err)
+			d.Syntax = nil
+		}
 	}
 
-	var cmds []tea.Cmd
-	cmds = append(cmds, tea.Sequence(
-		ls.FileChanged(d.Name, d.Buffer.Version(), change.Text),
-		ls.GetInlayHint(d.Name, d.Buffer.Version(), d.Range()),
-	))
+	return tea.Batch(cmds...), true
+}
 
-	return tea.Batch(cmds...)
+func (d *Document) appendChangesToHistory() {
+	if d.changes.IsEmpty() {
+		return
+	}
+
+	changes := d.changes
+	d.changes = NewChangeSetFromBuf(d.Buffer)
+
+	transaction := NewTransactionFrom(changes)
+	oldBuf := d.oldState
+
+	d.History.CommitRevision(transaction, oldBuf)
 }
 
 func (d *Document) InsertNewLine(p buffer.Point) tea.Cmd {
-	startIndex := d.Buffer.ByteIndex(p)
-	d.Buffer.Insert(p, []byte{'\n'})
+	startIndex := d.Buffer.ByteIndexByPoint(p)
+	transaction := NewTransactionFromInsert(d.Buffer, startIndex, []byte{'\n'})
 
-	return d.recordChange(Change{
-		StartByte:  startIndex,
-		OldEndByte: startIndex + 1,
-		NewEndByte: startIndex + 2,
-		StartPoint: p,
-		OldEndPoint: buffer.Point{
-			Row: 0,
-			Col: 0,
-		},
-		NewEndPoint: buffer.Point{
-			Row: 0,
-			Col: 0,
-		},
-		Text:    d.Buffer.Bytes(),
-		Version: d.Buffer.Version(),
-	})
+	return d.Apply(transaction)
 }
 
 func (d *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
@@ -220,192 +249,178 @@ func (d *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
 		return nil
 	}
 
-	startIndex := d.Buffer.ByteIndex(p)
-	d.Buffer.Insert(p, text)
+	startIndex := d.Buffer.ByteIndexByPoint(p)
+	transaction := NewTransactionFromInsert(d.Buffer, startIndex, text)
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + 1),
-		NewEndByte: uint32(startIndex + len(text) + 1),
-		StartPoint: p,
-		OldEndPoint: buffer.Point{
-			Row: p.Row,
-			Col: p.Col,
-		},
-		NewEndPoint: buffer.Point{
-			Row: p.Row,
-			Col: p.Col + len(text),
-		},
-		Text:    d.Buffer.Bytes(),
-		Version: d.Buffer.Version(),
-	})
-}
-
-func (d *Document) InsertRunes(p buffer.Point, text []rune) tea.Cmd {
-	return d.Insert(p, []byte(string(text)))
+	log.Printf("inserting text at index %d: %#v", startIndex, transaction)
+	return d.Apply(transaction)
 }
 
 func (d *Document) Replace(r buffer.Range, text []byte) tea.Cmd {
 	text = xrunes.Sanitize(text)
 
-	startIndex := d.Buffer.ByteIndex(r.Start)
-	endIndex := d.Buffer.ByteIndex(r.End)
-	d.Buffer.Replace(r, text)
+	startIndex := d.Buffer.ByteIndexByPoint(r.Start)
+	endIndex := d.Buffer.ByteIndexByPoint(r.End)
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(endIndex),
-		NewEndByte: uint32(startIndex + len(text)),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
+	transaction := NewTransactionFromChange(d.Buffer, []Change{{
+		From: startIndex,
+		To:   endIndex,
+		Text: text,
+	}})
 
-func (d *Document) DuplicateLine(row int) tea.Cmd {
-	line := d.Buffer.Line(row)
-	startIndex := d.Buffer.ByteIndex(buffer.Point{
-		Row: row,
-		Col: 0,
-	})
-	d.Buffer.DuplicateLine(row)
-
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + 1),
-		NewEndByte: uint32(startIndex + line.LenBytes() + 1),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
-
-func (d *Document) DeleteLine(row int) tea.Cmd {
-	line := d.Buffer.Line(row)
-	startIndex := d.Buffer.ByteIndex(buffer.Point{
-		Row: row,
-		Col: 0,
-	})
-
-	d.Buffer.DeleteLine(row)
-
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
-		NewEndByte: uint32(startIndex + 1),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
-
-func (d *Document) DeleteBefore(p buffer.Point) tea.Cmd {
-	startIndex := d.Buffer.ByteIndex(p)
-	d.Buffer.DeleteBefore(p)
-
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex - 1),
-		OldEndByte: uint32(startIndex + 1),
-		NewEndByte: uint32(startIndex),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
-
-func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
-	startIndex := d.Buffer.ByteIndex(p)
-
-	d.Buffer.DeleteAfter(p)
-
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + 1),
-		NewEndByte: uint32(startIndex + 2),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
+	return d.Apply(transaction)
 }
 
 func (d *Document) DeleteRange(r buffer.Range) tea.Cmd {
-	startIndex := d.Buffer.ByteIndex(r.Start)
-	endIndex := d.Buffer.ByteIndex(r.End)
-	d.Buffer.DeleteRange(r)
+	startIndex := d.Buffer.ByteIndexByPoint(r.Start)
+	endIndex := d.Buffer.ByteIndexByPoint(r.End)
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(endIndex),
-		NewEndByte: uint32(startIndex),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
+	transaction := NewTransactionFromDelete(d.Buffer, []Deletion{{
+		From: startIndex,
+		To:   endIndex,
+	}})
+
+	return d.Apply(transaction)
 }
 
-func (d *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
-	startPoint := d.NextWordLeft(p)
-	startIndex := d.Buffer.ByteIndex(startPoint)
-	endIndex := d.Buffer.ByteIndex(p)
-	d.Buffer.DeleteRange(buffer.Range{
-		Start: startPoint,
-		End:   p,
-	})
+func (d *Document) DeleteBefore(p buffer.Point) tea.Cmd {
+	startIndex := d.Buffer.ByteIndexByPoint(p)
+	if startIndex == 0 {
+		return nil
+	}
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(endIndex),
-		NewEndByte: uint32(startIndex),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
+	transaction := NewTransactionFromDelete(d.Buffer, []Deletion{{
+		From: startIndex - 1,
+		To:   startIndex,
+	}})
+
+	return d.Apply(transaction)
 }
 
-func (d *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
-	endPoint := d.NextWordRight(p)
-	startIndex := d.Buffer.ByteIndex(p)
-	endIndex := d.Buffer.ByteIndex(endPoint)
-	d.Buffer.DeleteRange(buffer.Range{
-		Start: p,
-		End:   endPoint,
-	})
+func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
+	startIndex := d.Buffer.ByteIndexByPoint(p)
+	if startIndex == d.Buffer.Len() {
+		return nil
+	}
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(endIndex),
-		NewEndByte: uint32(startIndex),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
+	transaction := NewTransactionFromDelete(d.Buffer, []Deletion{{
+		From: startIndex,
+		To:   startIndex + 1,
+	}})
+
+	return d.Apply(transaction)
 }
 
-func (d *Document) AddTab(row int) tea.Cmd {
-	line := d.Buffer.Line(row)
-	startIndex := d.Buffer.ByteIndex(buffer.Point{
-		Row: row,
-		Col: 0,
-	})
-	d.Buffer.AddTab(row)
+//func (d *Document) DuplicateLine(row int) tea.Cmd {
+//	line := d.Buffer.Line(row)
+//	startIndex := d.Buffer.ByteIndex(buffer.Point{
+//		Row: row,
+//		Col: 0,
+//	})
+//	d.Buffer.DuplicateLine(row)
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(startIndex + 1),
+//		NewEndByte: uint32(startIndex + line.LenBytes() + 1),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
+//
+//func (d *Document) DeleteLine(row int) tea.Cmd {
+//	line := d.Buffer.Line(row)
+//	startIndex := d.Buffer.ByteIndex(buffer.Point{
+//		Row: row,
+//		Col: 0,
+//	})
+//
+//	d.Buffer.DeleteLine(row)
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+//		NewEndByte: uint32(startIndex + 1),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
+//
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
-		NewEndByte: uint32(startIndex + line.LenBytes() + 2),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
+//
 
-func (d *Document) RemoveTab(row int) tea.Cmd {
-	line := d.Buffer.Line(row)
-	startIndex := d.Buffer.ByteIndex(buffer.Point{
-		Row: row,
-		Col: 0,
-	})
-	d.Buffer.RemoveTab(row)
+//
 
-	return d.recordChange(Change{
-		StartByte:  uint32(startIndex),
-		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
-		NewEndByte: uint32(startIndex + line.LenBytes() - 1),
-		Text:       d.Buffer.Bytes(),
-		Version:    d.Buffer.Version(),
-	})
-}
+//
+//func (d *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
+//	startPoint := d.NextWordLeft(p)
+//	startIndex := d.Buffer.ByteIndex(startPoint)
+//	endIndex := d.Buffer.ByteIndex(p)
+//	d.Buffer.DeleteRange(buffer.Range{
+//		Start: startPoint,
+//		End:   p,
+//	})
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(endIndex),
+//		NewEndByte: uint32(startIndex),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
+//
+//func (d *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
+//	endPoint := d.NextWordRight(p)
+//	startIndex := d.Buffer.ByteIndex(p)
+//	endIndex := d.Buffer.ByteIndex(endPoint)
+//	d.Buffer.DeleteRange(buffer.Range{
+//		Start: p,
+//		End:   endPoint,
+//	})
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(endIndex),
+//		NewEndByte: uint32(startIndex),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
+//
+//func (d *Document) AddTab(row int) tea.Cmd {
+//	line := d.Buffer.Line(row)
+//	startIndex := d.Buffer.ByteIndex(buffer.Point{
+//		Row: row,
+//		Col: 0,
+//	})
+//	d.Buffer.AddTab(row)
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+//		NewEndByte: uint32(startIndex + line.LenBytes() + 2),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
+//
+//func (d *Document) RemoveTab(row int) tea.Cmd {
+//	line := d.Buffer.Line(row)
+//	startIndex := d.Buffer.ByteIndex(buffer.Point{
+//		Row: row,
+//		Col: 0,
+//	})
+//	d.Buffer.RemoveTab(row)
+//
+//	return d.recordChange(Change{
+//		StartByte:  uint32(startIndex),
+//		OldEndByte: uint32(startIndex + line.LenBytes() + 1),
+//		NewEndByte: uint32(startIndex + line.LenBytes() - 1),
+//		Text:       d.Buffer.Bytes(),
+//		Version:    d.Buffer.Version(),
+//	})
+//}
 
 func (d *Document) NextWordLeft(p buffer.Point) buffer.Point {
 	if p.Col == 0 {
@@ -452,4 +467,24 @@ func (d *Document) NextWordRight(p buffer.Point) buffer.Point {
 	}
 
 	return p
+}
+
+// TODO: implement
+func (d *Document) Save() error {
+	return nil
+}
+
+// TODO: implement
+func (d *Document) Rename(name string) error {
+	return nil
+}
+
+// TODO: implement
+func (d *Document) Delete() error {
+	return nil
+}
+
+type CharStyle struct {
+	Style lipgloss.Style
+	End   int
 }

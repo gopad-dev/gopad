@@ -15,6 +15,7 @@ import (
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles"
+	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -82,7 +83,9 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Printf("Msg: %T: %v\n", msg, msg)
+	if _, ok := msg.(cursor.BlinkMsg); !ok {
+		log.Printf("Msg: %T: %v\n", msg, msg)
+	}
 	//now := time.Now()
 	//defer func() {
 	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
@@ -112,7 +115,6 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, overlay.Open(NewLSPOverlay(g.lsClient.Servers(), g.workspace)))
 
 	case tea.MouseMsg:
-		log.Printf("MouseMsg: %#v\n", msg)
 		switch {
 		case mouse.Matches(msg, ZoneTheme, tea.MouseLeft):
 			cmds = append(cmds, overlay.Open(NewSetThemeOverlay()))
@@ -120,8 +122,6 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		log.Printf("KeyMsg: %s: %#v\n", msg.String(), msg)
-
 		switch msg := msg.(type) {
 		case tea.KeyPressMsg:
 			// global keybindings
@@ -279,7 +279,7 @@ func (g Gopad) CodeBar() string {
 
 		infoLine = append(infoLine,
 			zone.Mark(editor.ZoneFileLineEnding, inlineBarStyle(file.LineEnding().String())),
-			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle(file.EncodingName())),
+			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle("UTF-8")),
 		)
 	}
 	infoLineStr := strings.Join(infoLine, inlineBarStyle(" | "))

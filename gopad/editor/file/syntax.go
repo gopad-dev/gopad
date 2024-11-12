@@ -10,8 +10,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/tree-sitter/go-tree-sitter"
 
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/internal/hash"
 	"go.gopad.dev/gopad/internal/slotmap"
+	"go.gopad.dev/gopad/internal/xbytes"
 )
 
 const (
@@ -64,13 +66,11 @@ type Syntax struct {
 	Rev      uint64
 	Language *Language
 	Layers   *SyntaxLayers
-	Styles   []StyleSpan
-	Source   []byte
 }
 
-func (s *Syntax) Parse(ctx context.Context, newRev uint64, newSource []byte, edits []SyntaxEdit) {
+func (s *Syntax) Parse(ctx context.Context, newRev uint64, newSource []byte, edits []SyntaxEdit) error {
 	if s.Layers.layers.Len() == 0 {
-		return
+		return nil
 	}
 
 	filteredEdits := make([]SyntaxEdit, 0)
@@ -81,44 +81,21 @@ func (s *Syntax) Parse(ctx context.Context, newRev uint64, newSource []byte, edi
 	}
 
 	if err := s.Layers.Update(ctx, s.Rev, newRev, newSource, filteredEdits); err != nil {
-		log.Println("error updating syntax layers:", err)
-	}
-
-	tree := s.Layers.Tree()
-
-	var styles []StyleSpan
-	if tree != nil {
-		var highlightName *string
-
-		for event, err := range s.Layers.HighlightIter(ctx, newSource, nil) {
-			if err != nil {
-				log.Panicf("failed to highlight source: %v", err)
-			}
-			switch e := event.(type) {
-			case HighlightEventSource:
-				var style lipgloss.Style
-				if highlightName != nil {
-					style = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // TODO: actual style from theme
-				}
-
-				styles = append(styles, StyleSpan{
-					Range: tree_sitter.Range{
-						StartByte: e.StartByte,
-						EndByte:   e.EndByte,
-					},
-					Style: style,
-				})
-			case HighlightEventStart:
-				highlightName = &e.CaptureName
-			case HighlightEventEnd:
-				highlightName = nil
-			}
-		}
+		return err
 	}
 
 	s.Rev = newRev
-	s.Styles = styles
-	s.Source = newSource
+
+	return nil
+}
+
+func (s *Syntax) Update(ctx context.Context, newRev uint64, newBuf buffer.Buffer, oldBuf buffer.Buffer, changeSet ChangeSet) error {
+	edits := generateEdits(oldBuf, changeSet)
+	return s.Parse(ctx, newRev, newBuf.Bytes(), []SyntaxEdit{edits})
+}
+
+func (s *Syntax) HighlightIter(buf buffer.Buffer, r *ByteRange) iter.Seq[CharStyle] {
+	return newStyleIter(s.Layers.HighlightIter(context.Background(), buf.Bytes(), r), buf)
 }
 
 type StyleSpan struct {
@@ -204,7 +181,7 @@ type injectionItem struct {
 
 type combinedInjectionItem struct {
 	languageName    string
-	nodes           []*tree_sitter.Node
+	nodes           []tree_sitter.Node
 	includeChildren bool
 }
 
@@ -322,7 +299,7 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 						combinedInjections[index].languageName = languageName
 					}
 					if contentNode != nil {
-						combinedInjections[index].nodes = append(combinedInjections[index].nodes, contentNode)
+						combinedInjections[index].nodes = append(combinedInjections[index].nodes, *contentNode)
 					}
 					combinedInjections[index].includeChildren = includeChildren
 					continue
@@ -337,7 +314,7 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 				if languageName != "" && contentNode != nil {
 					nextConfig := injectionCallback(languageName)
 					if nextConfig != nil {
-						nextRanges := intersectRanges(layer.Ranges, []*tree_sitter.Node{contentNode}, includeChildren)
+						nextRanges := intersectRanges(layer.Ranges, []tree_sitter.Node{*contentNode}, includeChildren)
 						if len(nextRanges) > 0 {
 							if contentNode.StartByte() < lastInjectionEnd {
 								continue
@@ -557,6 +534,105 @@ func (l *LanguageLayer) parse(ctx context.Context, parser *tree_sitter.Parser, s
 
 func (l *LanguageLayer) Equals(layer *LanguageLayer) bool {
 	return l.Depth == layer.Depth && l.Config.LanguageName == layer.Config.LanguageName && equalRanges(l.Ranges, layer.Ranges)
+}
+
+func generateEdits(oldBuf buffer.Buffer, changeSet ChangeSet) []*tree_sitter.InputEdit {
+	var oldPos int
+	var edits []*tree_sitter.InputEdit
+
+	if changeSet.IsEmpty() {
+		return edits
+	}
+
+	changes := changeSet.Changes
+
+	for len(changes) > 0 {
+		var change Operation
+		change, changes = changes[0], changes[1:]
+
+		var changeLen int
+		switch c := change.(type) {
+		case Move:
+			changeLen = c.N
+		case Delete:
+			changeLen = c.N
+		}
+
+		oldEnd := oldPos + changeLen
+
+		switch c := change.(type) {
+		case Delete:
+			startByte := oldBuf.ByteIndex(oldPos)
+			startPosition := oldBuf.Position(oldPos)
+
+			oldEndByte := oldBuf.ByteIndex(oldEnd)
+			oldEndPosition := oldBuf.Position(oldEnd)
+
+			edits = append(edits, &tree_sitter.InputEdit{
+				StartByte:      uint(startByte),
+				OldEndByte:     uint(oldEndByte),
+				NewEndByte:     uint(startByte),
+				StartPosition:  startPosition.ToTreeSitter(),
+				OldEndPosition: oldEndPosition.ToTreeSitter(),
+				NewEndPosition: startPosition.ToTreeSitter(),
+			})
+		case Insert:
+			startByte := oldBuf.ByteIndex(oldPos)
+			startPosition := oldBuf.Position(oldPos)
+
+			if len(changes) > 0 {
+				nextChange, ok := changes[0].(Delete)
+				if ok {
+					oldEnd = oldPos + nextChange.N
+					oldEndByte := oldBuf.ByteIndex(oldEnd)
+					oldEndPosition := oldBuf.Position(oldEnd)
+
+					changes = changes[1:]
+
+					edits = append(edits, &tree_sitter.InputEdit{
+						StartByte:      uint(startByte),
+						OldEndByte:     uint(oldEndByte),
+						NewEndByte:     uint(startByte + len(c.Text)),
+						StartPosition:  startPosition.ToTreeSitter(),
+						OldEndPosition: oldEndPosition.ToTreeSitter(),
+						NewEndPosition: traverseBytes(startPosition, c.Text).ToTreeSitter(),
+					})
+					continue
+				}
+			}
+
+			edits = append(edits, &tree_sitter.InputEdit{
+				StartByte:      uint(startByte),
+				OldEndByte:     uint(startByte),
+				NewEndByte:     uint(startByte + len(c.Text)),
+				StartPosition:  startPosition.ToTreeSitter(),
+				OldEndPosition: startPosition.ToTreeSitter(),
+				NewEndPosition: traverseBytes(startPosition, c.Text).ToTreeSitter(),
+			})
+		}
+
+		oldPos = oldEnd
+	}
+
+	return edits
+}
+
+func traverseBytes(p buffer.Point, text []byte) buffer.Point {
+	row, col := p.Point()
+
+	runes := xbytes.Runes(text)
+
+	for i, r := range runes {
+		if r == '\n' || r == '\r' {
+			if !(len(runes) > i+1 && runes[i+1] == '\n') {
+				row++
+				col = 0
+			}
+		}
+		col++
+	}
+
+	return buffer.NewPoint(row, col)
 }
 
 func equalRanges(a []tree_sitter.Range, b []tree_sitter.Range) bool {

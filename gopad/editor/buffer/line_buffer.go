@@ -82,7 +82,6 @@ func NewFromFile(name string, lineEnding LineEnding) (Buffer, error) {
 
 type lineBuffer struct {
 	lineEnding LineEnding
-	version    uint64
 	lines      []Line
 	checksum   []byte
 	hasher     hash.Hash
@@ -112,10 +111,6 @@ func (b *lineBuffer) LineEnding() LineEnding {
 
 func (b *lineBuffer) SetLineEnding(lineEnding LineEnding) {
 	b.lineEnding = lineEnding
-}
-
-func (b *lineBuffer) Version() uint64 {
-	return b.version
 }
 
 func (b *lineBuffer) Checksum() []byte {
@@ -152,7 +147,6 @@ func (b *lineBuffer) Clone() Buffer {
 
 	return &lineBuffer{
 		lineEnding: b.lineEnding,
-		version:    b.version,
 		lines:      lines,
 		checksum:   checksum,
 	}
@@ -192,7 +186,20 @@ func (b *lineBuffer) BytesRange(r Range) []byte {
 	return bs
 }
 
-func (b *lineBuffer) ByteIndex(p Point) int {
+// ByteIndex returns the byte index in the buffer for the rune index.
+func (b *lineBuffer) ByteIndex(i int) int {
+	var n int
+	for _, line := range b.lines {
+		byteLen := line.BytesLen()
+		if n+byteLen >= i {
+			return n + line.Index(i-n)
+		}
+		n += byteLen + 1
+	}
+	return n
+}
+
+func (b *lineBuffer) ByteIndexByPoint(p Point) int {
 	var n int
 	for i, line := range b.lines {
 		if i == p.Row {
@@ -252,10 +259,6 @@ func (b *lineBuffer) Insert(p Point, text []byte) {
 		return
 	}
 
-	defer func() {
-		b.version++
-	}()
-
 	if len(text) == 1 && text[0] == '\n' {
 		b.insertNewLine(p)
 		return
@@ -276,10 +279,6 @@ func (b *lineBuffer) Insert(p Point, text []byte) {
 }
 
 func (b *lineBuffer) Replace(r Range, text []byte) {
-	defer func() {
-		b.version++
-	}()
-
 	b.Delete(r)
 	if len(text) == 0 {
 		return
@@ -288,10 +287,6 @@ func (b *lineBuffer) Replace(r Range, text []byte) {
 }
 
 func (b *lineBuffer) Delete(r Range) {
-	defer func() {
-		b.version++
-	}()
-
 	if r.Start.Row == r.End.Row {
 		b.lines[r.Start.Row] = b.lines[r.Start.Row].CutEnd(r.Start.Col).Append(b.lines[r.Start.Row].CutStart(r.End.Col))
 	} else {

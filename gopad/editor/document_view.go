@@ -50,8 +50,8 @@ func zoneFileLineDiagnosticID(id int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
 }
 
-func newDocumentView(buff buffer.Buffer, mode file.Mode) (*DocumentView, error) {
-	f, err := file.NewDocumentWithBuffer(buff, mode)
+func newDocumentView(name string, buff buffer.Buffer, mode file.Mode) (*DocumentView, error) {
+	f, err := file.NewDocumentWithBuffer(name, buff, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ type DocumentView struct {
 }
 
 func (v *DocumentView) Name() string {
-	return v.file.Buffer.Name()
+	return v.file.Name
 }
 
 func (v *DocumentView) RelativeName(workspace string) string {
@@ -117,10 +117,6 @@ func (v *DocumentView) LanguageName() string {
 
 func (v *DocumentView) LineEnding() buffer.LineEnding {
 	return v.file.Buffer.LineEnding()
-}
-
-func (v *DocumentView) EncodingName() string {
-	return v.file.Buffer.EncodingName()
 }
 
 func (v *DocumentView) Focus() tea.Cmd {
@@ -239,7 +235,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 		v.file.SetInlayHint(msg.Version, msg.Hints)
 		return v, tea.Batch(cmds...)
 	case ls.RefreshInlayHintMsg:
-		cmds = append(cmds, ls.GetInlayHint(v.Name(), v.file.Buffer.Version(), v.file.Range()))
+		cmds = append(cmds, ls.GetInlayHint(v.Name(), v.file.Version(), v.file.Range()))
 		return v, tea.Batch(cmds...)
 	case ls.UpdateDeclarationsMsg:
 		if msg.Name != v.Name() {
@@ -390,7 +386,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					}
 					i, _ := strconv.Atoi(index)
 
-					if s := v.Selection(); s != nil && !s.Zero() {
+					if s := v.Selection(); s != nil && !s.IsEmpty() {
 						return v, tea.Batch(cmds...)
 					}
 
@@ -410,7 +406,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 
 					p := v.GetFileZoneCursorPos(msg, z)
 					v.SetCursor(p)
-					if s := v.Selection(); s == nil || s.Zero() {
+					if s := v.Selection(); s == nil || s.IsEmpty() {
 						v.ResetMark()
 					}
 					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
@@ -434,7 +430,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 						Row: row,
 						Col: -1,
 					})
-					if s := v.Selection(); s == nil || s.Zero() {
+					if s := v.Selection(); s == nil || s.IsEmpty() {
 						v.ResetMark()
 					}
 					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
@@ -645,9 +641,9 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.File.Save):
 				cmds = append(cmds, SaveFile(v.Name()))
 			case key.Matches(msg, config.Keys.Editor.Edit.Tab):
-				cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
+				//cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.RemoveTab):
-				cmds = append(cmds, v.file.RemoveTab(v.Cursor().Row))
+				//cmds = append(cmds, v.file.RemoveTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.Newline):
 				v.ResetMark()
 				cmds = append(cmds,
@@ -670,86 +666,37 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				} else {
 					cmds = append(cmds, v.file.DeleteBefore(v.Cursor()))
 				}
-				//	c := v.Cursor()
-				//	toDelete := v.file.Buffer.Line(c.Row).RuneBytes(c.Col - 1)
-				//	cmds = append(cmds, v.file.DeleteBefore(c, 1))
-				//	if lang := v.file.Language; lang != nil && len(lang.Config.AutoPairs) > 0 {
-				//		row, col = f.Cursor()
-				//
-				//		fileTree := f.Tree()
-				//		if fileTree != nil {
-				//			tree := fileTree.FindTree(buffer.Point{
-				//				Row: row,
-				//				Col: col,
-				//			})
-				//			if tree != nil {
-				//				node := tree.Tree.RootNode().DescendantForRange(sitter.Point{
-				//					Row:    uint32(row),
-				//					Column: uint32(col),
-				//				},
-				//					sitter.Point{
-				//						Row:    uint32(row),
-				//						Column: uint32(col),
-				//					},
-				//				)
-				//				if node != nil && node.Type() == "string" {
-				//					log.Println("IN STRING")
-				//				}
-				//			}
-				//		}
-				//
-				//		for _, pair := range lang.Config.AutoPairs {
-				//			if string(toDelete) != pair.Open {
-				//				continue
-				//			}
-				//			closeWidth := ansi.StringWidth(pair.Close)
-				//			behindCursor := f.file.Buffer.BytesRange(
-				//				buffer.Point{
-				//					Row: row,
-				//					Col: col,
-				//				},
-				//				buffer.Point{
-				//					Row: row,
-				//					Col: col + closeWidth,
-				//				},
-				//			)
-				//			if string(behindCursor) == pair.Close {
-				//				cmds = append(cmds, f.Replace(row, col, row, col+closeWidth, nil))
-				//				break
-				//			}
-				//		}
-				//	}
 			case key.Matches(msg, config.Keys.Editor.Edit.DuplicateLine):
 				s := v.Selection()
 				if s != nil {
 					cmds = append(cmds, v.file.Insert(v.Cursor(), v.SelectionBytes()))
 					v.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
+					//cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordLeft):
 				s := v.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.DeleteRange(*s))
+					//cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
+					//cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordRight):
 				s := v.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.DeleteRange(*s))
+					//cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
+					//cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLine):
 				s := v.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.DeleteRange(*s))
+					//cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
+					//cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				// TODO: implement
