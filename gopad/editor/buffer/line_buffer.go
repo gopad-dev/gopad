@@ -186,6 +186,19 @@ func (b *lineBuffer) BytesRange(r Range) []byte {
 	return bs
 }
 
+func (b *lineBuffer) Rune(i int) rune {
+	for _, line := range b.lines {
+		if i < line.Len() {
+			return line.Rune(i)
+		}
+		if i == line.Len() {
+			return '\n'
+		}
+		i -= line.Len() + 1
+	}
+	return 0
+}
+
 // ByteIndex returns the byte index in the buffer for the rune index.
 func (b *lineBuffer) ByteIndex(i int) int {
 	var n int

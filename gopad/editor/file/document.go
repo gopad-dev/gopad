@@ -311,7 +311,7 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 	return d.Apply(transaction)
 }
 
-//func (d *Document) DuplicateLine(row int) tea.Cmd {
+// func (d *Document) DuplicateLine(row int) tea.Cmd {
 //	line := d.Buffer.Line(row)
 //	startIndex := d.Buffer.ByteIndex(buffer.Point{
 //		Row: row,
@@ -326,9 +326,9 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 //
-//func (d *Document) DeleteLine(row int) tea.Cmd {
+// func (d *Document) DeleteLine(row int) tea.Cmd {
 //	line := d.Buffer.Line(row)
 //	startIndex := d.Buffer.ByteIndex(buffer.Point{
 //		Row: row,
@@ -344,7 +344,7 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 //
 
 //
@@ -352,7 +352,7 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //
 
 //
-//func (d *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
+// func (d *Document) DeleteWordLeft(p buffer.Point) tea.Cmd {
 //	startPoint := d.NextWordLeft(p)
 //	startIndex := d.Buffer.ByteIndex(startPoint)
 //	endIndex := d.Buffer.ByteIndex(p)
@@ -368,9 +368,9 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 //
-//func (d *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
+// func (d *Document) DeleteWordRight(p buffer.Point) tea.Cmd {
 //	endPoint := d.NextWordRight(p)
 //	startIndex := d.Buffer.ByteIndex(p)
 //	endIndex := d.Buffer.ByteIndex(endPoint)
@@ -386,9 +386,9 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 //
-//func (d *Document) AddTab(row int) tea.Cmd {
+// func (d *Document) AddTab(row int) tea.Cmd {
 //	line := d.Buffer.Line(row)
 //	startIndex := d.Buffer.ByteIndex(buffer.Point{
 //		Row: row,
@@ -403,9 +403,9 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 //
-//func (d *Document) RemoveTab(row int) tea.Cmd {
+// func (d *Document) RemoveTab(row int) tea.Cmd {
 //	line := d.Buffer.Line(row)
 //	startIndex := d.Buffer.ByteIndex(buffer.Point{
 //		Row: row,
@@ -420,7 +420,7 @@ func (d *Document) DeleteAfter(p buffer.Point) tea.Cmd {
 //		Text:       d.Buffer.Bytes(),
 //		Version:    d.Buffer.Version(),
 //	})
-//}
+// }
 
 func (d *Document) NextWordLeft(p buffer.Point) buffer.Point {
 	if p.Col == 0 {

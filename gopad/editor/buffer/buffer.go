@@ -63,6 +63,8 @@ type Buffer interface {
 	Bytes() []byte
 	// BytesRange returns the buffer as a byte slice from the given range. This uses \n as the line ending.
 	BytesRange(r Range) []byte
+	// Rune returns the rune at the given index.
+	Rune(i int) rune
 
 	// ByteIndex returns the byte index in the buffer for the rune index.
 	ByteIndex(i int) int

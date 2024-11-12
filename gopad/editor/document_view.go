@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"iter"
 	"log"
 	"strconv"
 	"strings"
@@ -641,9 +642,9 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.File.Save):
 				cmds = append(cmds, SaveFile(v.Name()))
 			case key.Matches(msg, config.Keys.Editor.Edit.Tab):
-				//cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
+				// cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.RemoveTab):
-				//cmds = append(cmds, v.file.RemoveTab(v.Cursor().Row))
+				// cmds = append(cmds, v.file.RemoveTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.Newline):
 				v.ResetMark()
 				cmds = append(cmds,
@@ -672,31 +673,31 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					cmds = append(cmds, v.file.Insert(v.Cursor(), v.SelectionBytes()))
 					v.ResetMark()
 				} else {
-					//cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
+					// cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordLeft):
 				s := v.Selection()
 				if s != nil {
-					//cmds = append(cmds, v.file.DeleteRange(*s))
+					// cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					//cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
+					// cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordRight):
 				s := v.Selection()
 				if s != nil {
-					//cmds = append(cmds, v.file.DeleteRange(*s))
+					// cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					//cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
+					// cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLine):
 				s := v.Selection()
 				if s != nil {
-					//cmds = append(cmds, v.file.DeleteRange(*s))
+					// cmds = append(cmds, v.file.DeleteRange(*s))
 					v.ResetMark()
 				} else {
-					//cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
+					// cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				// TODO: implement
@@ -746,6 +747,17 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	return v, tea.Batch(cmds...)
 }
 
+func getStyle(f func() (file.CharStyle, bool)) file.CharStyle {
+	style, ok := f()
+	if !ok {
+		return file.CharStyle{
+			Style: lipgloss.NewStyle(),
+			End:   0,
+		}
+	}
+	return style
+}
+
 func (v DocumentView) View(width int, height int, border bool, debug bool) string {
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
@@ -756,195 +768,72 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 	prefixWidth := lipgloss.Width(strconv.Itoa(v.file.Buffer.LinesLen()))
 	width = max(width-prefixWidth-styles.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
 
-	// debug takes up 4 lines
+	// debug takes up 3 lines
 	if debug {
-		height = max(height-4, 0)
+		height = max(height-3, 0)
 	}
 
 	v.refreshCursorViewOffset(width-2, height)
 	c := v.Cursor()
 	offset := v.cursor.offset
-	realCursorRow := c.Row - offset.Row
-	realCursorCol := c.Col - offset.Col
-
 	selection := v.Selection()
 
-	var editorCode string
-	positions := make([][]buffer.Point, max(height, 0))
-	for i := range height {
-		ln := i + offset.Row
+	nextStyle, stop := iter.Pull(v.file.Syntax.HighlightIter(v.file.Buffer, nil))
+	defer stop()
+	charStyle := getStyle(nextStyle)
 
-		var linePositions []buffer.Point
-
-		codeLineStyle := styles.FileView.LineStyle
-		codePrefixStyle := styles.FileView.LinePrefixStyle
-		codeLineCharStyle := styles.FileView.LineCharStyle
-		if ln == c.Row {
-			codeLineStyle = styles.FileView.CurrentLineStyle
-			codePrefixStyle = styles.FileView.CurrentLinePrefixStyle
-			codeLineCharStyle = styles.FileView.CurrentLineCharStyle
+	var (
+		editorCode string
+		lineCode   string
+	)
+	r := buffer.NewReader(v.file.Buffer, offset)
+	for {
+		char, ok := r.Next()
+		if !ok {
+			break
 		}
 
-		if ln >= v.file.Buffer.LinesLen() {
-			editorCode += borderStyle(zone.Mark(zoneFileLineEmptyID(ln), codeLineStyle.Render(codePrefixStyle.Render(strings.Repeat(" ", width))))) + "\n"
+		if char.Point.Row == height {
+			break
+		}
+
+		if char.Point.Col-offset.Col < width || char.Point.Row < offset.Row {
 			continue
 		}
 
-		lineDiagnostic, lineDiagnosticIndex := v.file.HighestLineDiagnostic(ln)
+		if char.Rune == '\n' {
+			editorCode += borderStyle(lineCode) + "\n"
+			lineCode = ""
+		}
 
-		var prefix string
-		if lineDiagnostic.Severity > 0 {
-			prefix = zone.Mark(zoneFileLineDiagnosticID(lineDiagnosticIndex), lineDiagnostic.Severity.Icon().Render())
+		if char.Index >= charStyle.End {
+			for {
+				charStyle = getStyle(nextStyle)
+				if char.Index < charStyle.End {
+					break
+				}
+			}
+		}
+
+		inSelection := selection != nil && selection.Contains(char.Point)
+
+		var renderChar string
+		if char.Point.Row == c.Row && char.Point.Col == c.Col {
+			renderChar = v.cursor.cursor.View(string(char.Rune), charStyle.Style)
+		} else if inSelection {
+			renderChar = styles.FileView.SelectionStyle.Inherit(charStyle.Style).Render(string(char.Rune))
 		} else {
-			prefix = " "
+			renderChar = charStyle.Style.Render(string(char.Rune))
 		}
 
-		prefixLn := strconv.Itoa(ln + 1)
-		prefix += zone.Mark(zoneFileLineNumberID(ln), codePrefixStyle.Render(strings.Repeat(" ", prefixWidth-lipgloss.Width(prefixLn))+prefixLn))
-
-		line := v.file.Buffer.Line(ln)
-		if line.Len() < offset.Col {
-			editorCode += borderStyle(codeLineStyle.Render(prefix)) + "\n"
-			continue
-		}
-
-		chars := line.RuneStrings()
-		var colOffset int
-		var codeLine []byte
-		// always draw one character off the screen to ensure the cursor is visible
-		for ii := range width - prefixWidth + 1 {
-			col := ii + offset.Col
-
-			if col <= line.Len() {
-				for len(linePositions) <= ii+colOffset {
-					linePositions = append(linePositions, buffer.Point{Row: ln, Col: col})
-				}
-			}
-
-			inSelection := selection != nil && selection.Contains(buffer.Point{Row: ln, Col: col})
-
-			var char string
-			if col > len(chars) {
-				codeLine = append(codeLine, codeLineCharStyle.Render(" ")...)
-				break
-			} else if col == len(chars) {
-				char = " "
-			} else {
-				char = chars[col]
-			}
-
-			// Replace tabs with spaces
-			if char == "\t" {
-				char = " "
-			}
-
-			// style := v.file.HighestMatchStyle(codeLineCharStyle, ln, col)
-			style := codeLineCharStyle
-			style = v.file.HighestLineColDiagnosticStyle(style, ln, col)
-
-			if ln == c.Row && ii == realCursorCol {
-				char = v.cursor.cursor.View(char, style)
-			} else if inSelection {
-				char = styles.FileView.SelectionStyle.Inherit(style).Render(char)
-			} else {
-				char = style.Render(char)
-			}
-			codeLine = append(codeLine, char...)
-
-			paddingStyle := codeLineCharStyle
-			labelStyle := config.Theme.UI.FileView.InlayHintStyle
-			if inSelection {
-				paddingStyle = styles.FileView.SelectionStyle.Inherit(paddingStyle)
-				labelStyle = styles.FileView.SelectionStyle.Inherit(labelStyle)
-			}
-			for _, hint := range v.file.InlayHintsForLineCol(ln, col+1) {
-				var label string
-				if hint.PaddingLeft {
-					label += paddingStyle.Render(" ")
-				}
-				label += labelStyle.Render(hint.Label)
-				if hint.PaddingRight {
-					label += paddingStyle.Render(" ")
-				}
-				codeLine = append(codeLine, label...)
-				colOffset += lipgloss.Width(label)
-			}
-		}
-
-		positions[i] = linePositions
-
-		if lineDiagnostic.Severity > 0 && lineDiagnostic.Range.Start.Row == ln {
-			lineWidth := ansi.StringWidth(string(codeLine))
-			if lineWidth < width {
-				diagnosticLine := zone.Mark(zoneFileDiagnosticID(lineDiagnosticIndex), codeLineCharStyle.Render(lineDiagnostic.ShortView(codeLineStyle)))
-				codeLine = append(codeLine, diagnosticLine...)
-			}
-		}
-
-		lineWidth := ansi.StringWidth(string(codeLine))
-		if lineWidth < width {
-			codeLine = append(codeLine, codeLineCharStyle.Render(strings.Repeat(" ", width-lineWidth))...)
-		}
-
-		editorCodeLine := zone.Mark(zoneFileLineID(ln), string(codeLine))
-
-		editorCode += borderStyle(codeLineStyle.Render(prefix+ansi.Truncate(editorCodeLine, width, ""))) + "\n"
+		lineCode += renderChar
 	}
 
-	v.file.Positions = positions
+	if lineCode != "" {
+		editorCode += borderStyle(lineCode) + "\n"
+	}
 
 	editorCode = strings.TrimSuffix(editorCode, "\n")
-
-	if v.showCurrentDiagnostic {
-		diagnostic := v.file.HighestLineColDiagnostic(c.Row, realCursorCol)
-		if diagnostic.Severity > 0 {
-			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
-				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
-				overlay.WithMarginY(realCursorRow+1),
-			)
-		} else {
-			v.HideCurrentDiagnostic()
-		}
-	} else if v.file.Autocomplete.Visible() {
-		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, v.file.Autocomplete.View(width, height), editorCode,
-			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
-			overlay.WithMarginY(realCursorRow+1),
-		)
-	}
-
-	if debug {
-		// matches := v.file.MatchesForLineCol(c.Row, realCursorCol)
-		// slices.Reverse(matches)
-		// var currentMatches []string
-		// for _, match := range matches {
-		//	var currentRef string
-		//	if match.ReferenceType != "" {
-		//		currentRef = fmt.Sprintf(" ref: %s", match.ReferenceType)
-		//	}
-		//	currentMatches = append(currentMatches, fmt.Sprintf("%s (%s: [%d, %d] - [%d, %d]%s)", match.Type, match.Source, match.Range.Start.Row, match.Range.Start.Col, match.Range.End.Row, match.Range.End.Col, currentRef))
-		// }
-		// editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Matches: %s", strings.Join(currentMatches, ", ")))
-
-		diagnostics := v.file.DiagnosticsForLineCol(c.Row, realCursorCol)
-		var currentDiagnostics []string
-		for _, diag := range diagnostics {
-			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d])", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
-		}
-		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Diagnostics: %s", strings.Join(currentDiagnostics, ", ")))
-
-		hints := v.file.InlayHintsForLine(c.Row)
-		var currentHints []string
-		for _, hint := range hints {
-			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d])", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
-		}
-		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", ")))
-
-		var currentDefinitions []string
-		for _, definitions := range v.file.Definitions {
-			currentDefinitions = append(currentDefinitions, fmt.Sprintf("%s ([%d, %d] - [%d, %d])", definitions.Name, definitions.Range.Start.Row, definitions.Range.Start.Col, definitions.Range.End.Row, definitions.Range.End.Col))
-		}
-		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Definitions: %s", strings.Join(currentDefinitions, ", ")))
-	}
 
 	return editorCode
 }
