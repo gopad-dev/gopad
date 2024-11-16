@@ -15,7 +15,7 @@ features = ['inlay_hints', 'diagnostics', 'completion', 'go_to_definition']
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
 
-[language_servers.gopls.config.'ui.hints']
+[language_servers.gopls.config.hints]
 assignVariableTypes = true
 compositeLiteralFields = true
 compositeLiteralTypes = true
@@ -45,6 +45,10 @@ args = ['--stdio']
 file_types = ['.json', '.jsonc']
 files = []
 
+[language_servers.json.config]
+provideFormatter = true
+json = { validate = { enable = true } }
+
 [language_servers.html]
 command = 'vscode-html-language-server'
 args = ['--stdio']
@@ -62,3 +66,16 @@ command = 'taplo'
 args = ['language_servers', 'stdio']
 file_types = ['.toml']
 files = []
+
+[language_servers.ts-query]
+command = 'ts_query_ls'
+args = []
+file_types = ['.scm']
+files = []
+roots = []
+features = ['diagnostics']
+
+[language_servers.ts-query.config.settings]
+'parser_install_directories' = ['config/grammars']
+'parser_aliases' = {}
+'language_retrieval_patterns' = [ 'config/queries/([^/]+)/[^/]+\\.scm$' ]

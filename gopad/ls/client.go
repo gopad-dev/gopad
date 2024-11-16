@@ -36,9 +36,10 @@ func New(version string, cfg config.LanguageServerConfigs, w io.Writer) *Client 
 }
 
 type Client struct {
-	registry map[string]ServerConfig
-	servers  []*Server
-	p        *tea.Program
+	registry  map[string]ServerConfig
+	servers   []*Server
+	p         *tea.Program
+	workspace string
 }
 
 func (l *Client) SetProgram(p *tea.Program) {
@@ -82,9 +83,30 @@ func (l *Client) Servers() []ServerConfig {
 func (l *Client) SupportedServers(name string) []*Server {
 	var servers []*Server
 	for _, server := range l.servers {
-		if server.SupportedFile(name) {
+		if server.cfg.SupportsFile(name) {
 			servers = append(servers, server)
 		}
+	}
+
+	for _, serverConfig := range l.registry {
+		if !serverConfig.Cfg.SupportsFile(name) {
+			continue
+		}
+
+		// Check if the server is already running
+		if slices.ContainsFunc(l.servers, func(server *Server) bool {
+			return server.Name() == serverConfig.Name
+		}) {
+			continue
+		}
+
+		client, err := serverConfig.New(l.workspace)
+		if err != nil {
+			log.Printf("failed to create client for %s: %v", serverConfig.Name, err)
+			continue
+		}
+
+		servers = append(servers, client)
 	}
 
 	slices.SortFunc(servers, func(a, b *Server) int {
@@ -141,8 +163,9 @@ func (l *Client) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 	case WorkspaceOpenedMsg:
+		l.workspace = msg.Workspace
 		for _, serverConfig := range l.registry {
-			if !serverConfig.Supported(msg.Workspace) {
+			if !serverConfig.Cfg.SupportsWorkspace(msg.Workspace) {
 				continue
 			}
 
@@ -155,6 +178,7 @@ func (l *Client) Update(msg tea.Msg) tea.Cmd {
 			l.servers = append(l.servers, client)
 		}
 	case WorkspaceClosedMsg:
+		l.workspace = ""
 		for i := len(l.servers) - 1; i >= 0; i-- {
 			server := l.servers[i]
 			if server.workspace != msg.Workspace {

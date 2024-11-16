@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"fmt"
+	"iter"
 	"log"
 	"os"
 	"path/filepath"
@@ -482,6 +483,25 @@ func (d *Document) Rename(name string) error {
 // TODO: implement
 func (d *Document) Delete() error {
 	return nil
+}
+
+func (d *Document) HighlightIter(r *ByteRange) iter.Seq[CharStyle] {
+	var hIter iter.Seq2[HighlightEvent, error]
+
+	if d.Syntax == nil {
+		log.Println("no syntax available, highlighting entire buffer")
+		hIter = func(yield func(HighlightEvent, error) bool) {
+			yield(HighlightEventSource{
+				StartByte: 0,
+				EndByte:   uint(d.Buffer.BytesLen()),
+			}, nil)
+		}
+	} else {
+		log.Println("highlighting with syntax")
+		hIter = d.Syntax.Layers.HighlightIter(context.Background(), d.Buffer.Bytes(), r)
+	}
+
+	return newStyleIter(hIter, d.Buffer)
 }
 
 type CharStyle struct {

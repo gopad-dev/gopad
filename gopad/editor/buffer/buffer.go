@@ -75,6 +75,8 @@ type Buffer interface {
 
 	// Len returns the rune length of the buffer. The actual byte length may be different due to line endings & encoding.
 	Len() int
+	// BytesLen returns the byte length of the buffer.
+	BytesLen() int
 	// LinesLen returns the number of lines in the buffer.
 	LinesLen() int
 	// Lines returns the lines in the buffer.

@@ -244,6 +244,7 @@ main:
 
 		// If none of the layers have any more highlight boundaries, terminate.
 		if len(h.Layers) == 0 {
+			log.Println("no more highlight boundaries")
 			if h.ByteOffset < uint(len(h.Source)) {
 				event := HighlightEventSource{
 					StartByte: h.ByteOffset,
@@ -254,6 +255,7 @@ main:
 			}
 			return nil, nil
 		}
+		log.Println("LAYER", h.Layers[0])
 
 		// Get the next capture from whichever layer has the earliest highlight boundary.
 		var r tree_sitter.Range
@@ -675,6 +677,7 @@ type styleIterator struct {
 }
 
 func (i *styleIterator) highlight(captureName string, languageName string) lipgloss.Style {
+	log.Println("looking for style for", captureName, languageName)
 	var style lipgloss.Style
 
 	for {
@@ -695,6 +698,7 @@ func (i *styleIterator) highlight(captureName string, languageName string) lipgl
 		captureName = captureName[:lastDot]
 	}
 
+	log.Println("no style in theme for", captureName, languageName)
 	return style
 }
 
@@ -705,6 +709,7 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 				log.Printf("error getting highlight event: %v", err)
 				continue
 			}
+			log.Println("event", event)
 
 			switch event := event.(type) {
 			case HighlightEventStart:
@@ -717,7 +722,7 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 			case HighlightEventSource:
 				var style lipgloss.Style
 				for _, h := range i.activeHighlights {
-					style = i.textStyle.Inherit(i.highlight(h.captureName, h.languageName))
+					style = i.highlight(h.captureName, h.languageName)
 				}
 				end := i.buf.ByteIndex(int(event.EndByte))
 				yield(CharStyle{

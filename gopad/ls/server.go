@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"time"
 
@@ -37,16 +35,6 @@ func (c ServerConfig) Description() string {
 func (c ServerConfig) New(workspace string) (*Server, error) {
 	log.Println("starting language server", c.Name)
 	return c.new(c.Name, c.Cfg, workspace)
-}
-
-func (c ServerConfig) Supported(workspace string) bool {
-	for _, root := range c.Cfg.Roots {
-		if _, err := os.Stat(filepath.Join(workspace, root)); err == nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 type SendFunc func(msg tea.Cmd)
@@ -83,10 +71,6 @@ type Server struct {
 
 func (c *Server) Name() string {
 	return c.name
-}
-
-func (c *Server) SupportedFile(name string) bool {
-	return slices.Contains(c.cfg.FileTypes, filepath.Ext(name)) || slices.Contains(c.cfg.Files, filepath.Base(name))
 }
 
 func (c *Server) start() error {

@@ -248,6 +248,14 @@ func (b *lineBuffer) Len() int {
 	return n
 }
 
+func (b *lineBuffer) BytesLen() int {
+	var n int
+	for _, line := range b.lines {
+		n += line.BytesLen() + 1
+	}
+	return n
+}
+
 func (b *lineBuffer) LinesLen() int {
 	return len(b.lines)
 }

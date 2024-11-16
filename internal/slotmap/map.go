@@ -18,6 +18,10 @@ type Map[V any] struct {
 	m map[LayerID]V
 }
 
+func (m *Map[V]) Map() map[LayerID]V {
+	return m.m
+}
+
 func (m *Map[V]) Iter() iter.Seq2[LayerID, V] {
 	return func(yield func(LayerID, V) bool) {
 		for k, v := range m.m {

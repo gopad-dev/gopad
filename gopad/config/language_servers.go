@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 )
 
@@ -40,6 +42,20 @@ type LanguageServerConfig struct {
 	Files     []string                `toml:"files"`
 	Roots     []string                `toml:"roots"`
 	Features  []LanguageServerFeature `toml:"features"`
+}
+
+func (c LanguageServerConfig) SupportsWorkspace(workspace string) bool {
+	for _, root := range c.Roots {
+		if _, err := os.Stat(filepath.Join(workspace, root)); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c LanguageServerConfig) SupportsFile(name string) bool {
+	return slices.Contains(c.FileTypes, filepath.Ext(name)) || slices.Contains(c.Files, filepath.Base(name))
 }
 
 type LanguageServerFeature string

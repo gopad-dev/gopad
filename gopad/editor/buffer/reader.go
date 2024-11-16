@@ -20,9 +20,9 @@ func (r *Reader) Next() (Char, bool) {
 	if r.pos >= r.len {
 		return Char{}, false
 	}
-	defer func() {
-		r.pos++
-	}()
+
+	p := r.point
+	i := r.pos
 
 	runee := r.buf.Rune(r.pos)
 	switch runee {
@@ -32,11 +32,12 @@ func (r *Reader) Next() (Char, bool) {
 	default:
 		r.point.Col++
 	}
+	r.pos++
 
 	return Char{
 		Rune:  runee,
-		Point: r.point,
-		Index: r.pos,
+		Point: p,
+		Index: i,
 	}, true
 }
 

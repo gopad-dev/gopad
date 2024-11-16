@@ -94,10 +94,6 @@ func (s *Syntax) Update(ctx context.Context, newRev uint64, newBuf buffer.Buffer
 	return s.Parse(ctx, newRev, newBuf.Bytes(), []SyntaxEdit{edits})
 }
 
-func (s *Syntax) HighlightIter(buf buffer.Buffer, r *ByteRange) iter.Seq[CharStyle] {
-	return newStyleIter(s.Layers.HighlightIter(context.Background(), buf.Bytes(), r), buf)
-}
-
 type StyleSpan struct {
 	Range tree_sitter.Range
 	Style lipgloss.Style
@@ -247,8 +243,8 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 	if cursor == nil {
 		cursor = tree_sitter.NewQueryCursor()
 	}
-	cursor.SetByteRange(0, ^uint(0))
-	cursor.SetMatchLimit(TreeSitterMatchLimit)
+	//cursor.SetByteRange(0, ^uint(0))
+	//cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 	touched := map[slotmap.LayerID]struct{}{}
 
@@ -395,7 +391,7 @@ func (s *SyntaxLayers) Tree() *tree_sitter.Tree {
 
 func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *ByteRange) iter.Seq2[HighlightEvent, error] {
 	var layers []*highlightIterLayer
-	for _, layer := range s.layers.Iter() {
+	for _, layer := range s.layers.Map() {
 		// Reuse a cursor from the pool if available.
 		cursor := s.parser.popCursor()
 		if cursor == nil {
@@ -408,8 +404,8 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 				EndByte:   ^uint(0),
 			}
 		}
-		cursor.SetByteRange(r.StartByte, r.EndByte)
-		cursor.SetMatchLimit(TreeSitterMatchLimit)
+		//cursor.SetByteRange(r.StartByte, r.EndByte)
+		//cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 		captures := make([]queryCapture, 0)
 		queryCaptures := cursor.Captures(layer.Config.Query, layer.Tree.RootNode(), source)

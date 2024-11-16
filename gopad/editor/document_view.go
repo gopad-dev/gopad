@@ -6,15 +6,15 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
 
-	"go.gopad.dev/gopad/gopad/editor/buffer"
-
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/key"
@@ -750,15 +750,20 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 func getStyle(f func() (file.CharStyle, bool)) file.CharStyle {
 	style, ok := f()
 	if !ok {
+		log.Println("no more styles")
 		return file.CharStyle{
 			Style: lipgloss.NewStyle(),
 			End:   0,
 		}
 	}
+	log.Println("found style", style.Style)
 	return style
 }
 
 func (v DocumentView) View(width int, height int, border bool, debug bool) string {
+	now := time.Now()
+	defer log.Println("DocumentView.View took", time.Since(now))
+
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -768,18 +773,13 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 	prefixWidth := lipgloss.Width(strconv.Itoa(v.file.Buffer.LinesLen()))
 	width = max(width-prefixWidth-styles.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
 
-	// debug takes up 3 lines
-	if debug {
-		height = max(height-3, 0)
-	}
-
 	v.refreshCursorViewOffset(width-2, height)
 	c := v.Cursor()
 	offset := v.cursor.offset
 	selection := v.Selection()
 
-	nextStyle, stop := iter.Pull(v.file.Syntax.HighlightIter(v.file.Buffer, nil))
-	defer stop()
+	nextStyle, _ := iter.Pull(v.file.HighlightIter(nil))
+	//defer stop()
 	charStyle := getStyle(nextStyle)
 
 	var (
@@ -797,14 +797,15 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 			break
 		}
 
-		if char.Point.Col-offset.Col < width || char.Point.Row < offset.Row {
-			continue
-		}
-
 		if char.Rune == '\n' {
 			editorCode += borderStyle(lineCode) + "\n"
 			lineCode = ""
+			continue
 		}
+
+		//if char.Point.Col-offset.Col < width || char.Point.Row < offset.Row {
+		//	continue
+		//}
 
 		if char.Index >= charStyle.End {
 			for {
