@@ -199,13 +199,24 @@ func (b *lineBuffer) Rune(i int) rune {
 	return 0
 }
 
-// ByteIndex returns the byte index in the buffer for the rune index.
 func (b *lineBuffer) ByteIndex(i int) int {
 	var n int
 	for _, line := range b.lines {
-		byteLen := line.BytesLen()
+		runeLen := line.Len() + 1
+		if n+runeLen >= i {
+			return n + line.ByteIndex(i-n)
+		}
+		n += runeLen
+	}
+	return n
+}
+
+func (b *lineBuffer) RuneIndex(i int) int {
+	var n int
+	for _, line := range b.lines {
+		byteLen := len(line.Bytes())
 		if n+byteLen >= i {
-			return n + line.Index(i-n)
+			return n + line.RuneIndex(i-n)
 		}
 		n += byteLen + 1
 	}

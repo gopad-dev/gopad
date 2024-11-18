@@ -66,8 +66,10 @@ type Buffer interface {
 	// Rune returns the rune at the given index.
 	Rune(i int) rune
 
-	// ByteIndex returns the byte index in the buffer for the rune index.
+	// ByteIndex converts the rune index to a byte index.
 	ByteIndex(i int) int
+	// RuneIndex converts the byte index to a rune index.
+	RuneIndex(i int) int
 	// ByteIndexByPoint returns the byte index in the buffer for the given point.
 	ByteIndexByPoint(p Point) int
 	// Position returns the point for the given byte index.
@@ -103,8 +105,10 @@ type Line interface {
 	Len() int
 	// BytesLen returns the byte length of the line.
 	BytesLen() int
-	// Index returns the byte index in the line for the given rune index.
-	Index(i int) int
+	// ByteIndex converts the rune index to a byte index.
+	ByteIndex(i int) int
+	// RuneIndex converts the byte index to a rune index.
+	RuneIndex(i int) int
 
 	// Rune returns the rune at the given index.
 	Rune(i int) rune

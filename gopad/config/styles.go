@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"image/color"
 
 	"github.com/charmbracelet/lipgloss/v2"
@@ -16,6 +17,41 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
+
+func NewCodeStyles(styles map[string]lipgloss.Style) *CodeStyles {
+	var scopes []string
+
+	for key := range styles {
+		scopes = append(scopes, key)
+	}
+
+	return &CodeStyles{
+		styles: styles,
+		scopes: scopes,
+	}
+}
+
+type CodeStyles struct {
+	styles map[string]lipgloss.Style
+	scopes []string
+}
+
+func (t *CodeStyles) Highlight(i int, languageName string) lipgloss.Style {
+	scope := t.scopes[i]
+	style, ok := t.styles[fmt.Sprintf("%s.%s", scope, languageName)]
+	if ok {
+		return style
+	}
+	return t.styles[scope]
+}
+
+func (t *CodeStyles) Scope(i int) string {
+	return t.scopes[i]
+}
+
+func (t *CodeStyles) Scopes() []string {
+	return t.scopes
+}
 
 type ThemeStyles struct {
 	Name       string

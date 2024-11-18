@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"iter"
 	"log"
 	"slices"
@@ -20,7 +21,7 @@ const (
 	TreeSitterMatchLimit = 256
 )
 
-var injectionCallback = func(languageName string) *HighlightConfig {
+var injectionCallback = func(languageName string) *HighlightConfiguration {
 	language := GetLanguage(languageName)
 	if language == nil || language.Grammar == nil {
 		return nil
@@ -50,16 +51,22 @@ type ByteRange struct {
 	EndByte   uint
 }
 
-func NewSyntax(language *Language, layers *SyntaxLayers) (*Syntax, error) {
-	layers, err := NewSyntaxLayers(nil, language.Grammar.Highlight)
+func NewSyntax(language *Language, source []byte) (*Syntax, error) {
+	layers, err := NewSyntaxLayers(source, language.Grammar.Highlight)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating syntax layers: %w", err)
 	}
 
-	return &Syntax{
+	syntax := &Syntax{
 		Language: language,
 		Layers:   layers,
-	}, nil
+	}
+
+	if err = syntax.Parse(context.Background(), 0, source, nil); err != nil {
+		return nil, fmt.Errorf("error parsing syntax: %w", err)
+	}
+
+	return syntax, nil
 }
 
 type Syntax struct {
@@ -125,7 +132,7 @@ func (p *parser) popCursor() *tree_sitter.QueryCursor {
 	return cursor
 }
 
-func NewSyntaxLayers(source []byte, config HighlightConfig) (*SyntaxLayers, error) {
+func NewSyntaxLayers(source []byte, config HighlightConfiguration) (*SyntaxLayers, error) {
 	rootLayer := &LanguageLayer{
 		Config: config,
 		Tree:   nil,
@@ -171,7 +178,7 @@ type SyntaxLayers struct {
 }
 
 type injectionItem struct {
-	config HighlightConfig
+	config HighlightConfiguration
 	ranges []tree_sitter.Range
 }
 
@@ -243,8 +250,8 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 	if cursor == nil {
 		cursor = tree_sitter.NewQueryCursor()
 	}
-	//cursor.SetByteRange(0, ^uint(0))
-	//cursor.SetMatchLimit(TreeSitterMatchLimit)
+	// cursor.SetByteRange(0, ^uint(0))
+	// cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 	touched := map[slotmap.LayerID]struct{}{}
 
@@ -404,8 +411,9 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 				EndByte:   ^uint(0),
 			}
 		}
-		//cursor.SetByteRange(r.StartByte, r.EndByte)
-		//cursor.SetMatchLimit(TreeSitterMatchLimit)
+
+		// cursor.SetByteRange(r.StartByte, r.EndByte)
+		// cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 		captures := make([]queryCapture, 0)
 		queryCaptures := cursor.Captures(layer.Config.Query, layer.Tree.RootNode(), source)
@@ -451,6 +459,7 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 		Layers:             layers,
 		NextEvent:          nil,
 		LastHighlightRange: nil,
+		Syntax:             s,
 	}
 	hIter.sortLayers()
 
@@ -491,7 +500,7 @@ func pointSub(a tree_sitter.Point, b tree_sitter.Point) tree_sitter.Point {
 }
 
 type LanguageLayer struct {
-	Config HighlightConfig
+	Config HighlightConfiguration
 	Tree   *tree_sitter.Tree
 	Ranges []tree_sitter.Range
 	Depth  int

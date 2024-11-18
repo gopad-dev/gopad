@@ -5,6 +5,27 @@ import (
 	"unicode/utf8"
 )
 
+// ByteIndex converts the rune index to a byte index.
+func ByteIndex(s []byte, i int) int {
+	if i == 0 {
+		return 0
+	}
+
+	runeIndex := 0
+	for len(s) > 0 {
+		_, l := utf8.DecodeRune(s)
+		s = s[l:]
+
+		if runeIndex == i {
+			return l
+		}
+
+		runeIndex++
+	}
+	return -1
+}
+
+// RuneIndex converts the byte index to a rune index.
 func RuneIndex(s []byte, i int) int {
 	if i == 0 {
 		return 0

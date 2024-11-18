@@ -171,7 +171,7 @@
 
 "func" @keyword.function
 
-"return" @keyword.return
+"return" @keyword.control.return
 
 [
   "import"
@@ -183,9 +183,9 @@
   "case"
   "switch"
   "if"
-  ] @keyword.conditional
+  ] @keyword.control.conditional
 
-"for" @keyword.repeat
+"for" @keyword.control.repeat
 
 [
   "var"

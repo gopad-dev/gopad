@@ -25,6 +25,8 @@ const (
 	captureLocalScopeInherits       = "local.scope-inherits"
 )
 
+type Highlight uint
+
 type HighlightEvent interface {
 	highlightEvent()
 }
@@ -37,7 +39,7 @@ type HighlightEventSource struct {
 func (HighlightEventSource) highlightEvent() {}
 
 type HighlightEventStart struct {
-	CaptureName  string
+	Highlight    Highlight
 	LanguageName string
 }
 
@@ -47,8 +49,9 @@ type HighlightEventEnd struct{}
 
 func (HighlightEventEnd) highlightEvent() {}
 
-func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (*HighlightConfig, error) {
-	querySource := localsQuery
+func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (*HighlightConfiguration, error) {
+	var querySource []byte
+	querySource = append(querySource, localsQuery...)
 	highlightsQueryOffset := uint(len(querySource))
 	querySource = append(querySource, highlightsQuery...)
 
@@ -98,7 +101,6 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 		localScopeCaptureIndex        *uint
 	)
 
-	highlightIndices := make([]string, 0)
 	for i, captureName := range query.CaptureNames() {
 		ui := uint(i)
 		switch captureName {
@@ -114,12 +116,11 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 			localRefCaptureIndex = &ui
 		case "local.scope":
 			localScopeCaptureIndex = &ui
-		default:
-			highlightIndices = append(highlightIndices, captureName)
 		}
 	}
 
-	return &HighlightConfig{
+	highlightIndices := make([]*Highlight, len(query.CaptureNames()))
+	return &HighlightConfiguration{
 		Language:                      language,
 		LanguageName:                  languageName,
 		Query:                         query,
@@ -137,14 +138,14 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 	}, nil
 }
 
-type HighlightConfig struct {
+type HighlightConfiguration struct {
 	Language                      *tree_sitter.Language
 	LanguageName                  string
 	Query                         *tree_sitter.Query
 	InjectionsQuery               *tree_sitter.Query
 	CombinedInjectionsPatterns    []uint
 	HighlightsPatternIndex        uint
-	HighlightIndices              []string
+	HighlightIndices              []*Highlight
 	NonLocalVariablePatterns      []bool
 	InjectionContentCaptureIndex  *uint
 	InjectionLanguageCaptureIndex *uint
@@ -154,10 +155,49 @@ type HighlightConfig struct {
 	LocalRefCaptureIndex          *uint
 }
 
+func (c *HighlightConfiguration) Configure(recognizedNames []string) {
+	highlightIndices := make([]*Highlight, len(c.Query.CaptureNames()))
+	for i, captureName := range c.Query.CaptureNames() {
+		captureParts := strings.Split(captureName, ".")
+
+		var bestIndex *Highlight
+		var bestMatchLen int
+		for j, recognizedName := range recognizedNames {
+			var matchLen int
+			matches := true
+			for _, part := range strings.Split(recognizedName, ".") {
+				matchLen++
+				if !slices.Contains(captureParts, part) {
+					matches = false
+					break
+				}
+			}
+			if matches && matchLen > bestMatchLen {
+				index := Highlight(j)
+				bestIndex = &index
+				bestMatchLen = matchLen
+			}
+		}
+		highlightIndices[i] = bestIndex
+	}
+	c.HighlightIndices = highlightIndices
+}
+
+func (c *HighlightConfiguration) NonconformantCaptureNames(captureNames []string) []string {
+	var nonconformantNames []string
+	for _, name := range c.Query.CaptureNames() {
+		if !(strings.HasPrefix(name, "_") || strings.HasPrefix(name, "local") || slices.Contains(captureNames, name)) {
+			nonconformantNames = append(nonconformantNames, name)
+		}
+	}
+
+	return nonconformantNames
+}
+
 type LocalDef struct {
 	Name      string
 	Range     ByteRange
-	Highlight *string
+	Highlight *Highlight
 }
 
 type LocalScope struct {
@@ -166,7 +206,7 @@ type LocalScope struct {
 	LocalDefs []LocalDef
 }
 
-type InjectionCallback func(name string) *HighlightConfig
+type InjectionCallback func(name string) *HighlightConfiguration
 
 type iterRange struct {
 	Start uint
@@ -212,6 +252,10 @@ func (h *highlightIter) sortLayers() {
 						i++
 						continue
 					}
+				} else {
+					layer := h.Layers[i+1]
+					h.Layers = append(h.Layers[:i], h.Layers[i+1:]...)
+					h.Syntax.parser.pushCursor(layer.Cursor)
 				}
 				break
 			}
@@ -219,10 +263,11 @@ func (h *highlightIter) sortLayers() {
 				h.Layers = append(h.Layers[:i], append([]*highlightIterLayer{h.Layers[0]}, h.Layers[i:]...)...)
 			}
 			break
+		} else {
+			layer := h.Layers[0]
+			h.Layers = h.Layers[1:]
+			h.Syntax.parser.pushCursor(layer.Cursor)
 		}
-		layer := h.Layers[0]
-		h.Layers = h.Layers[1:]
-		h.Syntax.parser.pushCursor(layer.Cursor)
 	}
 }
 
@@ -244,18 +289,17 @@ main:
 
 		// If none of the layers have any more highlight boundaries, terminate.
 		if len(h.Layers) == 0 {
-			log.Println("no more highlight boundaries")
-			if h.ByteOffset < uint(len(h.Source)) {
-				event := HighlightEventSource{
+			sourceLen := uint(len(h.Source))
+			if h.ByteOffset < sourceLen {
+				result := HighlightEventSource{
 					StartByte: h.ByteOffset,
-					EndByte:   uint(len(h.Source)),
+					EndByte:   sourceLen,
 				}
-				h.ByteOffset = uint(len(h.Source))
-				return event, nil
+				h.ByteOffset = sourceLen
+				return result, nil
 			}
 			return nil, nil
 		}
-		log.Println("LAYER", h.Layers[0])
 
 		// Get the next capture from whichever layer has the earliest highlight boundary.
 		var r tree_sitter.Range
@@ -275,14 +319,14 @@ main:
 					return h.emitEvent(endByte, HighlightEventEnd{})
 				}
 			}
-		} else if len(layer.HighlightEndStack) > 0 {
+		} else {
 			// If there are no more captures, then emit any remaining highlight end events.
 			// And if there are none of those, then just advance to the end of the document.
-
-			endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
-			layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
-			return h.emitEvent(endByte, HighlightEventEnd{})
-		} else {
+			if len(layer.HighlightEndStack) > 0 {
+				endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
+				layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
+				return h.emitEvent(endByte, HighlightEventEnd{})
+			}
 			return h.emitEvent(uint(len(h.Source)), nil)
 		}
 
@@ -297,8 +341,8 @@ main:
 
 		// If this capture is for tracking local variables, then process the
 		// local variable info.
-		var referenceHighlight *string
-		var definitionHighlight *string
+		var referenceHighlight *Highlight
+		var definitionHighlight *Highlight
 		for match.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
@@ -346,7 +390,7 @@ main:
 				if len(h.Source) > int(r.StartByte) && len(h.Source) > int(r.EndByte) {
 					name := string(h.Source[r.StartByte:r.EndByte])
 					for _, scope := range slices.Backward(layer.ScopeStack) {
-						var highlight *string
+						var highlight *Highlight
 						for _, def := range slices.Backward(scope.LocalDefs) {
 							if def.Name == name && r.StartByte >= def.Range.EndByte {
 								highlight = def.Highlight
@@ -421,13 +465,13 @@ main:
 		// If this node represents a local definition, then store the current
 		// highlight value on the local scope entry representing this node.
 		if definitionHighlight != nil {
-			definitionHighlight = &currentHighlight
+			definitionHighlight = currentHighlight
 		}
 
 		// Emit a scope start event and push the node's end position to the stack.
 		highlight := referenceHighlight
 		if highlight == nil {
-			highlight = &currentHighlight
+			highlight = currentHighlight
 		}
 		if highlight != nil {
 			h.LastHighlightRange = &iterRange{
@@ -437,7 +481,7 @@ main:
 			}
 			layer.HighlightEndStack = append(layer.HighlightEndStack, r.EndByte)
 			return h.emitEvent(r.StartByte, HighlightEventStart{
-				CaptureName:  *highlight,
+				Highlight:    *highlight,
 				LanguageName: layer.Config.LanguageName,
 			})
 		}
@@ -544,7 +588,7 @@ func intersectRanges(parentRanges []tree_sitter.Range, nodes []tree_sitter.Node,
 	return results
 }
 
-func (c HighlightConfig) injectionForMatch(query *tree_sitter.Query, match *tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
+func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, match *tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
 	if c.InjectionContentCaptureIndex == nil || c.InjectionLanguageCaptureIndex == nil {
 		return "", nil, false
 	}
@@ -590,7 +634,7 @@ type queryCapture struct {
 type highlightIterLayer struct {
 	Tree              *tree_sitter.Tree
 	Cursor            *tree_sitter.QueryCursor
-	Config            HighlightConfig
+	Config            HighlightConfiguration
 	HighlightEndStack []uint
 	ScopeStack        []LocalScope
 	Captures          []queryCapture
@@ -651,55 +695,34 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	}
 }
 
-func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer) iter.Seq[CharStyle] {
+type CharStyle struct {
+	Style        lipgloss.Style
+	StyleName    string
+	LanguageName string
+	End          int
+}
+
+func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer, styles *config.CodeStyles) iter.Seq[CharStyle] {
 	iterator := styleIterator{
-		textStyle:        lipgloss.NewStyle().Foreground(config.Theme.Foreground).Background(config.Theme.Background),
 		activeHighlights: nil,
 		highlightIter:    highlightIter,
 		buf:              buf,
-		theme:            config.Theme.CodeStyles,
+		styles:           styles,
 	}
 
 	return iterator.iter()
 }
 
-type highlight struct {
-	captureName  string
+type highlightStyle struct {
+	highlight    Highlight
 	languageName string
 }
 
 type styleIterator struct {
-	textStyle        lipgloss.Style
-	activeHighlights []highlight
+	activeHighlights []highlightStyle
 	highlightIter    iter.Seq2[HighlightEvent, error]
 	buf              buffer.Buffer
-	theme            map[string]lipgloss.Style
-}
-
-func (i *styleIterator) highlight(captureName string, languageName string) lipgloss.Style {
-	log.Println("looking for style for", captureName, languageName)
-	var style lipgloss.Style
-
-	for {
-		codeStyle, ok := i.theme[fmt.Sprintf("%s.%s", captureName, languageName)]
-		if ok {
-			style = codeStyle
-			break
-		}
-		codeStyle, ok = i.theme[captureName]
-		if ok {
-			style = codeStyle
-			break
-		}
-		lastDot := strings.LastIndex(captureName, ".")
-		if lastDot == -1 {
-			break
-		}
-		captureName = captureName[:lastDot]
-	}
-
-	log.Println("no style in theme for", captureName, languageName)
-	return style
+	styles           *config.CodeStyles
 }
 
 func (i *styleIterator) iter() iter.Seq[CharStyle] {
@@ -709,26 +732,32 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 				log.Printf("error getting highlight event: %v", err)
 				continue
 			}
-			log.Println("event", event)
 
 			switch event := event.(type) {
 			case HighlightEventStart:
-				i.activeHighlights = append(i.activeHighlights, highlight{
-					captureName:  event.CaptureName,
+				i.activeHighlights = append(i.activeHighlights, highlightStyle{
+					highlight:    event.Highlight,
 					languageName: event.LanguageName,
 				})
 			case HighlightEventEnd:
 				i.activeHighlights = i.activeHighlights[:len(i.activeHighlights)-1]
 			case HighlightEventSource:
-				var style lipgloss.Style
-				for _, h := range i.activeHighlights {
-					style = i.highlight(h.captureName, h.languageName)
+				ch := CharStyle{
+					// End:       i.buf.RuneIndex(int(event.EndByte)), TODO: RuneIndex seems to be broken, investigate
+					End: int(event.EndByte),
 				}
-				end := i.buf.ByteIndex(int(event.EndByte))
-				yield(CharStyle{
-					Style: style,
-					End:   end,
-				})
+
+				if len(i.activeHighlights) > 0 {
+					highlight := i.activeHighlights[len(i.activeHighlights)-1]
+
+					ch.Style = i.styles.Highlight(int(highlight.highlight), highlight.languageName)
+					ch.StyleName = i.styles.Scope(int(highlight.highlight))
+					ch.LanguageName = highlight.languageName
+				}
+
+				if ok := yield(ch); !ok {
+					return
+				}
 			}
 		}
 	}

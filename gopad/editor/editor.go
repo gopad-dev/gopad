@@ -102,9 +102,9 @@ func (e Editor) Init() (Editor, tea.Cmd) {
 	}
 
 	if f := e.FileView(); f != nil {
-		cmds = append(cmds, e.Focus(ModelTypeFile))
+		cmds = append(cmds, Focus(ModelTypeFile))
 	} else {
-		cmds = append(cmds, e.Focus(ModelTypeFileTree))
+		cmds = append(cmds, Focus(ModelTypeFileTree))
 	}
 
 	return e, tea.Batch(cmds...)
@@ -214,8 +214,21 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	return tea.Batch(cmds...), nil
 }
 
+func (e *Editor) FormatFile(name string) (tea.Cmd, error) {
+	f := e.ViewByName(name)
+	if f == nil {
+		return nil, nil
+	}
+	cmd, err := f.file.Format()
+	if err != nil {
+		return cmd, err
+	}
+
+	return tea.Batch(cmd, ls.FileCreated(f.file.Name, f.file.Buffer.Bytes())), nil
+}
+
 func (e *Editor) SaveFile(name string) (tea.Cmd, error) {
-	f := e.FileByName(name)
+	f := e.ViewByName(name)
 	if f == nil {
 		return nil, nil
 	}
@@ -231,7 +244,7 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 		newName = filepath.Join(e.workspace, newName)
 		newName, _ = filepath.Abs(newName)
 	}
-	f := e.FileByName(oldName)
+	f := e.ViewByName(oldName)
 	if f == nil {
 		return nil, nil
 	}
@@ -293,11 +306,11 @@ func (e *Editor) FileView() *DocumentView {
 	return e.fileViews[e.activeFile]
 }
 
-func (e *Editor) SetFile(index int) {
+func (e *Editor) SetView(index int) {
 	e.activeFile = index
 }
 
-func (e *Editor) SetFileByName(name string) {
+func (e *Editor) SetViewByName(name string) {
 	for i, f := range e.fileViews {
 		if f.file.Name == name {
 			e.activeFile = i
@@ -306,7 +319,7 @@ func (e *Editor) SetFileByName(name string) {
 	}
 }
 
-func (e *Editor) FileByName(name string) *DocumentView {
+func (e *Editor) ViewByName(name string) *DocumentView {
 	for _, f := range e.fileViews {
 		if f.file.Name == name {
 			return f
@@ -335,6 +348,11 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	case SetLanguageActionMsg:
 		if v := e.FileView(); v != nil {
 			cmds = append(cmds, v.SetLanguage(msg.Language))
+		}
+		return e, tea.Batch(cmds...)
+	case FormatActionMsg:
+		if v := e.FileView(); v != nil {
+			cmds = append(cmds, FormatFile(v.Name()))
 		}
 		return e, tea.Batch(cmds...)
 	case SaveActionMsg:
@@ -383,7 +401,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 
 	case CutMsg:
 		if v := e.FileView(); v != nil {
-			//v.file.DeleteRange(buffer.Range(msg))
+			// v.file.DeleteRange(buffer.Range(msg))
 			v.ResetMark()
 		}
 		return e, tea.Batch(cmds...)
@@ -433,10 +451,21 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			notifications.Add(fmt.Sprintf("file %s opened", msg.Name)),
 			Focus(ModelTypeFile),
 		)
-		e.SetFileByName(msg.Name)
+		e.SetViewByName(msg.Name)
 		if msg.Position != nil {
 			e.FileView().SetCursor(*msg.Position)
 		}
+		return e, tea.Batch(cmds...)
+	case FormatFileMsg:
+		cmd, err := e.FormatFile(msg.Name)
+		if err != nil {
+			cmds = append(cmds, notifications.Add(fmt.Sprintf("error while formatting file %s: %s", msg.Name, err.Error())))
+			return e, tea.Batch(cmds...)
+		}
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+		cmds = append(cmds, notifications.Add(fmt.Sprintf("file %s formatted", msg.Name)))
 		return e, tea.Batch(cmds...)
 	case SaveFileMsg:
 		cmd, err := e.SaveFile(msg.Name)
@@ -462,7 +491,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			notifications.Add(fmt.Sprintf("file %s created", msg.Name)),
 			Focus(ModelTypeFile),
 		)
-		e.SetFileByName(msg.Name)
+		e.SetViewByName(msg.Name)
 		return e, tea.Batch(cmds...)
 	case RenameFileMsg:
 		cmd, err := e.RenameFile(msg.OldName, msg.NewName)
@@ -524,7 +553,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, Focus(ModelTypeFile))
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				e.SetFile(i)
+				e.SetView(i)
 				return e, tea.Batch(cmds...)
 			case mouse.MatchesZone(msg, z, tea.MouseRight):
 				// TODO: open context menu?
@@ -591,6 +620,30 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		case key.Matches(msg, config.Keys.Editor.ToggleTreeSitterDebug):
 			e.ToggleTreeSitterDebug()
 			return e, tea.Batch(cmds...)
+		case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
+			v := e.FileView()
+			if v != nil {
+				if v.file.Syntax == nil {
+					cmds = append(cmds, notifications.Add("no syntax tree available for this file"))
+					return e, tea.Batch(cmds...)
+				}
+				tree := v.file.Syntax.Layers.Tree()
+
+				buff, err := buffer.New(bytes.NewReader([]byte(tree.RootNode().ToSexp())), buffer.LineEndingLF)
+				if err != nil {
+					cmds = append(cmds, notifications.Addf("error while creating tree s-expression buffer: %s", err.Error()))
+					return e, tea.Batch(cmds...)
+				}
+
+				dv, err := newDocumentView(v.file.FileName()+".tree", buff, file.ModeReadOnly)
+				if err != nil {
+					cmds = append(cmds, notifications.Addf("error while creating tree s-expression view: %s", err.Error()))
+					return e, tea.Batch(cmds...)
+				}
+
+				e.fileViews = append(e.fileViews, dv)
+				e.activeFile = len(e.fileViews) - 1
+			}
 		case key.Matches(msg, config.Keys.Editor.File.Next):
 			if e.activeFile < len(e.fileViews)-1 {
 				if f := e.FileView(); f != nil {

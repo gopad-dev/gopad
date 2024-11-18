@@ -52,6 +52,7 @@ type LanguageConfig struct {
 	AutoPairs          []LanguageAutoPairs `toml:"auto_pairs"`
 	Indent             Indent              `toml:"indent"`
 	Grammar            *GrammarConfig      `toml:"grammar"`
+	Formatter          *FormatterConfig    `toml:"formatter"`
 }
 
 type BlockCommentToken struct {
@@ -108,3 +109,8 @@ const (
 	RefTypeCommit RefType = "commit"
 	RefTypeTag    RefType = "tag"
 )
+
+type FormatterConfig struct {
+	Command string   `toml:"command"`
+	Args    []string `toml:"args"`
+}

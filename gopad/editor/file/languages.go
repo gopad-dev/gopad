@@ -46,7 +46,7 @@ func (l *Language) Description() string {
 }
 
 type GrammarConfig struct {
-	Highlight HighlightConfig
+	Highlight HighlightConfiguration
 	Outline   *OutlineQueryConfig
 }
 
@@ -71,6 +71,7 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
 			if g != nil {
+				g.Highlight.Configure(config.CodeTheme.Scopes())
 				lang.Grammar = g
 			}
 		}

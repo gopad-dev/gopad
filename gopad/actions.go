@@ -126,6 +126,18 @@ var Actions = []Action{
 			return OpenLSPOverlay
 		},
 	},
+	{
+		Name: "Stop LSP",
+		Run: func() tea.Cmd {
+			return OpenLSPOverlay
+		},
+	},
+	{
+		Name: "Format Document",
+		Run: func() tea.Cmd {
+			return editor.FormatAction
+		},
+	},
 }
 
 type Action struct {

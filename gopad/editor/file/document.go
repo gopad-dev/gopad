@@ -1,18 +1,22 @@
 package file
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"iter"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
 
+	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/xrunes"
@@ -27,26 +31,23 @@ const (
 	ModeWrite
 )
 
-func NewDocumentWithBuffer(name string, b buffer.Buffer, mode Mode) (*Document, error) {
+func NewDocumentWithBuffer(name string, buf buffer.Buffer, mode Mode) (*Document, error) {
 	var syntax *Syntax
 	if language := GetLanguageByFilename(name); language != nil {
-		layers, err := NewSyntaxLayers(b.Bytes(), language.Grammar.Highlight)
-		if err != nil {
-			return nil, fmt.Errorf("error creating syntax layers: %w", err)
-		}
-		syntax, err = NewSyntax(language, layers)
+		var err error
+		syntax, err = NewSyntax(language, buf.Bytes())
 		if err != nil {
 			return nil, fmt.Errorf("error creating syntax: %w", err)
 		}
 	}
 
 	d := &Document{
-		Buffer:             b,
+		Buffer:             buf,
 		Name:               name,
 		Mode:               mode,
 		Syntax:             syntax,
 		oldState:           nil,
-		changes:            NewChangeSetFromBuf(b),
+		changes:            NewChangeSetFromBuf(buf),
 		History:            NewHistory(),
 		Autocomplete:       nil,
 		version:            0,
@@ -144,12 +145,7 @@ func (d *Document) SetLanguage(name string) error {
 		return fmt.Errorf("language with name %q not found", name)
 	}
 
-	layers, err := NewSyntaxLayers(d.Buffer.Bytes(), language.Grammar.Highlight)
-	if err != nil {
-		return fmt.Errorf("error creating syntax layers: %w", err)
-	}
-
-	syntax, err := NewSyntax(language, layers)
+	syntax, err := NewSyntax(language, d.Buffer.Bytes())
 	if err != nil {
 		return fmt.Errorf("error creating syntax: %w", err)
 	}
@@ -470,6 +466,42 @@ func (d *Document) NextWordRight(p buffer.Point) buffer.Point {
 	return p
 }
 
+func (d *Document) Format() (tea.Cmd, error) {
+	if d.Syntax == nil {
+		return nil, errors.New("no syntax configured")
+	}
+
+	formatter := d.Syntax.Language.Config.Formatter
+	if formatter == nil {
+		return nil, errors.New("no formatter configured")
+	}
+
+	cmd := exec.Command(formatter.Command, formatter.Args...)
+	cmd.Stdin = bytes.NewReader(d.Buffer.Bytes())
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, errors.New("error creating formatter output pipe")
+	}
+
+	if err = cmd.Start(); err != nil {
+		return nil, errors.New("error starting formatter")
+	}
+
+	newData, err := io.ReadAll(out)
+	if err != nil {
+		return nil, errors.New("error reading formatter output")
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return nil, errors.New("error waiting for formatter")
+	}
+
+	return d.Replace(buffer.Range{
+		Start: buffer.Point{Row: 0, Col: 0},
+		End:   buffer.Point{Row: d.Buffer.LinesLen(), Col: d.Buffer.LineLen(max(d.Buffer.LinesLen()-1, 0))},
+	}, newData), nil
+}
+
 // TODO: implement
 func (d *Document) Save() error {
 	return nil
@@ -489,7 +521,6 @@ func (d *Document) HighlightIter(r *ByteRange) iter.Seq[CharStyle] {
 	var hIter iter.Seq2[HighlightEvent, error]
 
 	if d.Syntax == nil {
-		log.Println("no syntax available, highlighting entire buffer")
 		hIter = func(yield func(HighlightEvent, error) bool) {
 			yield(HighlightEventSource{
 				StartByte: 0,
@@ -497,14 +528,8 @@ func (d *Document) HighlightIter(r *ByteRange) iter.Seq[CharStyle] {
 			}, nil)
 		}
 	} else {
-		log.Println("highlighting with syntax")
 		hIter = d.Syntax.Layers.HighlightIter(context.Background(), d.Buffer.Bytes(), r)
 	}
 
-	return newStyleIter(hIter, d.Buffer)
-}
-
-type CharStyle struct {
-	Style lipgloss.Style
-	End   int
+	return newStyleIter(hIter, d.Buffer, config.CodeTheme)
 }

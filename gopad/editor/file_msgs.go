@@ -11,6 +11,12 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
 
+func FormatAction() tea.Msg {
+	return FormatActionMsg{}
+}
+
+type FormatActionMsg struct{}
+
 func SaveAction() tea.Msg {
 	return SaveActionMsg{}
 }
@@ -147,6 +153,18 @@ func OpenFilePosition(name string, position *buffer.Point) tea.Cmd {
 type OpenFileMsg struct {
 	Name     string
 	Position *buffer.Point
+}
+
+func FormatFile(name string) tea.Cmd {
+	return func() tea.Msg {
+		return FormatFileMsg{
+			Name: name,
+		}
+	}
+}
+
+type FormatFileMsg struct {
+	Name string
 }
 
 func SaveFile(name string) tea.Cmd {

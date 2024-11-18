@@ -261,15 +261,32 @@ unnecessary_char = { curly_underline = true, underline_color = '$red' }
 "constant.numeric.float" = { foreground = '$yellow' }
 "constant.builtin" = { foreground = '$bright_red' }
 "constant.builtin.boolean" = { foreground = '$yellow' }
+"constant.character" = { foreground = '$yellow' }
 "constant.character.escape" = { foreground = '$cyan', bold = true }
 "constant.other.placeholder" = { foreground = '$cyan', bold = true }
 
 "function" = { foreground = '$bright_cyan' }
 "function.builtin" = { foreground = '$bright_cyan' }
+"function.method" = { foreground = '$bright_cyan' }
+"function.method.private" = { foreground = '$bright_cyan' }
 "function.macro" = { foreground = '$bright_cyan' }
+
 "constructor" = { foreground = '$bright_cyan' }
+
 "keyword" = { foreground = '$bright_magenta', italic = true }
+"keyword.control" = { foreground = '$bright_magenta', italic = true }
+"keyword.control.conditional" = { foreground = '$bright_magenta', italic = true }
+"keyword.control.repeat" = { foreground = '$bright_magenta', italic = true }
+"keyword.control.import" = { foreground = '$bright_magenta', italic = true }
+"keyword.control.return" = { foreground = '$bright_magenta', italic = true }
+"keyword.control.exception" = { foreground = '$bright_magenta', italic = true }
+"keyword.operator" = { foreground = '$bright_magenta', italic = true }
 "keyword.directive" = { foreground = '$bright_magenta', italic = true }
+"keyword.function" = { foreground = '$bright_magenta', italic = true }
+"keyword.storage" = { foreground = '$bright_magenta', italic = true }
+"keyword.storage.type" = { foreground = '$bright_magenta', italic = true }
+"keyword.storage.modifier" = { foreground = '$bright_magenta', italic = true }
+
 "section" = { foreground = '$bright_magenta' }
 
 "punctuation.delimiter" = { foreground = '$white' }
@@ -277,12 +294,17 @@ unnecessary_char = { curly_underline = true, underline_color = '$red' }
 "punctuation.bracket" = { foreground = '$white' }
 
 "operator" = { foreground = '$white' }
+
 "special" = { foreground = '$bright_cyan' }
+
 "string" = { foreground = '$bright_green', bold = true }
 "string.special" = { foreground = '$yellow' }
 "string.special.path" = { foreground = '$bright_green', bold = true }
 "string.special.url" = { foreground = '$blue' }
+
 "type" = { foreground = '$bright_yellow', bold = true }
+"type.builtin" = { foreground = '$bright_yellow', bold = true }
+"type.parameter" = { foreground = '$bright_yellow', bold = true }
 
 "markup.heading" = { foreground = '$cyan' }
 "markup.heading.marker" = { foreground = '$bright_magenta' }

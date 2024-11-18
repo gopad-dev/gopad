@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -86,10 +87,10 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if _, ok := msg.(cursor.BlinkMsg); !ok {
 		log.Printf("Msg: %T: %v\n", msg, msg)
 	}
-	//now := time.Now()
-	//defer func() {
+	// now := time.Now()
+	// defer func() {
 	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
-	//}()
+	// }()
 
 	var cmds []tea.Cmd
 
@@ -201,10 +202,8 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
-	//now := time.Now()
-	//defer func() {
-	//	log.Printf("Render time: %s\n", time.Since(now))
-	//}()
+	now := time.Now()
+	defer log.Printf("Render time: %s\n", time.Since(now))
 
 	height := g.height
 

@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -512,23 +511,6 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
 				// TODO: refresh syntax highlight
-
-			case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
-				// TODO: decide where to put this
-				// if v.file.Tree == nil {
-				//	cmds = append(cmds, notifications.Add("no tree available for this file"))
-				//	return v, tea.Batch(cmds...)
-				// }
-				// buff, err := buffer.New(v.file.Buffer.FileName()+".tree", bytes.NewReader([]byte(v.file.Tree.Print())), "utf-8", buffer.LineEndingLF, false)
-				// if err != nil {
-				//	cmds = append(cmds, notifications.Add(fmt.Sprintf("error while opening tree.scm: %s", err.Error())))
-				//	return v, tea.Batch(cmds...)
-				// }
-				//
-				// debugFile := file.NewDocumentWithBuffer(buff, file.ModeReadOnly)
-				//
-				// e.files = append(e.files, debugFile)
-				// e.activeFile = len(e.files) - 1
 			case key.Matches(msg, config.Keys.Editor.Diagnostic.Show):
 				v.ShowCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Cancel) && v.ShowsCurrentDiagnostic():
@@ -747,23 +729,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	return v, tea.Batch(cmds...)
 }
 
-func getStyle(f func() (file.CharStyle, bool)) file.CharStyle {
-	style, ok := f()
-	if !ok {
-		log.Println("no more styles")
-		return file.CharStyle{
-			Style: lipgloss.NewStyle(),
-			End:   0,
-		}
-	}
-	log.Println("found style", style.Style)
-	return style
-}
-
 func (v DocumentView) View(width int, height int, border bool, debug bool) string {
-	now := time.Now()
-	defer log.Println("DocumentView.View took", time.Since(now))
-
 	styles := config.Theme.UI
 	borderStyle := func(strs ...string) string { return strings.Join(strs, " ") }
 	if border {
@@ -773,18 +739,25 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 	prefixWidth := lipgloss.Width(strconv.Itoa(v.file.Buffer.LinesLen()))
 	width = max(width-prefixWidth-styles.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
 
+	// debug takes up 4 lines
+	if debug {
+		height = max(height-4, 0)
+	}
+
 	v.refreshCursorViewOffset(width-2, height)
 	c := v.Cursor()
 	offset := v.cursor.offset
 	selection := v.Selection()
 
-	nextStyle, _ := iter.Pull(v.file.HighlightIter(nil))
-	//defer stop()
-	charStyle := getStyle(nextStyle)
+	nextStyle, stop := iter.Pull(v.file.HighlightIter(nil))
+	defer stop()
+	charStyle, _ := nextStyle()
 
 	var (
 		editorCode string
 		lineCode   string
+
+		cursorCharStyle file.CharStyle
 	)
 	r := buffer.NewReader(v.file.Buffer, offset)
 	for {
@@ -793,27 +766,44 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 			break
 		}
 
-		if char.Point.Row == height {
+		// stop rendering if we are out of the visible area
+		if char.Point.Row < offset.Row || char.Point.Row >= offset.Row+height {
 			break
 		}
 
 		if char.Rune == '\n' {
+			if char.Point.Row == c.Row && char.Point.Col == c.Col {
+				lineCode += v.cursor.cursor.View(" ", charStyle.Style)
+				cursorCharStyle = charStyle
+			} else {
+				lineCode += charStyle.Style.Render(" ")
+			}
+
 			editorCode += borderStyle(lineCode) + "\n"
 			lineCode = ""
 			continue
 		}
 
-		//if char.Point.Col-offset.Col < width || char.Point.Row < offset.Row {
-		//	continue
-		//}
+		// only render visible lines
+		if char.Point.Col < offset.Col || char.Point.Col >= offset.Col+width {
+			continue
+		}
 
 		if char.Index >= charStyle.End {
 			for {
-				charStyle = getStyle(nextStyle)
+				charStyle, ok = nextStyle()
+				if !ok {
+					break
+				}
 				if char.Index < charStyle.End {
 					break
 				}
 			}
+		}
+
+		// replace tabs with spaces for now TODO: handle tabs properly
+		if char.Rune == '\t' {
+			char.Rune = ' '
 		}
 
 		inSelection := selection != nil && selection.Contains(char.Point)
@@ -821,6 +811,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 		var renderChar string
 		if char.Point.Row == c.Row && char.Point.Col == c.Col {
 			renderChar = v.cursor.cursor.View(string(char.Rune), charStyle.Style)
+			cursorCharStyle = charStyle
 		} else if inSelection {
 			renderChar = styles.FileView.SelectionStyle.Inherit(charStyle.Style).Render(string(char.Rune))
 		} else {
@@ -835,6 +826,47 @@ func (v DocumentView) View(width int, height int, border bool, debug bool) strin
 	}
 
 	editorCode = strings.TrimSuffix(editorCode, "\n")
+
+	if v.showCurrentDiagnostic {
+		diagnostic := v.file.HighestLineColDiagnostic(c.Row, c.Col)
+		if diagnostic.Severity > 0 {
+			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
+				overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
+				overlay.WithMarginY(c.Row+1),
+			)
+		} else {
+			v.HideCurrentDiagnostic()
+		}
+	} else if v.file.Autocomplete.Visible() {
+		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, v.file.Autocomplete.View(width, height), editorCode,
+			overlay.WithMarginX(styles.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
+			overlay.WithMarginY(c.Row+1),
+		)
+	}
+
+	if debug {
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Cursor Char Style: %s (%s) [%d]", cursorCharStyle.StyleName, cursorCharStyle.LanguageName, cursorCharStyle.End))
+
+		diagnostics := v.file.DiagnosticsForLineCol(c.Row, c.Col)
+		var currentDiagnostics []string
+		for _, diag := range diagnostics {
+			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d])", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
+		}
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Diagnostics: %s", strings.Join(currentDiagnostics, ", ")))
+
+		hints := v.file.InlayHintsForLine(c.Row)
+		var currentHints []string
+		for _, hint := range hints {
+			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d])", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
+		}
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", ")))
+
+		var currentDefinitions []string
+		for _, definitions := range v.file.Definitions {
+			currentDefinitions = append(currentDefinitions, fmt.Sprintf("%s ([%d, %d] - [%d, %d])", definitions.Name, definitions.Range.Start.Row, definitions.Range.Start.Col, definitions.Range.End.Row, definitions.Range.End.Col))
+		}
+		editorCode += "\n" + borderStyle(fmt.Sprintf("  Current Definitions: %s", strings.Join(currentDefinitions, ", ")))
+	}
 
 	return editorCode
 }

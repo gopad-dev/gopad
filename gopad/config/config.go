@@ -31,6 +31,7 @@ var (
 	Keys            Keymap
 	Keymaps         []KeymapConfig
 	Theme           ThemeStyles
+	CodeTheme       *CodeStyles
 	Themes          []ThemeConfig
 )
 
@@ -109,6 +110,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 		}
 	}
 	Theme = theme.Theme()
+	CodeTheme = NewCodeStyles(Theme.CodeStyles)
 
 	return nil
 }

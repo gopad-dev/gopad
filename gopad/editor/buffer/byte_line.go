@@ -38,12 +38,16 @@ func (l byteLine) BytesLen() int {
 	return len(l.data)
 }
 
-func (l byteLine) Index(index int) int {
+func (l byteLine) Rune(index int) rune {
+	return xbytes.Rune(l.data, index)
+}
+
+func (l byteLine) ByteIndex(index int) int {
 	return xbytes.RuneIndex(l.data, index)
 }
 
-func (l byteLine) Rune(index int) rune {
-	return xbytes.Rune(l.data, index)
+func (l byteLine) RuneIndex(index int) int {
+	return xbytes.RuneIndex(l.data, index)
 }
 
 func (l byteLine) Runes() []rune {
