@@ -75,7 +75,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseReleaseMsg:
 		switch {
-		case mouse.Matches((msg), m.zoneID(), tea.MouseLeft):
+		case mouse.Matches(msg, m.zoneID(), tea.MouseLeft):
 			cmds = append(cmds, m.OnClick())
 			return m, tea.Batch(cmds...)
 		}

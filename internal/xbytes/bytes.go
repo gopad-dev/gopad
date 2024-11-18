@@ -179,7 +179,7 @@ func Insert(s []byte, i int, b ...byte) []byte {
 		return append(b, s...)
 	}
 
-	ri := RuneIndex(s, i)
+	ri := ByteIndex(s, i)
 	if ri == -1 || ri == len(s) {
 		return append(s, b...)
 	}
@@ -188,8 +188,8 @@ func Insert(s []byte, i int, b ...byte) []byte {
 }
 
 func Replace(s []byte, start int, end int, b ...byte) []byte {
-	startIndex := RuneIndex(s, start)
-	endIndex := RuneIndex(s, end)
+	startIndex := ByteIndex(s, start)
+	endIndex := ByteIndex(s, end)
 	if startIndex == -1 || endIndex == -1 {
 		return append(s, b...)
 	}
@@ -198,8 +198,8 @@ func Replace(s []byte, start int, end int, b ...byte) []byte {
 }
 
 func Delete(s []byte, start int, end int) []byte {
-	startIndex := RuneIndex(s, start)
-	endIndex := RuneIndex(s, end)
+	startIndex := ByteIndex(s, start)
+	endIndex := ByteIndex(s, end)
 	if startIndex == -1 || endIndex == -1 {
 		return s
 	}

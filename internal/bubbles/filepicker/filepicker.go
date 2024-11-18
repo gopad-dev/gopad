@@ -10,9 +10,9 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dustin/go-humanize"
-	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 )
 
 var (

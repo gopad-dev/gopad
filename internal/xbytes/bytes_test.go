@@ -251,26 +251,29 @@ func TestInsert(t *testing.T) {
 func TestReplace(t *testing.T) {
 	s := []struct {
 		data     []byte
-		i        int
+		from     int
+		to       int
 		data2    []byte
 		expected []byte
 	}{
 		{
 			data:     []byte("Hello, 世界"),
-			i:        7,
+			from:     7,
+			to:       7,
 			data2:    []byte("界"),
 			expected: []byte("Hello, 界界"),
 		},
 		{
 			data:     []byte("Hello, 世界"),
-			i:        8,
+			from:     8,
+			to:       8,
 			data2:    []byte("a"),
 			expected: []byte("Hello, 世a"),
 		},
 	}
 
 	for _, d := range s {
-		actual := Replace(d.data, d.i, d.data2...)
+		actual := Replace(d.data, d.from, d.to, d.data2...)
 		assert.Equal(t, d.expected, actual)
 	}
 }

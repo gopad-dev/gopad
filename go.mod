@@ -5,6 +5,7 @@ go 1.23
 replace (
 	github.com/charmbracelet/lipgloss/v2 => github.com/gopad-dev/lipgloss/v2 v2.0.0-20241116225007-513a66c72a0b
 	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240919125415-44caa82cfbd5
+	github.com/tree-sitter/go-tree-sitter => github.com/gopad-dev/go-tree-sitter-new v0.0.0-20241111011602-a1b6e90961a1
 	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240916085830-4815610e4100
 )
 

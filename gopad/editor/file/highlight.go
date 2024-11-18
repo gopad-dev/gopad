@@ -346,7 +346,7 @@ main:
 		for match.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
-			if layer.Config.LocalScopeCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalScopeCaptureIndex {
+			if layer.Config.LocalScopeCaptureIndex != nil && capture.Index == *layer.Config.LocalScopeCaptureIndex {
 				definitionHighlight = nil
 				scope := LocalScope{
 					Inherits:  true,
@@ -359,7 +359,7 @@ main:
 					}
 				}
 				layer.ScopeStack = append(layer.ScopeStack, scope)
-			} else if layer.Config.LocalDefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalDefCaptureIndex {
+			} else if layer.Config.LocalDefCaptureIndex != nil && capture.Index == *layer.Config.LocalDefCaptureIndex {
 				// If the node represents a definition, add a new definition to the
 				// local scope at the top of the scope stack.
 				referenceHighlight = nil
@@ -368,7 +368,7 @@ main:
 
 				var valueRange tree_sitter.Range
 				for _, matchCapture := range match.Match.Captures {
-					if layer.Config.LocalDefValueCaptureIndex != nil && uint(matchCapture.Index) == *layer.Config.LocalDefValueCaptureIndex {
+					if layer.Config.LocalDefValueCaptureIndex != nil && matchCapture.Index == *layer.Config.LocalDefValueCaptureIndex {
 						valueRange = matchCapture.Node.Range()
 					}
 				}
@@ -383,7 +383,7 @@ main:
 					})
 					definitionHighlight = scope.LocalDefs[len(scope.LocalDefs)-1].Highlight
 				}
-			} else if layer.Config.LocalRefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
+			} else if layer.Config.LocalRefCaptureIndex != nil && capture.Index == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
 				// If the node represents a reference, then try to find the corresponding
 				// definition in the scope stack.
 				definitionHighlight = nil
@@ -600,9 +600,9 @@ func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, matc
 
 	for _, capture := range match.Captures {
 		index := capture.Index
-		if uint(index) == languageCaptureIndex {
+		if index == languageCaptureIndex {
 			languageName = capture.Node.Utf8Text(source)
-		} else if uint(index) == contentCaptureIndex {
+		} else if index == contentCaptureIndex {
 			contentNode = &capture.Node
 		}
 	}
