@@ -3,7 +3,7 @@ module go.gopad.dev/gopad
 go 1.23
 
 replace (
-	github.com/charmbracelet/lipgloss => github.com/gopad-dev/lipgloss v0.0.0-20240906153413-0bcc656d0482
+	github.com/charmbracelet/lipgloss/v2 => github.com/gopad-dev/lipgloss/v2 v2.0.0-20241116225007-513a66c72a0b
 	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240919125415-44caa82cfbd5
 	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240916085830-4815610e4100
 )
@@ -11,8 +11,8 @@ replace (
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bmatcuk/doublestar/v4 v4.7.1
-	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.1.0.20241028191104-f7c464793655
-	github.com/charmbracelet/lipgloss v1.0.0
+	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.2
+	github.com/charmbracelet/lipgloss/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/x/ansi v0.4.5
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ebitengine/purego v0.8.1
@@ -25,14 +25,14 @@ require (
 	go.gopad.dev/fuzzysearch v0.0.0-20240526153819-c12185e04fe2
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.1-0.20240203004437-3c0d4339e51f
-	golang.org/x/text v0.20.0
 )
 
 require (
 	github.com/charmbracelet/colorprofile v0.1.7 // indirect
+	github.com/charmbracelet/lipgloss v1.0.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.5 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/charmbracelet/x/wcwidth v0.0.0-20241108191800-317c90dc73b2 // indirect
+	github.com/charmbracelet/x/wcwidth v0.0.0-20241113152101-0af7d04e9f32 // indirect
 	github.com/charmbracelet/x/windows v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -54,6 +54,7 @@ require (
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

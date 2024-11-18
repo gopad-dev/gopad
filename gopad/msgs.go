@@ -8,5 +8,4 @@ func OpenLSPOverlay() tea.Msg {
 	return OpenLSPOverlayMsg{}
 }
 
-type OpenLSPOverlayMsg struct {
-}
+type OpenLSPOverlayMsg struct{}

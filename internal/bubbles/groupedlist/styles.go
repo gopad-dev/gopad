@@ -1,7 +1,7 @@
 package groupedlist
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 )
 
 var DefaultStyles = Styles{

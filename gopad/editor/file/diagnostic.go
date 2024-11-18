@@ -4,7 +4,7 @@ import (
 	"log"
 	"slices"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 

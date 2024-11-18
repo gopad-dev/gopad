@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"

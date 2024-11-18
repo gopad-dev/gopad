@@ -6,7 +6,7 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
@@ -136,7 +136,7 @@ type Model struct {
 	// Styles. These will be applied as inline config.Styles.
 	//
 	// For an introduction to styling with Lip Gloss see:
-	// https://github.com/charmbracelet/lipgloss
+	// https://github.com/charmbracelet/lipgloss/v2
 	Styles Styles
 
 	// CharLimit is the maximum amount of characters this input element will

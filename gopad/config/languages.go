@@ -3,7 +3,7 @@ package config
 import (
 	"slices"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 )
 
 type Use struct {

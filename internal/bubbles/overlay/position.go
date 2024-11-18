@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/muesli/reflow/ansi"
 )

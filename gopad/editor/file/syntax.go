@@ -7,7 +7,7 @@ import (
 	"log"
 	"slices"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"

@@ -91,6 +91,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 					tea.WithKeyReleases,
 					tea.WithUniformKeyLayout,
 				),
+				tea.WithFerociousRenderer(),
 			}
 			zone.NewGlobal()
 			defer zone.Close()
@@ -112,9 +113,9 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 
 	cmd.PersistentFlags().StringP("config-dir", "c", "", "set configuration directory (Default: ./.gopad, $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)")
 	cmd.Flags().StringP("workspace", "w", "", "set workspace directory (Default: first directory argument)")
-	cmd.Flags().StringP("debug", "d", "", "set debug log file")
-	cmd.Flags().StringP("debug-lsp", "l", "", "set debug lsp log file")
-	cmd.Flags().StringP("pprof", "p", "", "set pprof address:port")
+	cmd.Flags().StringP("debug", "", "", "set debug log file")
+	cmd.Flags().StringP("debug-lsp", "", "", "set debug lsp log file")
+	cmd.Flags().StringP("pprof", "", "", "set pprof address:port")
 	cmd.Flags().BoolP("disable-mouse", "", false, "disable mouse support (enabled by default)")
 
 	return cmd
