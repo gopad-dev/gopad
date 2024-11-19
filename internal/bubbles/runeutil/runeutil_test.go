@@ -33,7 +33,6 @@ func TestSanitize(t *testing.T) {
 			r, w = utf8.DecodeRune(b[i:])
 			runes = append(runes, r)
 		}
-		t.Logf("input runes: %+v", runes)
 		s := NewSanitizer(ReplaceNewlines("XX"), ReplaceTabs(""))
 		result := s.Sanitize(runes)
 		rs := string(result)

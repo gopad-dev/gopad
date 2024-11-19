@@ -214,13 +214,17 @@ func (b *lineBuffer) ByteIndex(i int) int {
 func (b *lineBuffer) RuneIndex(i int) int {
 	var n int
 	for _, line := range b.lines {
-		byteLen := len(line.Bytes())
-		if n+byteLen >= i {
-			return n + line.RuneIndex(i-n)
+		byteLen := line.BytesLen()
+		if i < byteLen {
+			return n + line.RuneIndex(i)
 		}
-		n += byteLen + 1
+		if i == byteLen {
+			return n + line.Len()
+		}
+		i -= byteLen + 1
+		n += line.Len() + 1
 	}
-	return n
+	return -1
 }
 
 func (b *lineBuffer) ByteIndexByPoint(p Point) int {
@@ -310,6 +314,13 @@ func (b *lineBuffer) Insert(p Point, text []byte) {
 	}
 }
 
+func (b *lineBuffer) insertNewLine(p Point) {
+	line := b.lines[p.Row]
+	b.lines[p.Row] = line.CutEnd(p.Col)
+	b.lines = slices.Insert(b.lines, p.Row+1, NewEmptyLine())
+	b.lines[p.Row+1] = line.CutStart(p.Col)
+}
+
 func (b *lineBuffer) Replace(r Range, text []byte) {
 	b.Delete(r)
 	if len(text) == 0 {
@@ -325,11 +336,4 @@ func (b *lineBuffer) Delete(r Range) {
 		b.lines[r.Start.Row] = b.lines[r.Start.Row].CutEnd(r.Start.Col).Append(b.lines[r.End.Row].CutStart(r.End.Col))
 		b.lines = append(b.lines[:r.Start.Row+1], b.lines[r.End.Row+1:]...)
 	}
-}
-
-func (b *lineBuffer) insertNewLine(p Point) {
-	line := b.lines[p.Row]
-	b.lines[p.Row] = line.CutEnd(p.Col)
-	b.lines = slices.Insert(b.lines, p.Row+1, NewEmptyLine())
-	b.lines[p.Row+1] = line.CutStart(p.Col)
 }

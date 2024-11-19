@@ -6,54 +6,150 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRuneIndex(t *testing.T) {
+func TestByteIndex(t *testing.T) {
 	testString := "Hello, 世界"
 
-	s := []struct {
-		data        []byte
-		pos         int
-		expectedPos int
+	tests := []struct {
+		name     string
+		data     []byte
+		index    int
+		expected int
 	}{
 		{
-			data:        []byte(testString),
-			pos:         0,
-			expectedPos: 0,
+			name:     "start",
+			data:     []byte(testString),
+			index:    0,
+			expected: 0,
 		},
 		{
-			data:        []byte(testString),
-			pos:         1,
-			expectedPos: 1,
+			name:     "second rune",
+			data:     []byte(testString),
+			index:    1,
+			expected: 1,
 		},
 		{
-			data:        []byte(testString),
-			pos:         30,
-			expectedPos: -1,
+			name:     "out of bounds",
+			data:     []byte(testString),
+			index:    30,
+			expected: -1,
 		},
 		{
-			data:        []byte(testString),
-			pos:         0,
-			expectedPos: 0,
+			name:     "middle",
+			data:     []byte(testString),
+			index:    7,
+			expected: 7,
 		},
 		{
-			data:        []byte(testString),
-			pos:         7,
-			expectedPos: 7,
-		},
-		{
-			data:        []byte(testString),
-			pos:         8,
-			expectedPos: 10,
-		},
-		{
-			data:        []byte(testString),
-			pos:         9,
-			expectedPos: -1,
+			name:     "end",
+			data:     []byte(testString),
+			index:    8,
+			expected: 10,
 		},
 	}
 
-	for _, d := range s {
-		pos := RuneIndex(d.data, d.pos)
-		assert.Equal(t, d.expectedPos, pos)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			pos := ByteIndex(test.data, test.index)
+			assert.Equal(t, test.expected, pos)
+		})
+	}
+}
+
+func TestByteIndexEnd(t *testing.T) {
+	testString := "Hello, 世界"
+
+	tests := []struct {
+		name     string
+		data     []byte
+		index    int
+		expected int
+	}{
+		{
+			name:     "start",
+			data:     []byte(testString),
+			index:    0,
+			expected: 1,
+		},
+		{
+			name:     "second rune",
+			data:     []byte(testString),
+			index:    1,
+			expected: 2,
+		},
+		{
+			name:     "out of bounds",
+			data:     []byte(testString),
+			index:    30,
+			expected: -1,
+		},
+		{
+			name:     "middle",
+			data:     []byte(testString),
+			index:    7,
+			expected: 10,
+		},
+		{
+			name:     "end",
+			data:     []byte(testString),
+			index:    8,
+			expected: 13,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			pos := ByteIndexEnd(test.data, test.index)
+			assert.Equal(t, test.expected, pos)
+		})
+	}
+}
+
+func TestRuneIndex(t *testing.T) {
+	testString := "Hello, 世界"
+
+	tests := []struct {
+		name     string
+		data     []byte
+		index    int
+		expected int
+	}{
+		{
+			name:     "start",
+			data:     []byte(testString),
+			index:    0,
+			expected: 0,
+		},
+		{
+			name:     "second rune",
+			data:     []byte(testString),
+			index:    1,
+			expected: 1,
+		},
+		{
+			name:     "out of bounds",
+			data:     []byte(testString),
+			index:    30,
+			expected: -1,
+		},
+		{
+			name:     "middle",
+			data:     []byte(testString),
+			index:    7,
+			expected: 7,
+		},
+		{
+			name:     "end",
+			data:     []byte(testString),
+			index:    10,
+			expected: 8,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			pos := RuneIndex(test.data, test.index)
+			assert.Equal(t, test.expected, pos)
+		})
 	}
 }
 
@@ -216,25 +312,29 @@ func TestAppend(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	s := []struct {
+	tests := []struct {
+		name     string
 		data     []byte
 		index    int
 		data2    []byte
 		expected []byte
 	}{
 		{
+			name:     "insert at the beginning",
 			data:     []byte("Hllo, 世界"),
 			index:    1,
 			data2:    []byte("e"),
 			expected: []byte("Hello, 世界"),
 		},
 		{
+			name:     "insert in the middle",
 			data:     []byte("Hello, 界"),
 			index:    7,
 			data2:    []byte("世"),
 			expected: []byte("Hello, 世界"),
 		},
 		{
+			name:     "insert in the end",
 			data:     []byte("Hello, 世"),
 			index:    8,
 			data2:    []byte("界"),
@@ -242,14 +342,17 @@ func TestInsert(t *testing.T) {
 		},
 	}
 
-	for _, d := range s {
-		actual := Insert(d.data, d.index, d.data2...)
-		assert.Equal(t, d.expected, actual)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := Insert(test.data, test.index, test.data2...)
+			assert.Equal(t, string(test.expected), string(actual))
+		})
 	}
 }
 
 func TestReplace(t *testing.T) {
-	s := []struct {
+	tests := []struct {
+		name     string
 		data     []byte
 		from     int
 		to       int
@@ -257,6 +360,7 @@ func TestReplace(t *testing.T) {
 		expected []byte
 	}{
 		{
+			name:     "replace at the beginning",
 			data:     []byte("Hello, 世界"),
 			from:     7,
 			to:       7,
@@ -264,6 +368,15 @@ func TestReplace(t *testing.T) {
 			expected: []byte("Hello, 界界"),
 		},
 		{
+			name:     "replace in the middle",
+			data:     []byte("Hello, 世界"),
+			from:     7,
+			to:       7,
+			data2:    []byte("界"),
+			expected: []byte("Hello, 界界"),
+		},
+		{
+			name:     "replace at the end",
 			data:     []byte("Hello, 世界"),
 			from:     8,
 			to:       8,
@@ -272,8 +385,49 @@ func TestReplace(t *testing.T) {
 		},
 	}
 
-	for _, d := range s {
-		actual := Replace(d.data, d.from, d.to, d.data2...)
-		assert.Equal(t, d.expected, actual)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := Replace(test.data, test.from, test.to, test.data2...)
+			assert.Equal(t, string(test.expected), string(actual))
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		start    int
+		end      int
+		expected []byte
+	}{
+		{
+			name:     "delete at the beginning",
+			data:     []byte("Hello, 世界"),
+			start:    0,
+			end:      0,
+			expected: []byte("ello, 世界"),
+		},
+		{
+			name:     "delete in the middle",
+			data:     []byte("Hello, 世界"),
+			start:    7,
+			end:      7,
+			expected: []byte("Hello, 界"),
+		},
+		{
+			name:     "delete at the end",
+			data:     []byte("Hello, 世界"),
+			start:    8,
+			end:      8,
+			expected: []byte("Hello, 世"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := Delete(test.data, test.start, test.end)
+			assert.Equal(t, string(test.expected), string(actual))
+		})
 	}
 }

@@ -11,17 +11,43 @@ func ByteIndex(s []byte, i int) int {
 		return 0
 	}
 
-	runeIndex := 0
+	var (
+		runeIndex int
+		byteIndex int
+	)
 	for len(s) > 0 {
 		_, l := utf8.DecodeRune(s)
-		s = s[l:]
 
 		if runeIndex == i {
-			return l
+			return byteIndex
 		}
 
+		s = s[l:]
 		runeIndex++
+		byteIndex += l
 	}
+
+	return -1
+}
+
+// ByteIndexEnd converts the rune index to a byte index at the end of the rune.
+func ByteIndexEnd(s []byte, i int) int {
+	var (
+		runeIndex int
+		byteIndex int
+	)
+	for len(s) > 0 {
+		_, l := utf8.DecodeRune(s)
+
+		if runeIndex == i {
+			return byteIndex + l
+		}
+
+		s = s[l:]
+		runeIndex++
+		byteIndex += l
+	}
+
 	return -1
 }
 
@@ -31,65 +57,73 @@ func RuneIndex(s []byte, i int) int {
 		return 0
 	}
 
-	byteIndex := 0
-	runeIndex := 0
+	var (
+		runeIndex int
+		byteIndex int
+	)
 	for len(s) > 0 {
 		_, l := utf8.DecodeRune(s)
-		s = s[l:]
 
-		if runeIndex == i {
-			return byteIndex
+		if byteIndex == i {
+			return runeIndex
 		}
 
-		byteIndex += l
+		s = s[l:]
 		runeIndex++
+		byteIndex += l
 	}
 	return -1
 }
 
 func RuneLen(s []byte, i int) int {
-	runeIndex := 0
+	var runeIndex int
 	for len(s) > 0 {
 		_, l := utf8.DecodeRune(s)
-		s = s[l:]
 
 		if runeIndex == i {
 			return l
 		}
 
+		s = s[l:]
 		runeIndex++
 	}
+
 	return -1
 }
 
+func RuneCount(s []byte) int {
+	return utf8.RuneCount(s)
+}
+
 func Runes(s []byte) []rune {
-	t := make([]rune, utf8.RuneCount(s))
-	i := 0
+	runes := make([]rune, 0)
 	for len(s) > 0 {
 		r, l := utf8.DecodeRune(s)
-		t[i] = r
-		i++
+		runes = append(runes, r)
 		s = s[l:]
 	}
-	return t
+	return runes
 }
 
 func RunesRange(s []byte, start int, end int) []rune {
-	t := make([]rune, end-start)
-	i := 0
-	runeIndex := 0
+	runes := make([]rune, end-start)
+
+	var (
+		runeIndex int
+		i         int
+	)
 	for len(s) > 0 {
 		r, l := utf8.DecodeRune(s)
 		s = s[l:]
 
 		if runeIndex >= start && runeIndex < end {
-			t[i] = r
+			runes[i] = r
 			i++
 		}
 
 		runeIndex++
 	}
-	return t
+	return runes
 }
 
 func Rune(s []byte, i int) rune {
@@ -166,47 +200,54 @@ func CutRange(s []byte, start int, end int) []byte {
 	return s
 }
 
+// Append appends the given bytes to the given bytes.
 func Append(s []byte, b ...byte) []byte {
 	return append(s, b...)
 }
 
+// Prepend prepends the given bytes to the given bytes.
 func Prepend(s []byte, b ...byte) []byte {
-	return append(b, s...)
+	return Append(b, s...)
 }
 
+// Insert inserts the given bytes at the given index.
 func Insert(s []byte, i int, b ...byte) []byte {
 	if i == 0 {
-		return append(b, s...)
+		return Append(b, s...)
 	}
 
-	ri := ByteIndex(s, i)
-	if ri == -1 || ri == len(s) {
+	index := ByteIndex(s, i)
+	if index == -1 {
 		return append(s, b...)
 	}
 
-	return slices.Insert(s, ri, b...)
+	return slices.Insert(s, index, b...)
 }
 
+// Replace replaces the range of bytes from start (inclusive) to end (inclusive) with the given bytes.
 func Replace(s []byte, start int, end int, b ...byte) []byte {
 	startIndex := ByteIndex(s, start)
-	endIndex := ByteIndex(s, end)
-	if startIndex == -1 || endIndex == -1 {
-		return append(s, b...)
+	endIndex := ByteIndexEnd(s, end)
+	if startIndex == -1 {
+		panic("start index out of range")
+	}
+	if endIndex == -1 {
+		panic("end index out of range")
 	}
 
 	return slices.Replace(s, startIndex, endIndex, b...)
 }
 
+// Delete deletes the range of bytes from start (inclusive) to end (inclusive).
 func Delete(s []byte, start int, end int) []byte {
 	startIndex := ByteIndex(s, start)
-	endIndex := ByteIndex(s, end)
-	if startIndex == -1 || endIndex == -1 {
-		return s
+	endIndex := ByteIndexEnd(s, end)
+	if startIndex == -1 {
+		panic("start index out of range")
+	}
+	if endIndex == -1 {
+		panic("end index out of range")
 	}
 
 	return slices.Delete(s, startIndex, endIndex)
-}
-
-func RuneCount(s []byte) int {
-	return utf8.RuneCount(s)
 }

@@ -753,9 +753,9 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 					Style:        i.textStyle,
 					StyleName:    "text",
 					LanguageName: "",
-					Start:        int(event.StartByte),
-					// End:       i.buf.RuneIndex(int(event.EndByte)), TODO: RuneIndex seems to be broken, investigate
-					End: int(event.EndByte),
+					Start:        i.buf.RuneIndex(int(event.StartByte)),
+					End:          i.buf.RuneIndex(int(event.EndByte)),
+					//End: int(event.EndByte),
 				}
 
 				if len(i.activeHighlights) > 0 {
