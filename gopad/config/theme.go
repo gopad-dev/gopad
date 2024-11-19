@@ -371,10 +371,16 @@ type DiagnosticConfig struct {
 
 type CodeStylesConfig map[string]bubbles.Style
 
-func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) map[string]lipgloss.Style {
-	m := make(map[string]lipgloss.Style, len(c))
+func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) *CodeStyles {
+	styles := make(map[string]lipgloss.Style, len(c))
+	scopes := make([]string, 0, len(c))
 	for k, v := range c {
-		m[k] = v.Style(colors)
+		styles[k] = v.Style(colors)
+		scopes = append(scopes, k)
 	}
-	return m
+
+	return &CodeStyles{
+		styles: styles,
+		scopes: scopes,
+	}
 }

@@ -155,9 +155,10 @@ func (d *Document) SetLanguage(name string) error {
 }
 
 func (d *Document) Range() buffer.Range {
+	lenLine := d.Buffer.LinesLen()
 	return buffer.Range{
 		Start: buffer.Point{Row: 0, Col: 0},
-		End:   buffer.Point{Row: d.Buffer.LinesLen(), Col: d.Buffer.LineLen(max(d.Buffer.LinesLen()-1, 0))},
+		End:   buffer.Point{Row: lenLine, Col: d.Buffer.LineLen(max(lenLine-1, 0))},
 	}
 }
 
@@ -204,8 +205,10 @@ func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
 	d.version++
 
 	cmds := []tea.Cmd{
-		ls.FileChanged(d.Name, d.Version(), d.Buffer.Bytes()),
-		ls.GetInlayHint(d.Name, d.Version(), d.Range()),
+		tea.Sequence(
+			ls.FileChanged(d.Name, d.Version(), d.Buffer.Bytes()),
+			ls.GetInlayHint(d.Name, d.Version(), d.Range()),
+		),
 	}
 
 	if d.Syntax != nil {
@@ -531,5 +534,5 @@ func (d *Document) HighlightIter(r *ByteRange) iter.Seq[CharStyle] {
 		hIter = d.Syntax.Layers.HighlightIter(context.Background(), d.Buffer.Bytes(), r)
 	}
 
-	return newStyleIter(hIter, d.Buffer, config.CodeTheme)
+	return newStyleIter(hIter, d.Buffer, config.Theme.CodeStyles)
 }

@@ -71,7 +71,6 @@ func LoadLanguages(defaultConfigs embed.FS) error {
 				return fmt.Errorf("error loading tree-sitter grammar for %q: %w", name, err)
 			}
 			if g != nil {
-				g.Highlight.Configure(config.CodeTheme.Scopes())
 				lang.Grammar = g
 			}
 		}
@@ -136,6 +135,8 @@ func newHighlightConfig(languageName string, cfg config.GrammarConfig, defaultCo
 	if err != nil {
 		return nil, fmt.Errorf("error creating highlight config: %w", err)
 	}
+
+	highlightConfig.Configure(config.Theme.CodeStyles.Scopes())
 
 	outlineQuery, err := readQuery(queriesConfigDir, defaultConfigs, name, queryOutlineFileName)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

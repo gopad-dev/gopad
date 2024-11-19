@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/tree-sitter/go-tree-sitter"
 
-	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
@@ -699,15 +698,22 @@ type CharStyle struct {
 	Style        lipgloss.Style
 	StyleName    string
 	LanguageName string
+	Start        int
 	End          int
 }
 
-func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer, styles *config.CodeStyles) iter.Seq[CharStyle] {
+type Theme interface {
+	Highlight(i int, languageName string) lipgloss.Style
+	Scope(i int) string
+	Scopes() []string
+}
+
+func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer, theme Theme) iter.Seq[CharStyle] {
 	iterator := styleIterator{
 		activeHighlights: nil,
 		highlightIter:    highlightIter,
 		buf:              buf,
-		styles:           styles,
+		theme:            theme,
 	}
 
 	return iterator.iter()
@@ -719,10 +725,11 @@ type highlightStyle struct {
 }
 
 type styleIterator struct {
+	textStyle        lipgloss.Style
 	activeHighlights []highlightStyle
 	highlightIter    iter.Seq2[HighlightEvent, error]
 	buf              buffer.Buffer
-	styles           *config.CodeStyles
+	theme            Theme
 }
 
 func (i *styleIterator) iter() iter.Seq[CharStyle] {
@@ -743,6 +750,10 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 				i.activeHighlights = i.activeHighlights[:len(i.activeHighlights)-1]
 			case HighlightEventSource:
 				ch := CharStyle{
+					Style:        i.textStyle,
+					StyleName:    "text",
+					LanguageName: "",
+					Start:        int(event.StartByte),
 					// End:       i.buf.RuneIndex(int(event.EndByte)), TODO: RuneIndex seems to be broken, investigate
 					End: int(event.EndByte),
 				}
@@ -750,8 +761,8 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 				if len(i.activeHighlights) > 0 {
 					highlight := i.activeHighlights[len(i.activeHighlights)-1]
 
-					ch.Style = i.styles.Highlight(int(highlight.highlight), highlight.languageName)
-					ch.StyleName = i.styles.Scope(int(highlight.highlight))
+					ch.Style = i.theme.Highlight(int(highlight.highlight), highlight.languageName)
+					ch.StyleName = i.theme.Scope(int(highlight.highlight))
 					ch.LanguageName = highlight.languageName
 				}
 

@@ -207,8 +207,10 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	e.fileViews = append(e.fileViews, v)
 
 	cmds := []tea.Cmd{
-		ls.FileOpened(v.file.Name, v.file.Version(), v.LanguageName(), v.file.Buffer.Bytes()),
-		ls.GetInlayHint(v.file.Name, v.file.Version(), v.file.Range()),
+		tea.Sequence(
+			ls.FileOpened(v.file.Name, v.file.Version(), v.LanguageName(), v.file.Buffer.Bytes()),
+			ls.GetInlayHint(v.file.Name, v.file.Version(), v.file.Range()),
+		),
 	}
 
 	return tea.Batch(cmds...), nil

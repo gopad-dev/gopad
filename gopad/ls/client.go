@@ -7,6 +7,7 @@ import (
 	"log"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
@@ -38,6 +39,7 @@ func New(version string, cfg config.LanguageServerConfigs, w io.Writer) *Client 
 type Client struct {
 	registry  map[string]ServerConfig
 	servers   []*Server
+	serversMu sync.Mutex
 	p         *tea.Program
 	workspace string
 }
@@ -82,6 +84,10 @@ func (l *Client) Servers() []ServerConfig {
 
 func (l *Client) SupportedServers(name string) []*Server {
 	var servers []*Server
+
+	l.serversMu.Lock()
+	defer l.serversMu.Unlock()
+
 	for _, server := range l.servers {
 		if server.cfg.SupportsFile(name) {
 			servers = append(servers, server)
@@ -100,13 +106,14 @@ func (l *Client) SupportedServers(name string) []*Server {
 			continue
 		}
 
-		client, err := serverConfig.New(l.workspace)
+		server, err := serverConfig.New(l.workspace)
 		if err != nil {
 			log.Printf("failed to create client for %s: %v", serverConfig.Name, err)
 			continue
 		}
 
-		servers = append(servers, client)
+		l.servers = append(servers, server)
+		servers = append(servers, server)
 	}
 
 	slices.SortFunc(servers, func(a, b *Server) int {
@@ -139,13 +146,16 @@ func (l *Client) Update(msg tea.Msg) tea.Cmd {
 			return Err(errors.New("server not found"))
 		}
 
-		client, err := serverConfig.New(msg.Workspace)
+		l.serversMu.Lock()
+		server, err := serverConfig.New(msg.Workspace)
 		if err != nil {
-			log.Printf("failed to create client for %s: %v", serverConfig.Name, err)
+			l.serversMu.Unlock()
+			log.Printf("failed to create server for %s: %v", serverConfig.Name, err)
 			return Err(err)
 		}
 
-		l.servers = append(l.servers, client)
+		l.servers = append(l.servers, server)
+		l.serversMu.Lock()
 	case StopServerMsg:
 		for i, server := range l.servers {
 			if server.Name() == msg.Name {
@@ -164,18 +174,28 @@ func (l *Client) Update(msg tea.Msg) tea.Cmd {
 		}
 	case WorkspaceOpenedMsg:
 		l.workspace = msg.Workspace
+
+		l.serversMu.Lock()
+		defer l.serversMu.Unlock()
 		for _, serverConfig := range l.registry {
 			if !serverConfig.Cfg.SupportsWorkspace(msg.Workspace) {
 				continue
 			}
 
-			client, err := serverConfig.New(msg.Workspace)
-			if err != nil {
-				log.Printf("failed to create client for %s: %v", serverConfig.Name, err)
+			// Check if the server is already running
+			if slices.ContainsFunc(l.servers, func(server *Server) bool {
+				return server.Name() == serverConfig.Name
+			}) {
 				continue
 			}
 
-			l.servers = append(l.servers, client)
+			server, err := serverConfig.New(msg.Workspace)
+			if err != nil {
+				log.Printf("failed to create server for %s: %v", serverConfig.Name, err)
+				continue
+			}
+
+			l.servers = append(l.servers, server)
 		}
 	case WorkspaceClosedMsg:
 		l.workspace = ""

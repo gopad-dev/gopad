@@ -1,5 +1,9 @@
 package buffer
 
+import (
+	"iter"
+)
+
 func NewReader(buf Buffer, offset Point) *Reader {
 	return &Reader{
 		buf:   buf,
@@ -16,7 +20,21 @@ type Reader struct {
 	point Point
 }
 
-func (r *Reader) Next() (Char, bool) {
+func (r *Reader) All() iter.Seq[Char] {
+	return func(yield func(Char) bool) {
+		for {
+			c, ok := r.next()
+			if !ok {
+				break
+			}
+			if !yield(c) {
+				break
+			}
+		}
+	}
+}
+
+func (r *Reader) next() (Char, bool) {
 	if r.pos >= r.len {
 		return Char{}, false
 	}

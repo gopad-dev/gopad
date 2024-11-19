@@ -18,17 +18,16 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-func NewCodeStyles(styles map[string]lipgloss.Style) *CodeStyles {
-	var scopes []string
+type ThemeStyles struct {
+	Name       string
+	Foreground color.Color
+	Background color.Color
 
-	for key := range styles {
-		scopes = append(scopes, key)
-	}
-
-	return &CodeStyles{
-		styles: styles,
-		scopes: scopes,
-	}
+	Colors     bubbles.ColorStyles
+	Icons      IconStyles
+	UI         UiStyles
+	Diagnostic DiagnosticStyles
+	CodeStyles *CodeStyles
 }
 
 type CodeStyles struct {
@@ -51,18 +50,6 @@ func (t *CodeStyles) Scope(i int) string {
 
 func (t *CodeStyles) Scopes() []string {
 	return t.scopes
-}
-
-type ThemeStyles struct {
-	Name       string
-	Foreground color.Color
-	Background color.Color
-
-	Colors     bubbles.ColorStyles
-	Icons      IconStyles
-	UI         UiStyles
-	Diagnostic DiagnosticStyles
-	CodeStyles map[string]lipgloss.Style
 }
 
 type IconStyles struct {
