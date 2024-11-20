@@ -1,9 +1,7 @@
-package file
+package doc
 
 import (
 	"time"
-
-	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 type Revision struct {
@@ -42,8 +40,9 @@ func (h *History) AtRoot() bool {
 	return h.current == 0
 }
 
-func (h *History) CommitRevision(transaction Transaction, originalBuf buffer.Buffer) {
-	inversion := transaction.Invert(originalBuf)
+func (h *History) CommitRevision(transaction Transaction, originalState state) {
+	inversion := transaction.Invert(originalState.Buffer)
+	inversion.WithCursor(originalState.Cursor)
 
 	newCurrent := len(h.revisions)
 	h.revisions[h.current].LastChild = &newCurrent

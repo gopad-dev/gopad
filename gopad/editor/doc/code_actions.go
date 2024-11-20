@@ -1,4 +1,4 @@
-package file
+package doc
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"

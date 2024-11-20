@@ -222,7 +222,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.realRow != realRow || m.realCol != realCol {
 			m.realRow = realRow
 			m.realCol = realCol
-			cmd = tea.SetCursorPosition(realRow, realCol)
+			//cmd = tea.SetCursorPosition(realRow, realCol)
 		}
 	}
 

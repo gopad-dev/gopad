@@ -1,4 +1,4 @@
-package file
+package doc
 
 import (
 	"iter"
@@ -425,10 +425,10 @@ func NewTransactionFromDelete(buf buffer.Buffer, deletions []Deletion) Transacti
 	}
 }
 
-func NewTransactionFromInsert(buf buffer.Buffer, at int, text []byte) Transaction {
+func NewTransactionFromInsert(buf buffer.Buffer, index int, text []byte) Transaction {
 	return NewTransactionFromChange(buf, []Change{{
-		From: at,
-		To:   at,
+		From: index,
+		To:   index,
 		Text: text,
 	}})
 }
@@ -445,6 +445,7 @@ func NewTransactionFrom(changes ChangeSet) Transaction {
 
 type Transaction struct {
 	Changes ChangeSet
+	Cursor  *Cursor
 }
 
 func (t *Transaction) Apply(buf buffer.Buffer) bool {
@@ -458,11 +459,16 @@ func (t *Transaction) Apply(buf buffer.Buffer) bool {
 func (t *Transaction) Invert(originalBuf buffer.Buffer) Transaction {
 	return Transaction{
 		Changes: t.Changes.Invert(originalBuf),
+		Cursor:  nil,
 	}
 }
 
 func (t *Transaction) Insert(text []byte) {
 	t.Changes.Insert(text)
+}
+
+func (t *Transaction) WithCursor(cursor Cursor) {
+	t.Cursor = &cursor
 }
 
 func (t *Transaction) Iter() iter.Seq[Change] {

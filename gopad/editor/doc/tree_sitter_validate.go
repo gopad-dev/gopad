@@ -1,4 +1,4 @@
-package file
+package doc
 
 // func ValidateTree(name string, version int32, tree *Tree) tea.Cmd {
 // 	return func() tea.Msg {

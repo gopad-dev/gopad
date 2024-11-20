@@ -1,4 +1,4 @@
-package file
+package doc
 
 import (
 	"bytes"
@@ -41,15 +41,15 @@ func NewDocumentWithBuffer(name string, buf buffer.Buffer, mode Mode) (*Document
 		}
 	}
 
-	d := &Document{
+	return &Document{
 		Buffer:             buf,
 		Name:               name,
 		Mode:               mode,
+		cursor:             newCursor(),
 		Syntax:             syntax,
 		oldState:           nil,
 		changes:            NewChangeSetFromBuf(buf),
 		History:            NewHistory(),
-		Autocomplete:       nil,
 		version:            0,
 		diagnosticVersions: map[ls.DiagnosticType]uint64{},
 		Diagnostics:        nil,
@@ -61,11 +61,7 @@ func NewDocumentWithBuffer(name string, buf buffer.Buffer, mode Mode) (*Document
 		Implementations:    nil,
 		References:         nil,
 		Positions:          nil,
-	}
-
-	d.Autocomplete = NewAutocompleter(d)
-
-	return d, nil
+	}, nil
 }
 
 func NewDocumentFromName(name string) (*Document, error) {
@@ -95,29 +91,32 @@ func NewDocumentFromName(name string) (*Document, error) {
 	return NewDocumentWithBuffer(name, b, mode)
 }
 
-type Document struct {
+type state struct {
 	Buffer buffer.Buffer
-	Name   string
-	Mode   Mode
-	Syntax *Syntax
+	Cursor Cursor
+}
 
-	oldState     buffer.Buffer
-	changes      ChangeSet
-	History      *History
-	Autocomplete *Autocompleter
-	version      uint64
+type Document struct {
+	Buffer  buffer.Buffer
+	Name    string
+	Mode    Mode
+	cursor  Cursor
+	version uint64
+
+	Syntax   *Syntax
+	oldState *state
+	changes  ChangeSet
+	History  *History
 
 	diagnosticVersions map[ls.DiagnosticType]uint64
 	Diagnostics        []ls.Diagnostic
-
-	inlayHintsVersion uint64
-	InlayHints        []ls.InlayHint
-
-	Declarations    []ls.FileLocation
-	Definitions     []ls.FileLocation
-	TypeDefinitions []ls.FileLocation
-	Implementations []ls.FileLocation
-	References      []ls.FileLocation
+	inlayHintsVersion  uint64
+	InlayHints         []ls.InlayHint
+	Declarations       []ls.FileLocation
+	Definitions        []ls.FileLocation
+	TypeDefinitions    []ls.FileLocation
+	Implementations    []ls.FileLocation
+	References         []ls.FileLocation
 
 	Positions [][]buffer.Point
 }
@@ -177,7 +176,10 @@ func (d *Document) applyInner(t Transaction) (tea.Cmd, bool) {
 	}()
 
 	if d.changes.IsEmpty() && !t.Changes.IsEmpty() {
-		d.oldState = d.Buffer.Clone()
+		d.oldState = &state{
+			Buffer: d.Buffer.Clone(),
+			Cursor: d.cursor,
+		}
 	}
 
 	cmd, success := d.apply(t)
@@ -192,13 +194,15 @@ func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
 	oldBuf := d.Buffer.Clone()
 	changes := t.Changes
 
-	success := changes.Apply(d.Buffer)
-	if !success {
+	if !changes.Apply(d.Buffer) {
 		log.Printf("error applying changes: %v", changes)
 		return nil, false
 	}
 
 	if changes.IsEmpty() {
+		if t.Cursor != nil {
+			d.cursor = *t.Cursor
+		}
 		return nil, true
 	}
 
@@ -219,6 +223,10 @@ func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
 		}
 	}
 
+	if t.Cursor != nil {
+		d.cursor = *t.Cursor
+	}
+
 	return tea.Batch(cmds...), true
 }
 
@@ -231,9 +239,8 @@ func (d *Document) appendChangesToHistory() {
 	d.changes = NewChangeSetFromBuf(d.Buffer)
 
 	transaction := NewTransactionFrom(changes)
-	oldBuf := d.oldState
 
-	d.History.CommitRevision(transaction, oldBuf)
+	d.History.CommitRevision(transaction, *d.oldState)
 }
 
 func (d *Document) InsertNewLine(p buffer.Point) tea.Cmd {

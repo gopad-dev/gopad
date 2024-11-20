@@ -15,7 +15,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad"
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/xio"
 )
@@ -76,7 +76,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			}
 
 			loadConfig(configDir, defaultConfigs)
-			if err := file.LoadLanguages(defaultConfigs); err != nil {
+			if err := doc.LoadLanguages(defaultConfigs); err != nil {
 				return err
 			}
 

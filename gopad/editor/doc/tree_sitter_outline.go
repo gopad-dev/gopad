@@ -1,4 +1,4 @@
-package file
+package doc
 
 import (
 	"go.gopad.dev/gopad/gopad/editor/buffer"

@@ -9,20 +9,20 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-func Outline(f *file.Document) tea.Cmd {
+func Outline(f *doc.Document) tea.Cmd {
 	return func() tea.Msg {
 		// return outlineMsg(f.OutlineTree()) TODO: readd this
 		return outlineMsg(nil)
 	}
 }
 
-type outlineMsg []file.OutlineItem
+type outlineMsg []doc.OutlineItem
 
 type outlineItem struct {
 	r        buffer.Range
@@ -42,7 +42,7 @@ func (o outlineItem) FilterValue() string {
 	return o.rawTitle
 }
 
-func renderOutlineItem(file *file.Document, itemStyle lipgloss.Style, item file.OutlineItem) outlineItem {
+func renderOutlineItem(file *doc.Document, itemStyle lipgloss.Style, item doc.OutlineItem) outlineItem {
 	codeCharStyle := config.Theme.UI.FileView.LineCharStyle
 
 	var (
@@ -75,7 +75,7 @@ const OutlineOverlayID = "editor.outline"
 
 var _ overlay.Overlay = (*OutlineOverlay)(nil)
 
-func NewOutlineOverlay(f *file.Document) OutlineOverlay {
+func NewOutlineOverlay(f *doc.Document) OutlineOverlay {
 	l := config.NewList[outlineItem](nil)
 	l.TextInput.Placeholder = "Search symbols..."
 	l.Focus()
@@ -87,8 +87,8 @@ func NewOutlineOverlay(f *file.Document) OutlineOverlay {
 }
 
 type OutlineOverlay struct {
-	f     *file.Document
-	items []file.OutlineItem
+	f     *doc.Document
+	items []doc.OutlineItem
 	l     list.Model[outlineItem]
 }
 

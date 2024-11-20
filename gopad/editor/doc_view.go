@@ -14,7 +14,7 @@ import (
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
@@ -50,61 +50,50 @@ func zoneFileLineDiagnosticID(id int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineDiagnosticPrefix, strconv.Itoa(id))
 }
 
-func newDocumentView(name string, buff buffer.Buffer, mode file.Mode) (*DocumentView, error) {
-	f, err := file.NewDocumentWithBuffer(name, buff, mode)
+func newDocumentView(name string, buff buffer.Buffer, mode doc.Mode) (*DocumentView, error) {
+	f, err := doc.NewDocumentWithBuffer(name, buff, mode)
 	if err != nil {
 		return nil, err
 	}
 
 	return &DocumentView{
-		file: f,
-		cursor: fileCursor{
-			point: buffer.Point{
-				Row: 0,
-				Col: 0,
-			},
-			cursor: config.NewCursor(),
-		},
+		Doc:         f,
+		viewOffsetX: -1,
+		viewOffsetY: -1,
 	}, nil
 }
 
 func newDocumentViewFromName(name string) (*DocumentView, error) {
-	f, err := file.NewDocumentFromName(name)
+	f, err := doc.NewDocumentFromName(name)
 	if err != nil {
 		return nil, err
 	}
 	return &DocumentView{
-		file: f,
-		cursor: fileCursor{
-			point: buffer.Point{
-				Row: 0,
-				Col: 0,
-			},
-			cursor: config.NewCursor(),
-		},
+		Doc:         f,
+		viewOffsetX: -1,
+		viewOffsetY: -1,
 	}, nil
 }
 
 type DocumentView struct {
-	file                  *file.Document
-	cursor                fileCursor
+	Doc    *doc.Document
+	offset buffer.Point
+
+	lastCursorPosX int
+	lastCursorPosY int
+	viewOffsetX    int
+	viewOffsetY    int
+
+	focused               bool
 	showCurrentDiagnostic bool
 	definitionsIndex      int
 }
 
-func (v *DocumentView) Name() string {
-	return v.file.Name
-}
-
-func (v *DocumentView) RelativeName(workspace string) string {
-	return v.file.RelativeName(workspace)
-}
-
-func (v *DocumentView) Language() *file.Language {
-	if v.file.Syntax == nil {
+func (v *DocumentView) Language() *doc.Language {
+	if v.Doc.Syntax == nil {
 		return nil
 	}
-	return v.file.Syntax.Language
+	return v.Doc.Syntax.Language
 }
 
 func (v *DocumentView) LanguageName() string {
@@ -116,19 +105,22 @@ func (v *DocumentView) LanguageName() string {
 }
 
 func (v *DocumentView) LineEnding() buffer.LineEnding {
-	return v.file.Buffer.LineEnding()
+	return v.Doc.Buffer.LineEnding()
 }
 
 func (v *DocumentView) Focus() tea.Cmd {
-	return v.cursor.cursor.Focus()
+	v.focused = true
+	return tea.ShowCursor
 }
 
-func (v *DocumentView) Blur() {
-	v.cursor.cursor.Blur()
+func (v *DocumentView) Blur() tea.Cmd {
+	v.focused = false
+	//return tea.HideCursor
+	return nil
 }
 
 func (v DocumentView) Focused() bool {
-	return v.cursor.cursor.Focused()
+	return v.focused
 }
 
 func (v *DocumentView) ShowsCurrentDiagnostic() bool {
@@ -144,19 +136,19 @@ func (v *DocumentView) HideCurrentDiagnostic() {
 }
 
 func (v DocumentView) GetCursorForCharPos(p buffer.Point) buffer.Point {
-	positionRow := max(p.Row-v.cursor.offset.Row, 0)
-	if positionRow >= len(v.file.Positions) {
+	positionRow := max(p.Row-v.offset.Row, 0)
+	if positionRow >= len(v.Doc.Positions) {
 		return buffer.Point{
-			Row: max(v.file.Buffer.LinesLen()-1, 0),
+			Row: max(v.Doc.Buffer.LinesLen()-1, 0),
 			Col: 0,
 		}
 	}
 
-	linePositions := v.file.Positions[positionRow]
+	linePositions := v.Doc.Positions[positionRow]
 	if p.Col >= len(linePositions) {
 		return buffer.Point{
 			Row: p.Row,
-			Col: v.file.Buffer.LineLen(p.Row),
+			Col: v.Doc.Buffer.LineLen(p.Row),
 		}
 	}
 
@@ -170,16 +162,16 @@ func (v DocumentView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) b
 }
 
 func (v *DocumentView) SetLanguage(language string) tea.Cmd {
-	if err := v.file.SetLanguage(language); err != nil {
+	if err := v.Doc.SetLanguage(language); err != nil {
 		return notifications.Add(fmt.Sprintf("failed to set language: %s", err.Error()))
 	}
-	v.file.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
+	v.Doc.ClearDiagnosticsByType(ls.DiagnosticTypeTreeSitter)
 
 	return nil
 }
 
 func (v *DocumentView) refreshCursorViewOffset(width int, height int) {
-	c := v.Cursor()
+	c := v.Doc.Cursor()
 
 	// TODO: figure out how to handle inlay hints when scrolling horizontally
 	// if len(f.positions) > 0 {
@@ -196,49 +188,46 @@ func (v *DocumentView) refreshCursorViewOffset(width int, height int) {
 	//	}
 	// }
 
-	if c.Row >= v.cursor.offset.Row+height {
-		v.cursor.offset.Row = c.Row - height + 1
-	} else if c.Row < v.cursor.offset.Row {
-		v.cursor.offset.Row = c.Row
+	if c.Row >= v.offset.Row+height {
+		v.offset.Row = c.Row - height + 1
+	} else if c.Row < v.offset.Row {
+		v.offset.Row = c.Row
 	}
 
-	if c.Col >= v.cursor.offset.Col+width {
-		v.cursor.offset.Col = c.Col - width + 1
-	} else if c.Col < v.cursor.offset.Col {
-		v.cursor.offset.Col = c.Col
+	if c.Col >= v.offset.Col+width {
+		v.offset.Col = c.Col - width + 1
+	} else if c.Col < v.offset.Col {
+		v.offset.Col = c.Col
 	}
 }
 
 func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	var cmds []tea.Cmd
-	var overwriteCursorBlink bool
-
-	oldCursor := v.Cursor()
 
 	switch msg := msg.(type) {
 	case ls.UpdateFileDiagnosticMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
-		v.file.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
+		v.Doc.SetDiagnostic(msg.Type, msg.Version, msg.Diagnostics)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateAutocompletionMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
-		v.file.Autocomplete.SetCompletions(msg.Completions)
+		//v.file.Autocomplete.SetCompletions(msg.Completions)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateInlayHintMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
-		v.file.SetInlayHint(msg.Version, msg.Hints)
+		v.Doc.SetInlayHint(msg.Version, msg.Hints)
 		return v, tea.Batch(cmds...)
 	case ls.RefreshInlayHintMsg:
-		cmds = append(cmds, ls.GetInlayHint(v.Name(), v.file.Version(), v.file.Range()))
+		cmds = append(cmds, ls.GetInlayHint(v.Doc.Name, v.Doc.Version(), v.Doc.Range()))
 		return v, tea.Batch(cmds...)
 	case ls.UpdateDeclarationsMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
 		if len(msg.Declarations) == 0 {
@@ -253,10 +242,10 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			return v, tea.Batch(cmds...)
 		}
 
-		v.file.SetDeclarations(msg.Declarations)
+		v.Doc.SetDeclarations(msg.Declarations)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateDefinitionsMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
 
@@ -271,10 +260,10 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 
 			return v, tea.Batch(cmds...)
 		}
-		v.file.SetDefinitions(msg.Definitions)
+		v.Doc.SetDefinitions(msg.Definitions)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateTypeDefinitionsMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
 
@@ -290,10 +279,10 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			return v, tea.Batch(cmds...)
 		}
 
-		v.file.SetTypeDefinitions(msg.TypeDefinitions)
+		v.Doc.SetTypeDefinitions(msg.TypeDefinitions)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateImplementationsMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
 
@@ -309,10 +298,10 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			return v, tea.Batch(cmds...)
 		}
 
-		v.file.SetImplementations(msg.Implementations)
+		v.Doc.SetImplementations(msg.Implementations)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateReferencesMsg:
-		if msg.Name != v.Name() {
+		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
 
@@ -328,7 +317,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			return v, tea.Batch(cmds...)
 		}
 
-		v.file.SetReferences(msg.References)
+		v.Doc.SetReferences(msg.References)
 		return v, tea.Batch(cmds...)
 
 	case tea.MouseMsg:
@@ -343,9 +332,9 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					}
 					i, _ := strconv.Atoi(index)
 
-					diagnostic := v.file.Diagnostics[i]
-					v.SetCursor(diagnostic.Range.Start)
-					v.SetMark(v.Cursor())
+					diagnostic := v.Doc.Diagnostics[i]
+					v.Doc.SetCursor(diagnostic.Range.Start)
+					v.Doc.SetMark(v.Doc.Cursor())
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -354,9 +343,8 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					p := v.GetFileZoneCursorPos(msg, z)
-					v.SetCursor(p)
-					v.SetMark(v.Cursor())
-					overwriteCursorBlink = true
+					v.Doc.SetCursor(p)
+					v.Doc.SetMark(v.Doc.Cursor())
 				}
 			}
 
@@ -364,12 +352,11 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLineNumberPrefix))
-					v.SetCursor(buffer.Point{
+					v.Doc.SetCursor(buffer.Point{
 						Row: row,
 						Col: -1,
 					})
-					v.SetMark(v.Cursor())
-					overwriteCursorBlink = true
+					v.Doc.SetMark(v.Doc.Cursor())
 				}
 			}
 		case tea.MouseReleaseMsg:
@@ -386,12 +373,12 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					}
 					i, _ := strconv.Atoi(index)
 
-					if s := v.Selection(); s != nil && !s.IsEmpty() {
+					if s := v.Doc.Selection(); s != nil && !s.IsEmpty() {
 						return v, tea.Batch(cmds...)
 					}
 
-					diagnostic := v.file.Diagnostics[i]
-					v.SetCursor(diagnostic.Range.Start)
+					diagnostic := v.Doc.Diagnostics[i]
+					v.Doc.SetCursor(diagnostic.Range.Start)
 					v.ShowCurrentDiagnostic()
 					return v, tea.Batch(cmds...)
 				}
@@ -405,11 +392,11 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					}
 
 					p := v.GetFileZoneCursorPos(msg, z)
-					v.SetCursor(p)
-					if s := v.Selection(); s == nil || s.IsEmpty() {
-						v.ResetMark()
+					v.Doc.SetCursor(p)
+					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
+						v.Doc.ResetMark()
 					}
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseRight):
 					// TODO: open context menu?
@@ -426,14 +413,14 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					}
 
 					row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLineNumberPrefix))
-					v.SetCursor(buffer.Point{
+					v.Doc.SetCursor(buffer.Point{
 						Row: row,
 						Col: -1,
 					})
-					if s := v.Selection(); s == nil || s.IsEmpty() {
-						v.ResetMark()
+					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
+						v.Doc.ResetMark()
 					}
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -452,7 +439,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					p := v.GetFileZoneCursorPos(msg, z)
-					v.SetCursor(p)
+					v.Doc.SetCursor(p)
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -460,20 +447,20 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			for _, z := range append(zone.GetPrefix(ZoneFileLinePrefix), zone.GetPrefix(ZoneFileLineNumberPrefix)...) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.ModShift):
-					v.MoveCursorLeft(1)
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					v.Doc.MoveCursorLeft(1)
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelRight), mouse.MatchesZone(msg, z, tea.MouseWheelUp, tea.ModShift):
-					v.MoveCursorRight(1)
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					v.Doc.MoveCursorRight(1)
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelUp):
-					v.MoveCursorUp(1)
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					v.Doc.MoveCursorUp(1)
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
-					v.MoveCursorDown(1)
-					cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					v.Doc.MoveCursorDown(1)
+					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -484,39 +471,39 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 		case tea.KeyPressMsg:
 			switch {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete.Show):
-				p := v.Cursor()
-				cmds = append(cmds, ls.GetAutocompletion(v.Name(), p))
+				p := v.Doc.Cursor()
+				cmds = append(cmds, ls.GetAutocompletion(v.Doc.Name, p))
 				return v, tea.Batch(cmds...)
-			case key.Matches(msg, config.Keys.Cancel) && v.file.Autocomplete.Visible():
-				v.file.Autocomplete.ClearCompletions()
-			case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && v.file.Autocomplete.Visible():
-				v.file.Autocomplete.Next()
-			case key.Matches(msg, config.Keys.Editor.Autocomplete.Prev) && v.file.Autocomplete.Visible():
-				v.file.Autocomplete.Previous()
-			case key.Matches(msg, config.Keys.Editor.Autocomplete.Apply) && v.file.Autocomplete.Visible():
-				completion := v.file.Autocomplete.Selected()
-				if completion != nil {
-					if completion.Text != "" {
-						cmds = append(cmds, v.file.Insert(v.Cursor(), []byte(completion.Text)))
-					} else if completion.Edit != nil {
-						cmds = append(cmds, v.file.Replace(
-							completion.Edit.Range,
-							[]byte(completion.Edit.NewText)),
-						)
-					} else {
-						cmds = append(cmds, v.file.Insert(v.Cursor(), []byte(completion.Label)))
-					}
-				}
-				v.file.Autocomplete.ClearCompletions()
-				return v, tea.Batch(cmds...)
+			//case key.Matches(msg, config.Keys.Cancel) && v.file.Autocomplete.Visible():
+			//	v.file.Autocomplete.ClearCompletions()
+			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && v.file.Autocomplete.Visible():
+			//	v.file.Autocomplete.Next()
+			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Prev) && v.file.Autocomplete.Visible():
+			//	v.file.Autocomplete.Previous()
+			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Apply) && v.file.Autocomplete.Visible():
+			//	completion := v.file.Autocomplete.Selected()
+			//	if completion != nil {
+			//		if completion.Text != "" {
+			//			cmds = append(cmds, v.file.Insert(v.Cursor(), []byte(completion.Text)))
+			//		} else if completion.Edit != nil {
+			//			cmds = append(cmds, v.file.Replace(
+			//				completion.Edit.Range,
+			//				[]byte(completion.Edit.NewText)),
+			//			)
+			//		} else {
+			//			cmds = append(cmds, v.file.Insert(v.Cursor(), []byte(completion.Label)))
+			//		}
+			//	}
+			//	v.file.Autocomplete.ClearCompletions()
+			//	return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
-				if v.file.Syntax != nil {
-					syntax, err := file.NewSyntax(v.file.Syntax.Language, v.file.Buffer.Bytes())
+				if v.Doc.Syntax != nil {
+					syntax, err := doc.NewSyntax(v.Doc.Syntax.Language, v.Doc.Buffer.Bytes())
 					if err != nil {
 						cmds = append(cmds, notifications.Addf("failed to refresh syntax highlight: %s", err.Error()))
 						return v, tea.Batch(cmds...)
 					}
-					v.file.Syntax = syntax
+					v.Doc.Syntax = syntax
 					cmds = append(cmds, notifications.Add("Syntax highlight refreshed"))
 				}
 			case key.Matches(msg, config.Keys.Editor.Diagnostic.Show):
@@ -524,13 +511,13 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Cancel) && v.ShowsCurrentDiagnostic():
 				v.HideCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Editor.Code.ShowDeclaration):
-				cmds = append(cmds, v.file.ShowDeclaration(v.Cursor()))
+				cmds = append(cmds, v.Doc.ShowDeclaration(v.Doc.Cursor()))
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowDefinitions):
-				cmds = append(cmds, v.file.ShowDefinitions(v.Cursor()))
+				cmds = append(cmds, v.Doc.ShowDefinitions(v.Doc.Cursor()))
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowTypeDefinition):
-				cmds = append(cmds, v.file.ShowTypeDefinitions(v.Cursor()))
+				cmds = append(cmds, v.Doc.ShowTypeDefinitions(v.Doc.Cursor()))
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowImplementation):
 				// cmds = append(cmds, f.ShowImplementations())
@@ -539,160 +526,145 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				// cmds = append(cmds, f.ShowReferences())
 				// return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.OpenOutline):
-				cmds = append(cmds, overlay.Open(NewOutlineOverlay(v.file)))
+				cmds = append(cmds, overlay.Open(NewOutlineOverlay(v.Doc)))
 
 			case key.Matches(msg, config.Keys.Editor.File.Close):
 				cmds = append(cmds, CloseAction)
 
 			case key.Matches(msg, config.Keys.Editor.File.Delete):
-				cmds = append(cmds, overlay.Open(NewDeleteOverlay([]string{v.Name()})))
+				cmds = append(cmds, overlay.Open(NewDeleteOverlay([]string{v.Doc.Name})))
 			case key.Matches(msg, config.Keys.Editor.File.Rename):
-				cmds = append(cmds, overlay.Open(NewRenameOverlay(v.Name())))
+				cmds = append(cmds, overlay.Open(NewRenameOverlay(v.Doc.Name)))
 			case key.Matches(msg, config.Keys.Editor.Navigation.LineUp):
-				v.MoveCursorUp(moveSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorUp(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.LineDown):
-				v.MoveCursorDown(moveSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorDown(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.CharacterLeft):
-				v.MoveCursorLeft(moveSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorLeft(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.CharacterRight):
-				v.MoveCursorRight(moveSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorRight(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.WordUp):
-				v.MoveCursorWordUp()
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorWordUp()
 			case key.Matches(msg, config.Keys.Editor.Navigation.WordDown):
-				v.MoveCursorWordDown()
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorWordDown()
 			case key.Matches(msg, config.Keys.Editor.Navigation.WordLeft):
-				v.SetCursor(v.file.NextWordLeft(v.Cursor()))
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.SetCursor(v.Doc.NextWordLeft(v.Doc.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.WordRight):
-				v.SetCursor(v.file.NextWordRight(v.Cursor()))
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.SetCursor(v.Doc.NextWordRight(v.Doc.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.PageUp):
-				v.MoveCursorUp(pageSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorUp(pageSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.PageDown):
-				v.MoveCursorDown(pageSize)
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				v.Doc.MoveCursorDown(pageSize)
 			case key.Matches(msg, config.Keys.Editor.Navigation.LineStart):
-				v.SetCursor(buffer.Point{
+				v.Doc.SetCursor(buffer.Point{
 					Row: -1,
 					Col: 0,
 				})
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.LineEnd):
-				c := v.Cursor()
-				v.SetCursor(buffer.Point{
+				c := v.Doc.Cursor()
+				v.Doc.SetCursor(buffer.Point{
 					Row: -1,
-					Col: v.file.Buffer.LineLen(c.Row),
+					Col: v.Doc.Buffer.LineLen(c.Row),
 				})
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.FileStart):
-				v.SetCursor(buffer.Point{
+				v.Doc.SetCursor(buffer.Point{
 					Row: 0,
 					Col: 0,
 				})
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.FileEnd):
-				v.SetCursor(buffer.Point{
-					Row: v.file.Buffer.LinesLen() - 1,
-					Col: v.file.Buffer.LineLen(v.file.Buffer.LinesLen() - 1),
+				v.Doc.SetCursor(buffer.Point{
+					Row: v.Doc.Buffer.LinesLen() - 1,
+					Col: v.Doc.Buffer.LineLen(v.Doc.Buffer.LinesLen() - 1),
 				})
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.GoTo):
-				cmds = append(cmds, overlay.Open(NewGoToOverlay(v.Cursor())))
+				cmds = append(cmds, overlay.Open(NewGoToOverlay(v.Doc.Cursor())))
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Edit.Copy):
-				selBytes := v.SelectionBytes()
+				selBytes := v.Doc.SelectionBytes()
 				if len(selBytes) > 0 {
 					cmds = append(cmds, Copy(selBytes))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.Paste):
 				cmds = append(cmds, Paste)
 			case key.Matches(msg, config.Keys.Editor.Edit.Cut):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
-					cmds = append(cmds, Cut(*s, v.SelectionBytes()))
+					cmds = append(cmds, Cut(*s, v.Doc.SelectionBytes()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectLeft):
-				v.SelectLeft(moveSize)
+				v.Doc.SelectLeft(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectRight):
-				v.SelectRight(moveSize)
+				v.Doc.SelectRight(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectUp):
-				v.SelectUp(moveSize)
+				v.Doc.SelectUp(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectDown):
-				v.SelectDown(moveSize)
+				v.Doc.SelectDown(moveSize)
 			case key.Matches(msg, config.Keys.Editor.Selection.SelectAll):
-				v.SelectAll()
+				v.Doc.SelectAll()
 
 			case key.Matches(msg, config.Keys.Editor.File.Save):
-				cmds = append(cmds, SaveFile(v.Name()))
+				cmds = append(cmds, SaveFile(v.Doc.Name))
 			case key.Matches(msg, config.Keys.Editor.Edit.Tab):
 				// cmds = append(cmds, v.file.AddTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.RemoveTab):
 				// cmds = append(cmds, v.file.RemoveTab(v.Cursor().Row))
 			case key.Matches(msg, config.Keys.Editor.Edit.Newline):
-				v.ResetMark()
-				cmds = append(cmds,
-					v.file.InsertNewLine(v.Cursor()),
-					v.file.Autocomplete.Update(v.Cursor()),
-				)
+				v.Doc.ResetMark()
+				cmds = append(cmds, v.Doc.InsertNewLine(v.Doc.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteRight):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.DeleteRange(*s))
-					v.ResetMark()
+					cmds = append(cmds, v.Doc.DeleteRange(*s))
+					v.Doc.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DeleteAfter(v.Cursor()))
+					cmds = append(cmds, v.Doc.DeleteAfter(v.Doc.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLeft):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.DeleteRange(*s))
-					v.ResetMark()
+					cmds = append(cmds, v.Doc.DeleteRange(*s))
+					v.Doc.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.DeleteBefore(v.Cursor()))
+					cmds = append(cmds, v.Doc.DeleteBefore(v.Doc.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DuplicateLine):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
-					cmds = append(cmds, v.file.Insert(v.Cursor(), v.SelectionBytes()))
-					v.ResetMark()
+					cmds = append(cmds, v.Doc.Insert(v.Doc.Cursor(), v.Doc.SelectionBytes()))
+					v.Doc.ResetMark()
 				} else {
 					// cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordLeft):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
 					// cmds = append(cmds, v.file.DeleteRange(*s))
-					v.ResetMark()
+					v.Doc.ResetMark()
 				} else {
 					// cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordRight):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
 					// cmds = append(cmds, v.file.DeleteRange(*s))
-					v.ResetMark()
+					v.Doc.ResetMark()
 				} else {
 					// cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLine):
-				s := v.Selection()
+				s := v.Doc.Selection()
 				if s != nil {
 					// cmds = append(cmds, v.file.DeleteRange(*s))
-					v.ResetMark()
+					v.Doc.ResetMark()
 				} else {
 					// cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				// TODO: implement
 				// cmds = append(cmds, v.file.ToggleComment())
-				overwriteCursorBlink = true
 
 			default:
 				k := msg.Key()
@@ -701,47 +673,36 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				}
 
 				text := []byte(k.Text)
-				if s := v.Selection(); s != nil {
-					cmds = append(cmds, v.file.Replace(*s, text))
-					v.ResetMark()
+				if s := v.Doc.Selection(); s != nil {
+					cmds = append(cmds, v.Doc.Replace(*s, text))
+					v.Doc.ResetMark()
 				} else {
-					cmds = append(cmds, v.file.Insert(v.Cursor(), text))
-				}
-
-				cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
-
-				// handle auto pairs
-				if lang := v.Language(); lang != nil && len(lang.Config.AutoPairs) > 0 {
-					for _, pair := range lang.Config.AutoPairs {
-						if string(k.Code) == pair.Open {
-							c := v.Cursor()
-							c.Col += ansi.StringWidth(pair.Open)
-							cmds = append(cmds, v.file.Insert(c, []byte(pair.Close)))
-							break
-						}
-					}
+					cmds = append(cmds, v.Doc.Insert(v.Doc.Cursor(), text))
 				}
 			}
 		}
 	}
 
-	var cmd tea.Cmd
-	v.cursor.cursor, cmd = v.cursor.cursor.Update(msg)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-	if v.Cursor() != oldCursor || overwriteCursorBlink {
-		cmds = append(cmds, v.CursorBlinkCmd())
+	c := v.Doc.Cursor()
+	if v.lastCursorPosX != c.Row || v.lastCursorPosY != c.Col {
+		log.Printf("view offset: %d, %d\n", v.viewOffsetX, v.viewOffsetY)
+
+		cmds = append(cmds,
+			tea.SetCursorPosition(c.Col+v.viewOffsetX, c.Row+v.viewOffsetY),
+		)
+
+		v.lastCursorPosY = c.Col
+		v.lastCursorPosX = c.Row
 	}
 
 	return v, tea.Batch(cmds...)
 }
 
-func (v DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, width int, border bool) string {
+func (v *DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, width int, border bool) string {
 	codeLineStyle := config.Theme.UI.FileView.LineStyle
 	codePrefixStyle := config.Theme.UI.FileView.LinePrefixStyle
 	codeLineCharStyle := config.Theme.UI.FileView.LineCharStyle
-	if ln == v.Cursor().Row {
+	if ln == v.Doc.Cursor().Row {
 		codeLineStyle = config.Theme.UI.FileView.CurrentLineStyle
 		codePrefixStyle = config.Theme.UI.FileView.CurrentLinePrefixStyle
 		codeLineCharStyle = config.Theme.UI.FileView.CurrentLineCharStyle
@@ -757,7 +718,7 @@ func (v DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, width
 		return borderStyle("") + "\n"
 	}
 
-	lineDiagnostic, lineDiagnosticIndex := v.file.HighestLineDiagnostic(ln)
+	lineDiagnostic, lineDiagnosticIndex := v.Doc.HighestLineDiagnostic(ln)
 
 	var prefix string
 	if lineDiagnostic.Severity > 0 {
@@ -777,9 +738,13 @@ func (v DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, width
 	return borderStyle(prefix+codeLineStyle.Render(string(lineCode))) + "\n"
 }
 
-func (v DocumentView) View(width int, height int, border bool, debug bool, offsetX int, offsetY int) string {
-	prefixWidth := lipgloss.Width(strconv.Itoa(v.file.Buffer.LinesLen()))
-	width = max(width-prefixWidth-config.Theme.UI.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
+func (v *DocumentView) View(width int, height int, border bool, debug bool, offsetX int, offsetY int) string {
+	prefixWidth := lipgloss.Width(strconv.Itoa(v.Doc.Buffer.LinesLen()))
+	borderWidth := config.Theme.UI.FileView.BorderStyle.GetHorizontalFrameSize()
+	width = max(width-prefixWidth-borderWidth-3, 0)
+
+	v.viewOffsetX = offsetX + prefixWidth + borderWidth + 3
+	v.viewOffsetY = offsetY
 
 	// debug takes up 4 lines
 	if debug {
@@ -787,11 +752,11 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 	}
 
 	v.refreshCursorViewOffset(width-2, height)
-	c := v.Cursor()
-	offset := v.cursor.offset
-	selection := v.Selection()
+	c := v.Doc.Cursor()
+	offset := v.offset
+	selection := v.Doc.Selection()
 
-	nextStyle, stop := iter.Pull(v.file.HighlightIter(nil))
+	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(nil))
 	defer stop()
 	charStyle, ok := nextStyle()
 
@@ -801,9 +766,9 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 		lastChar   buffer.Char
 
 		// keep track of the style under the cursor for debugging
-		cursorCharStyle file.CharStyle
+		cursorCharStyle doc.CharStyle
 	)
-	r := buffer.NewReader(v.file.Buffer, offset)
+	r := buffer.NewReader(v.Doc.Buffer, offset)
 	for char := range r.All() {
 		// stop rendering if we are out of the visible area
 		if char.Point.Row < offset.Row || char.Point.Row >= offset.Row+height {
@@ -818,7 +783,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 		lastChar = char
 
 		codeLineCharStyle := config.Theme.UI.FileView.LineCharStyle
-		if char.Point.Row == v.Cursor().Row {
+		if char.Point.Row == c.Row {
 			codeLineCharStyle = config.Theme.UI.FileView.CurrentLineCharStyle
 		}
 
@@ -834,12 +799,15 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 			}
 		}
 
+		if char.Point.Row == c.Row && char.Point.Col == c.Col {
+			cursorCharStyle = charStyle
+		}
+
 		style := charStyle.Style.Inherit(codeLineCharStyle)
-		style = v.file.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
+		style = v.Doc.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
 
 		if char.Rune == '\n' {
 			if char.Point.Row == c.Row && char.Point.Col == c.Col {
-				lineCode = append(lineCode, v.cursor.cursor.View(" ", style)...)
 				cursorCharStyle = charStyle
 			} else {
 				lineCode = append(lineCode, style.Render(" ")...)
@@ -858,10 +826,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 		inSelection := selection != nil && selection.Contains(char.Point)
 
 		var renderChar string
-		if char.Point.Row == c.Row && char.Point.Col == c.Col {
-			renderChar = v.cursor.cursor.View(string(char.Rune), style)
-			cursorCharStyle = charStyle
-		} else if inSelection {
+		if inSelection {
 			renderChar = config.Theme.UI.FileView.SelectionStyle.Inherit(style).Render(string(char.Rune))
 		} else {
 			renderChar = style.Render(string(char.Rune))
@@ -875,7 +840,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 			paddingStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(paddingStyle)
 			labelStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(labelStyle)
 		}
-		for _, hint := range v.file.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
+		for _, hint := range v.Doc.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
 			var label string
 			if hint.PaddingLeft {
 				label += paddingStyle.Render(" ")
@@ -900,7 +865,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 	editorCode = strings.TrimSuffix(editorCode, "\n")
 
 	if v.showCurrentDiagnostic {
-		diagnostic := v.file.HighestLineColDiagnostic(c.Row, c.Col)
+		diagnostic := v.Doc.HighestLineColDiagnostic(c.Row, c.Col)
 		if diagnostic.Severity > 0 {
 			editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, diagnostic.View(width, height), editorCode,
 				overlay.WithMarginX(config.Theme.UI.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
@@ -909,24 +874,19 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 		} else {
 			v.HideCurrentDiagnostic()
 		}
-	} else if v.file.Autocomplete.Visible() {
-		editorCode = overlay.PlacePosition(lipgloss.Left, lipgloss.Top, v.file.Autocomplete.View(width, height), editorCode,
-			overlay.WithMarginX(config.Theme.UI.FileView.LinePrefixStyle.GetHorizontalFrameSize()+prefixWidth+1+c.Col),
-			overlay.WithMarginY(c.Row+1),
-		)
 	}
 
 	if debug {
 		editorCode += "\n" + fmt.Sprintf("  Cursor Char Style: %s (%s) [%d, %d]", cursorCharStyle.StyleName, cursorCharStyle.LanguageName, cursorCharStyle.Start, cursorCharStyle.End)
 
-		diagnostics := v.file.DiagnosticsForLineCol(c.Row, c.Col)
+		diagnostics := v.Doc.DiagnosticsForLineCol(c.Row, c.Col)
 		var currentDiagnostics []string
 		for _, diag := range diagnostics {
 			currentDiagnostics = append(currentDiagnostics, fmt.Sprintf("%s (%s: %s [%d, %d] - [%d, %d])", diag.Message, diag.Type, diag.Source, diag.Range.Start.Row, diag.Range.Start.Col, diag.Range.End.Row, diag.Range.End.Col))
 		}
 		editorCode += "\n" + fmt.Sprintf("  Current Diagnostics: %s", strings.Join(currentDiagnostics, ", "))
 
-		hints := v.file.InlayHintsForLine(c.Row)
+		hints := v.Doc.InlayHintsForLine(c.Row)
 		var currentHints []string
 		for _, hint := range hints {
 			currentHints = append(currentHints, fmt.Sprintf("%s (%s [%d, %d])", hint.Label, hint.Type, hint.Position.Row, hint.Position.Col))
@@ -934,7 +894,7 @@ func (v DocumentView) View(width int, height int, border bool, debug bool, offse
 		editorCode += "\n" + fmt.Sprintf("  Current Inlay Hints: %s", strings.Join(currentHints, ", "))
 
 		var currentDefinitions []string
-		for _, definitions := range v.file.Definitions {
+		for _, definitions := range v.Doc.Definitions {
 			currentDefinitions = append(currentDefinitions, fmt.Sprintf("%s ([%d, %d] - [%d, %d])", definitions.Name, definitions.Range.Start.Row, definitions.Range.Start.Col, definitions.Range.End.Row, definitions.Range.End.Col))
 		}
 		editorCode += "\n" + fmt.Sprintf("  Current Definitions: %s", strings.Join(currentDefinitions, ", "))

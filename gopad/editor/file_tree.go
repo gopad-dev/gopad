@@ -17,7 +17,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
@@ -28,7 +28,7 @@ const (
 )
 
 func fileIconByFileNameFunc(name string) lipgloss.Style {
-	language := file.GetLanguageByFilename(name)
+	language := doc.GetLanguageByFilename(name)
 	var languageName string
 	if language != nil {
 		languageName = language.Name

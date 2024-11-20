@@ -7,7 +7,7 @@ import (
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -19,7 +19,7 @@ const FileLanguageZoneID = "file.language"
 var _ overlay.Overlay = (*SetLanguageOverlay)(nil)
 
 func NewSetLanguageOverlay() SetLanguageOverlay {
-	l := config.NewList(file.Languages)
+	l := config.NewList(doc.Languages)
 	l.TextInput.Placeholder = "Type a language and press enter to set it"
 	l.Focus()
 
@@ -29,7 +29,7 @@ func NewSetLanguageOverlay() SetLanguageOverlay {
 }
 
 type SetLanguageOverlay struct {
-	l list.Model[*file.Language]
+	l list.Model[*doc.Language]
 }
 
 func (s SetLanguageOverlay) ID() string {

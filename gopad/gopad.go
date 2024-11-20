@@ -54,8 +54,8 @@ func (g *Gopad) Focus() tea.Cmd {
 	return g.editor.Focus(editor.ModelTypeFile)
 }
 
-func (g *Gopad) Blur() {
-	g.editor.Blur()
+func (g *Gopad) Blur() tea.Cmd {
+	return g.editor.Blur()
 }
 
 func (g Gopad) Init() (tea.Model, tea.Cmd) {
@@ -108,7 +108,7 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return g, tea.Batch(cmds...)
 
 	case overlay.TakeFocusMsg, tea.BlurMsg:
-		g.Blur()
+		cmds = append(cmds, g.Blur())
 		return g, tea.Batch(cmds...)
 
 	case OpenLSPOverlayMsg:
@@ -235,7 +235,7 @@ func (g Gopad) AppBar() string {
 func (g Gopad) CodeBar() string {
 	width := g.width
 	contentWidth := width - config.Theme.UI.CodeBar.Style.GetHorizontalFrameSize()
-	file := g.editor.FileView()
+	docView := g.editor.DocView()
 
 	barStyle := config.Theme.UI.CodeBar.Style
 	inlineBarStyle := barStyle.Inline(true).Render
@@ -243,15 +243,15 @@ func (g Gopad) CodeBar() string {
 	var infoLine []string
 	infoLine = append(infoLine, zone.Mark(ZoneTheme, inlineBarStyle(config.Theme.Name)))
 
-	if file != nil {
-		if s := file.Selection(); s != nil {
+	if docView != nil {
+		if s := docView.Doc.Selection(); s != nil {
 			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("%d lines | [%d:%d-%d:%d]", s.Lines(), s.Start.Row+1, s.Start.Col+1, s.End.Row+1, s.End.Col+1))))
 		} else {
-			c := file.Cursor()
+			c := docView.Doc.Cursor()
 			infoLine = append(infoLine, zone.Mark(editor.ZoneFileGoTo, inlineBarStyle(fmt.Sprintf("[%d:%d]", c.Row+1, c.Col+1))))
 		}
 
-		if servers := g.lsClient.SupportedServers(file.Name()); len(servers) > 0 {
+		if servers := g.lsClient.SupportedServers(docView.Doc.Name); len(servers) > 0 {
 			var clientNames []string
 			for _, server := range servers {
 				clientNames = append(clientNames, server.Name())
@@ -259,7 +259,7 @@ func (g Gopad) CodeBar() string {
 			infoLine = append(infoLine, inlineBarStyle(strings.Join(clientNames, ",")))
 		}
 
-		if language := file.Language(); language != nil {
+		if language := docView.Language(); language != nil {
 			name := language.Name
 			icon := config.Theme.Icons.FileIcon(name).Render()
 
@@ -277,7 +277,7 @@ func (g Gopad) CodeBar() string {
 		}
 
 		infoLine = append(infoLine,
-			zone.Mark(editor.ZoneFileLineEnding, inlineBarStyle(file.LineEnding().String())),
+			zone.Mark(editor.ZoneFileLineEnding, inlineBarStyle(docView.Doc.Buffer.LineEnding().String())),
 			zone.Mark(editor.ZoneFileEncoding, inlineBarStyle("UTF-8")),
 		)
 	}
@@ -286,11 +286,11 @@ func (g Gopad) CodeBar() string {
 	maxWorkspaceNameWidth := max(0, contentWidth-1-lipgloss.Width(infoLineStr))
 	workspaceName := g.editor.Workspace()
 	if workspaceName != "" {
-		if file != nil {
-			workspaceName = filepath.Join(filepath.Base(workspaceName), file.RelativeName(workspaceName))
+		if docView != nil {
+			workspaceName = filepath.Join(filepath.Base(workspaceName), docView.Doc.RelativeName(workspaceName))
 		}
-	} else if file != nil {
-		workspaceName = file.Name()
+	} else if docView != nil {
+		workspaceName = docView.Doc.Name
 	}
 
 	if maxWorkspaceNameWidth > 0 && lipgloss.Width(workspaceName) > maxWorkspaceNameWidth {
