@@ -33,7 +33,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.0.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.5 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/charmbracelet/x/wcwidth v0.0.0-20241113152101-0af7d04e9f32 // indirect
+	github.com/charmbracelet/x/wcwidth v0.0.0-20241119170951-e919f77bf23b // indirect
 	github.com/charmbracelet/x/windows v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

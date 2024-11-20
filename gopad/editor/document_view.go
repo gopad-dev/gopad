@@ -510,7 +510,15 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				v.file.Autocomplete.ClearCompletions()
 				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
-				// TODO: refresh syntax highlight
+				if v.file.Syntax != nil {
+					syntax, err := file.NewSyntax(v.file.Syntax.Language, v.file.Buffer.Bytes())
+					if err != nil {
+						cmds = append(cmds, notifications.Addf("failed to refresh syntax highlight: %s", err.Error()))
+						return v, tea.Batch(cmds...)
+					}
+					v.file.Syntax = syntax
+					cmds = append(cmds, notifications.Add("Syntax highlight refreshed"))
+				}
 			case key.Matches(msg, config.Keys.Editor.Diagnostic.Show):
 				v.ShowCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Cancel) && v.ShowsCurrentDiagnostic():
@@ -769,7 +777,7 @@ func (v DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, width
 	return borderStyle(prefix+codeLineStyle.Render(string(lineCode))) + "\n"
 }
 
-func (v DocumentView) View(width int, height int, border bool, debug bool) string {
+func (v DocumentView) View(width int, height int, border bool, debug bool, offsetX int, offsetY int) string {
 	prefixWidth := lipgloss.Width(strconv.Itoa(v.file.Buffer.LinesLen()))
 	width = max(width-prefixWidth-config.Theme.UI.FileView.BorderStyle.GetHorizontalFrameSize()-3, 0)
 

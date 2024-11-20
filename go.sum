@@ -16,8 +16,8 @@ github.com/charmbracelet/x/cellbuf v0.0.5 h1:LYmOqjZqoLeL4bgafJu+HZesy5zIdjgSYFk
 github.com/charmbracelet/x/cellbuf v0.0.5/go.mod h1:FaDNlvrPSNCEnih536+xi5f8iqxRQfDA20TVTs30CPU=
 github.com/charmbracelet/x/term v0.2.1 h1:AQeHeLZ1OqSXhrAWpYUtZyX1T3zVxfpZuEQMIQaGIAQ=
 github.com/charmbracelet/x/term v0.2.1/go.mod h1:oQ4enTYFV7QN4m0i9mzHrViD7TQKvNEEkHUMCmsxdUg=
-github.com/charmbracelet/x/wcwidth v0.0.0-20241113152101-0af7d04e9f32 h1:14czE6R5CgOlvONsJYa2B1uTyLvXzGXpBqw2AyZeTh4=
-github.com/charmbracelet/x/wcwidth v0.0.0-20241113152101-0af7d04e9f32/go.mod h1:hyua5CY63kyl7IfyIxv1SjVEqoKze/XmDkEglItuVjA=
+github.com/charmbracelet/x/wcwidth v0.0.0-20241119170951-e919f77bf23b h1:TF0bhQRbHgu+zGe5Ix6tFam8A5hp3S3QAkw/5TxXHu8=
+github.com/charmbracelet/x/wcwidth v0.0.0-20241119170951-e919f77bf23b/go.mod h1:hyua5CY63kyl7IfyIxv1SjVEqoKze/XmDkEglItuVjA=
 github.com/charmbracelet/x/windows v0.2.0 h1:ilXA1GJjTNkgOm94CLPeSz7rar54jtFatdmoiONPuEw=
 github.com/charmbracelet/x/windows v0.2.0/go.mod h1:ZibNFR49ZFqCXgP76sYanisxRyC+EYrBE7TTknD8s1s=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=

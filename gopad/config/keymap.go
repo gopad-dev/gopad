@@ -88,7 +88,7 @@ type EditorKeyMap struct {
 	OpenOutline    key.Binding
 
 	RefreshSyntaxHighlight key.Binding
-	ToggleTreeSitterDebug  key.Binding
+	ToggleDebug            key.Binding
 	DebugTreeSitterNodes   key.Binding
 
 	File         EditorFileKeyMap
@@ -114,7 +114,7 @@ func (k EditorKeyMap) HelpView() []help.KeyMapCategory {
 				k.OpenOutline,
 				emptyKeyBind,
 				k.RefreshSyntaxHighlight,
-				k.ToggleTreeSitterDebug,
+				k.ToggleDebug,
 				k.DebugTreeSitterNodes,
 			},
 		},
@@ -513,7 +513,7 @@ type EditorKeyConfig struct {
 	OpenOutline    string `toml:"open_outline"`
 
 	RefreshSyntaxHighlight string `toml:"refresh_syntax_highlight"`
-	ToggleTreeSitterDebug  string `toml:"toggle_tree_sitter_debug"`
+	ToggleDebug            string `toml:"toggle_debug"`
 	DebugTreeSitterNodes   string `toml:"debug_tree_sitter_nodes"`
 
 	File struct {
@@ -630,9 +630,9 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			key.WithKeys(k.RefreshSyntaxHighlight),
 			key.WithHelp(k.RefreshSyntaxHighlight, "refresh syntax highlight"),
 		),
-		ToggleTreeSitterDebug: key.NewBinding(
-			key.WithKeys(k.ToggleTreeSitterDebug),
-			key.WithHelp(k.ToggleTreeSitterDebug, "toggle tree-sitter debug"),
+		ToggleDebug: key.NewBinding(
+			key.WithKeys(k.ToggleDebug),
+			key.WithHelp(k.ToggleDebug, "toggle tree-sitter debug"),
 		),
 		DebugTreeSitterNodes: key.NewBinding(
 			key.WithKeys(k.DebugTreeSitterNodes),

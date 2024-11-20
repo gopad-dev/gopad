@@ -23,7 +23,7 @@ search = 'ctrl+f'
 open_outline = 'alt+7'
 
 refresh_syntax_highlight = 'f1'
-toggle_tree_sitter_debug = 'f2'
+toggle_debug = 'f2'
 debug_tree_sitter_nodes = 'f3'
 
 [keys.editor.file]

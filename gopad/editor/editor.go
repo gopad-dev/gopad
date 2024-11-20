@@ -65,8 +65,8 @@ type Editor struct {
 	activeFile int
 	fileOffset int
 
-	focus           ModelType
-	treeSitterDebug bool
+	focus ModelType
+	debug bool
 }
 
 func (e Editor) Init() (Editor, tea.Cmd) {
@@ -339,8 +339,8 @@ func (e *Editor) HasChanges() bool {
 	return false
 }
 
-func (e *Editor) ToggleTreeSitterDebug() {
-	e.treeSitterDebug = !e.treeSitterDebug
+func (e *Editor) ToggleDebug() {
+	e.debug = !e.debug
 }
 
 func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
@@ -619,8 +619,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, Focus(ModelTypeFile))
 			}
 			return e, tea.Batch(cmds...)
-		case key.Matches(msg, config.Keys.Editor.ToggleTreeSitterDebug):
-			e.ToggleTreeSitterDebug()
+		case key.Matches(msg, config.Keys.Editor.ToggleDebug):
+			e.ToggleDebug()
 			return e, tea.Batch(cmds...)
 		case key.Matches(msg, config.Keys.Editor.DebugTreeSitterNodes):
 			v := e.FileView()
@@ -700,11 +700,13 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	return e, tea.Batch(cmds...)
 }
 
-func (e *Editor) View(width int, height int) string {
+func (e *Editor) View(width int, height int, offsetX int, offsetY int) string {
 	var tree string
 	if e.fileTree.Visible() {
 		tree = e.fileTree.View(height)
-		width -= lipgloss.Width(tree)
+		treeWidth := lipgloss.Width(tree)
+		width -= treeWidth
+		offsetX += treeWidth
 	}
 
 	f := e.FileView()
@@ -730,10 +732,12 @@ func (e *Editor) View(width int, height int) string {
 		if tree != "" {
 			search = config.Theme.UI.FileView.BorderStyle.Render(search)
 		}
-		height -= lipgloss.Height(search)
+		searchHeight := lipgloss.Height(search)
+		height -= searchHeight
+		offsetY += searchHeight
 	}
 
-	editor := f.View(width, height, e.fileTree.Visible(), e.treeSitterDebug)
+	editor := f.View(width, height, e.fileTree.Visible(), e.debug, offsetX, offsetY)
 
 	if search != "" {
 		editor = lipgloss.JoinVertical(lipgloss.Left, search, editor)

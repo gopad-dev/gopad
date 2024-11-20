@@ -84,13 +84,12 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if _, ok := msg.(cursor.BlinkMsg); !ok {
-		log.Printf("Msg: %T: %v\n", msg, msg)
-	}
-	// now := time.Now()
-	// defer func() {
-	//	log.Printf("Update time: %s\nMessage: %T", time.Since(now), msg)
-	// }()
+	now := time.Now()
+	defer func() {
+		if _, ok := msg.(cursor.BlinkMsg); !ok {
+			log.Printf("Update time: %s, Msg: %T", time.Since(now), msg)
+		}
+	}()
 
 	var cmds []tea.Cmd
 
@@ -209,7 +208,8 @@ func (g Gopad) View() string {
 
 	appBar := g.AppBar()
 	codeBar := g.CodeBar()
-	codeEditor := g.editor.View(g.width, height-lipgloss.Height(appBar)-lipgloss.Height(codeBar))
+	appBarHeight := lipgloss.Height(appBar)
+	codeEditor := g.editor.View(g.width, height-appBarHeight-lipgloss.Height(codeBar), 0, appBarHeight)
 	view := fmt.Sprintf("%s\n%s\n%s", appBar, codeEditor, codeBar)
 
 	if g.overlays.Focused() {
