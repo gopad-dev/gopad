@@ -5,7 +5,7 @@ go 1.23
 replace (
 	github.com/charmbracelet/lipgloss/v2 => github.com/gopad-dev/lipgloss/v2 v2.0.0-20241116225007-513a66c72a0b
 	github.com/lrstanley/bubblezone => github.com/gopad-dev/bubblezone v0.0.0-20240919125415-44caa82cfbd5
-	github.com/tree-sitter/go-tree-sitter => github.com/gopad-dev/go-tree-sitter-new v0.0.0-20241111011602-a1b6e90961a1
+	github.com/tree-sitter/go-tree-sitter => github.com/gopad-dev/go-tree-sitter-new v0.0.0-20241121002053-3e4ecb5d8c7b
 	go.lsp.dev/protocol => github.com/gopad-dev/protocol v0.0.0-20240916085830-4815610e4100
 )
 
@@ -33,7 +33,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.0.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.5 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/charmbracelet/x/wcwidth v0.0.0-20241119170951-e919f77bf23b // indirect
+	github.com/charmbracelet/x/wcwidth v0.0.0-20241120212915-1c56a76fb03b // indirect
 	github.com/charmbracelet/x/windows v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

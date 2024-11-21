@@ -11,12 +11,12 @@ import (
 
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/key"
+	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/runeutil"
 )
 
 // Internal messages for clipboard operations.
 type pasteMsg string
-type pasteErrMsg struct{ error }
 
 // EchoMode sets the input behavior of the text input field.
 type EchoMode int
@@ -496,9 +496,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case pasteMsg:
 		m.insertRunesFromUserInput([]rune(msg))
-
-	case pasteErrMsg:
-		m.Err = msg
 	}
 
 	var cmds []tea.Cmd
@@ -603,7 +600,7 @@ func Blink() tea.Msg {
 func Paste() tea.Msg {
 	str, err := clipboard.ReadAll()
 	if err != nil {
-		return pasteErrMsg{err}
+		return notifications.Addf("Error pasting from clipboard: %v", err)
 	}
 	return pasteMsg(str)
 }

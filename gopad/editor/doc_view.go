@@ -115,7 +115,7 @@ func (v *DocumentView) Focus() tea.Cmd {
 
 func (v *DocumentView) Blur() tea.Cmd {
 	v.focused = false
-	//return tea.HideCursor
+	// return tea.HideCursor
 	return nil
 }
 
@@ -215,7 +215,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 		if msg.Name != v.Doc.Name {
 			return v, tea.Batch(cmds...)
 		}
-		//v.file.Autocomplete.SetCompletions(msg.Completions)
+		// v.file.Autocomplete.SetCompletions(msg.Completions)
 		return v, tea.Batch(cmds...)
 	case ls.UpdateInlayHintMsg:
 		if msg.Name != v.Doc.Name {
@@ -396,7 +396,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
 						v.Doc.ResetMark()
 					}
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseRight):
 					// TODO: open context menu?
@@ -420,7 +420,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
 						v.Doc.ResetMark()
 					}
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -448,19 +448,19 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.ModShift):
 					v.Doc.MoveCursorLeft(1)
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelRight), mouse.MatchesZone(msg, z, tea.MouseWheelUp, tea.ModShift):
 					v.Doc.MoveCursorRight(1)
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelUp):
 					v.Doc.MoveCursorUp(1)
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
 					v.Doc.MoveCursorDown(1)
-					//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 					return v, tea.Batch(cmds...)
 				}
 			}
@@ -474,13 +474,13 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				p := v.Doc.Cursor()
 				cmds = append(cmds, ls.GetAutocompletion(v.Doc.Name, p))
 				return v, tea.Batch(cmds...)
-			//case key.Matches(msg, config.Keys.Cancel) && v.file.Autocomplete.Visible():
+			// case key.Matches(msg, config.Keys.Cancel) && v.file.Autocomplete.Visible():
 			//	v.file.Autocomplete.ClearCompletions()
-			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && v.file.Autocomplete.Visible():
+			// case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && v.file.Autocomplete.Visible():
 			//	v.file.Autocomplete.Next()
-			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Prev) && v.file.Autocomplete.Visible():
+			// case key.Matches(msg, config.Keys.Editor.Autocomplete.Prev) && v.file.Autocomplete.Visible():
 			//	v.file.Autocomplete.Previous()
-			//case key.Matches(msg, config.Keys.Editor.Autocomplete.Apply) && v.file.Autocomplete.Visible():
+			// case key.Matches(msg, config.Keys.Editor.Autocomplete.Apply) && v.file.Autocomplete.Visible():
 			//	completion := v.file.Autocomplete.Selected()
 			//	if completion != nil {
 			//		if completion.Text != "" {
@@ -566,19 +566,19 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					Row: -1,
 					Col: v.Doc.Buffer.LineLen(c.Row),
 				})
-				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.FileStart):
 				v.Doc.SetCursor(buffer.Point{
 					Row: 0,
 					Col: 0,
 				})
-				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.FileEnd):
 				v.Doc.SetCursor(buffer.Point{
 					Row: v.Doc.Buffer.LinesLen() - 1,
 					Col: v.Doc.Buffer.LineLen(v.Doc.Buffer.LinesLen() - 1),
 				})
-				//cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
+				// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
 			case key.Matches(msg, config.Keys.Editor.Navigation.GoTo):
 				cmds = append(cmds, overlay.Open(NewGoToOverlay(v.Doc.Cursor())))
 				return v, tea.Batch(cmds...)
@@ -635,32 +635,32 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				if s != nil {
 					cmds = append(cmds, v.Doc.Insert(v.Doc.Cursor(), v.Doc.SelectionBytes()))
 					v.Doc.ResetMark()
-				} else {
-					// cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
+					// } else {
+					// 	cmds = append(cmds, v.file.DuplicateLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordLeft):
 				s := v.Doc.Selection()
 				if s != nil {
-					// cmds = append(cmds, v.file.DeleteRange(*s))
+					cmds = append(cmds, v.Doc.DeleteRange(*s))
 					v.Doc.ResetMark()
-				} else {
-					// cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
+					// } else {
+					// 	cmds = append(cmds, v.file.DeleteWordLeft(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteWordRight):
 				s := v.Doc.Selection()
 				if s != nil {
-					// cmds = append(cmds, v.file.DeleteRange(*s))
+					cmds = append(cmds, v.Doc.DeleteRange(*s))
 					v.Doc.ResetMark()
-				} else {
-					// cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
+					// } else {
+					// 	cmds = append(cmds, v.file.DeleteWordRight(v.Cursor()))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.DeleteLine):
 				s := v.Doc.Selection()
 				if s != nil {
-					// cmds = append(cmds, v.file.DeleteRange(*s))
+					cmds = append(cmds, v.Doc.DeleteRange(*s))
 					v.Doc.ResetMark()
-				} else {
-					// cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
+					// } else {
+					// 	cmds = append(cmds, v.file.DeleteLine(v.Cursor().Row))
 				}
 			case key.Matches(msg, config.Keys.Editor.Edit.ToggleComment):
 				// TODO: implement
@@ -758,7 +758,7 @@ func (v *DocumentView) View(width int, height int, border bool, debug bool, offs
 
 	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(nil))
 	defer stop()
-	charStyle, ok := nextStyle()
+	charStyle, _ := nextStyle()
 
 	var (
 		editorCode string
@@ -789,6 +789,7 @@ func (v *DocumentView) View(width int, height int, border bool, debug bool, offs
 
 		if char.Index >= charStyle.End {
 			for {
+				var ok bool
 				charStyle, ok = nextStyle()
 				if !ok {
 					break

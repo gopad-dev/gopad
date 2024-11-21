@@ -385,7 +385,6 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				return e, overlay.Open(NewCloseOverlay([]string{v.Doc.Name}))
 			}
 			cmds = append(cmds, CloseFile(v.Doc.Name))
-
 		}
 		return e, tea.Batch(cmds...)
 	case GoToActionMsg:

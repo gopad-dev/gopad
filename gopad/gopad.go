@@ -202,7 +202,9 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (g Gopad) View() string {
 	now := time.Now()
-	defer log.Printf("Render time: %s\n", time.Since(now))
+	defer func() {
+		log.Printf("Render time: %s\n", time.Since(now))
+	}()
 
 	height := g.height
 

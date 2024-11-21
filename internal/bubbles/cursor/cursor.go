@@ -222,7 +222,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.realRow != realRow || m.realCol != realCol {
 			m.realRow = realRow
 			m.realCol = realCol
-			//cmd = tea.SetCursorPosition(realRow, realCol)
+			// cmd = tea.SetCursorPosition(realRow, realCol)
 		}
 	}
 
@@ -308,7 +308,7 @@ func (m *Model) SetPosition(row, col int) {
 }
 
 // SetOffset sets the offset the cursor is displayed at.
-func (m Model) SetOffset(x, y int) {
+func (m *Model) SetOffset(x, y int) {
 	m.offsetX = x
 	m.offsetY = y
 }

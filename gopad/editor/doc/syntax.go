@@ -1,6 +1,7 @@
 package doc
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -250,8 +251,8 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 	if cursor == nil {
 		cursor = tree_sitter.NewQueryCursor()
 	}
-	// cursor.SetByteRange(0, ^uint(0))
-	// cursor.SetMatchLimit(TreeSitterMatchLimit)
+	cursor.SetByteRange(0, ^uint(0))
+	cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 	touched := map[slotmap.LayerID]struct{}{}
 
@@ -412,8 +413,8 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 			}
 		}
 
-		// cursor.SetByteRange(r.StartByte, r.EndByte)
-		// cursor.SetMatchLimit(TreeSitterMatchLimit)
+		cursor.SetByteRange(r.StartByte, r.EndByte)
+		cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 		captures := make([]queryCapture, 0)
 		queryCaptures := cursor.Captures(layer.Config.Query, layer.Tree.RootNode(), source)
@@ -509,9 +510,22 @@ type LanguageLayer struct {
 }
 
 func (l *LanguageLayer) Hash(h *hash.Hasher) {
-	_ = binary.Write(h, binary.LittleEndian, l.Depth)
-	_ = binary.Write(h, binary.LittleEndian, l.Config.LanguageName)
-	_ = binary.Write(h, binary.LittleEndian, l.Ranges)
+	_ = binary.Write(h, binary.LittleEndian, uint8(l.Depth))
+	_ = binary.Write(h, binary.LittleEndian, []byte(l.Config.LanguageName))
+	_ = binary.Write(h, binary.LittleEndian, rangesToBytes(l.Ranges))
+}
+
+func rangesToBytes(ranges []tree_sitter.Range) []byte {
+	b := bytes.Buffer{}
+	for _, r := range ranges {
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.StartByte))
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.EndByte))
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.StartPoint.Row))
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.StartPoint.Column))
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.EndPoint.Row))
+		_ = binary.Write(&b, binary.LittleEndian, uint64(r.EndPoint.Column))
+	}
+	return b.Bytes()
 }
 
 func (l *LanguageLayer) parse(ctx context.Context, parser *tree_sitter.Parser, source []byte, hasEdits bool) error {
