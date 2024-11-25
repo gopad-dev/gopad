@@ -9,13 +9,13 @@ import (
 	"log"
 	"slices"
 
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/internal/hash"
 	"go.gopad.dev/gopad/internal/slotmap"
 	"go.gopad.dev/gopad/internal/xbytes"
+	"go.gopad.dev/gopad/internal/xslices"
 )
 
 const (
@@ -52,8 +52,8 @@ type ByteRange struct {
 	EndByte   uint
 }
 
-func NewSyntax(language *Language, source []byte) (*Syntax, error) {
-	layers, err := NewSyntaxLayers(source, language.Grammar.Highlight)
+func NewSyntax(ctx context.Context, language *Language, source []byte) (*Syntax, error) {
+	layers, err := NewSyntaxLayers(ctx, source, language.Grammar.Highlight)
 	if err != nil {
 		return nil, fmt.Errorf("error creating syntax layers: %w", err)
 	}
@@ -63,7 +63,7 @@ func NewSyntax(language *Language, source []byte) (*Syntax, error) {
 		Layers:   layers,
 	}
 
-	if err = syntax.Parse(context.Background(), 0, source, nil); err != nil {
+	if err = syntax.Parse(ctx, 0, source, nil); err != nil {
 		return nil, fmt.Errorf("error parsing syntax: %w", err)
 	}
 
@@ -102,11 +102,6 @@ func (s *Syntax) Update(ctx context.Context, newRev uint64, newBuf buffer.Buffer
 	return s.Parse(ctx, newRev, newBuf.Bytes(), []SyntaxEdit{edits})
 }
 
-type StyleSpan struct {
-	Range tree_sitter.Range
-	Style lipgloss.Style
-}
-
 func newParser() *parser {
 	return &parser{
 		parser:  tree_sitter.NewParser(),
@@ -124,16 +119,18 @@ func (p *parser) pushCursor(cursor *tree_sitter.QueryCursor) {
 }
 
 func (p *parser) popCursor() *tree_sitter.QueryCursor {
-	if len(p.cursors) == 0 {
-		return nil
+	var cursor *tree_sitter.QueryCursor
+	cursor, p.cursors = xslices.Pop(p.cursors)
+
+	// If there are no cursors in the pool, create a new one.
+	if cursor == nil {
+		cursor = tree_sitter.NewQueryCursor()
 	}
 
-	var cursor *tree_sitter.QueryCursor
-	cursor, p.cursors = p.cursors[len(p.cursors)-1], p.cursors[:len(p.cursors)-1]
 	return cursor
 }
 
-func NewSyntaxLayers(source []byte, config HighlightConfiguration) (*SyntaxLayers, error) {
+func NewSyntaxLayers(ctx context.Context, source []byte, config HighlightConfiguration) (*SyntaxLayers, error) {
 	rootLayer := &LanguageLayer{
 		Config: config,
 		Tree:   nil,
@@ -165,7 +162,7 @@ func NewSyntaxLayers(source []byte, config HighlightConfiguration) (*SyntaxLayer
 		root:   root,
 	}
 
-	if err := syntax.Update(context.Background(), 0, 0, source, nil); err != nil {
+	if err := syntax.Update(ctx, 0, 0, source, nil); err != nil {
 		return nil, err
 	}
 
@@ -248,9 +245,6 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 	}
 
 	cursor := s.parser.popCursor()
-	if cursor == nil {
-		cursor = tree_sitter.NewQueryCursor()
-	}
 	cursor.SetByteRange(0, ^uint(0))
 	cursor.SetMatchLimit(TreeSitterMatchLimit)
 
@@ -292,7 +286,7 @@ func (s *SyntaxLayers) Update(ctx context.Context, currentRev uint64, newRev uin
 					break
 				}
 
-				languageName, contentNode, includeChildren := layer.Config.injectionForMatch(layer.Config.InjectionsQuery, match, source)
+				languageName, contentNode, includeChildren := layer.Config.injectionForMatch(layer.Config.InjectionsQuery, *match, source)
 
 				// in case this is a combined injection save it for more processing later
 				index := slices.IndexFunc(layer.Config.CombinedInjectionsPatterns, func(u uint) bool {
@@ -402,10 +396,7 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 	for _, layer := range s.layers.Map() {
 		// Reuse a cursor from the pool if available.
 		cursor := s.parser.popCursor()
-		if cursor == nil {
-			cursor = tree_sitter.NewQueryCursor()
-		}
-		// if reusing cursors & no range this resets to whole range
+		// if no range, this resets to whole range
 		if r == nil {
 			r = &ByteRange{
 				StartByte: 0,
@@ -416,15 +407,17 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 		cursor.SetByteRange(r.StartByte, r.EndByte)
 		cursor.SetMatchLimit(TreeSitterMatchLimit)
 
-		captures := make([]queryCapture, 0)
+		captures := make([]_queryCapture, 0)
 		queryCaptures := cursor.Captures(layer.Config.Query, layer.Tree.RootNode(), source)
 		for {
-			capture, i := queryCaptures.Next()
-			if capture == nil {
+			match, i := queryCaptures.Next()
+			if match == nil {
 				break
 			}
-			captures = append(captures, queryCapture{
-				Match: capture,
+
+			match.Captures = slices.Clone(match.Captures)
+			captures = append(captures, _queryCapture{
+				Match: *match,
 				Index: i,
 			})
 		}

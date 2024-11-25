@@ -3,15 +3,10 @@ package doc
 import (
 	"context"
 	"fmt"
-	"iter"
-	"log"
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/tree-sitter/go-tree-sitter"
-
-	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 const (
@@ -304,8 +299,8 @@ main:
 		var r tree_sitter.Range
 		layer := h.Layers[0]
 		if len(layer.Captures) > 0 {
-			nextMatch := layer.Captures[0]
-			nextCapture := nextMatch.Match.Captures[nextMatch.Index]
+			nextQueryCapture := layer.Captures[0]
+			nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
 			r = nextCapture.Node.Range()
 
 			// If any previous highlight ends before this node starts, then before
@@ -329,9 +324,9 @@ main:
 			return h.emitEvent(uint(len(h.Source)), nil)
 		}
 
-		match := layer.Captures[0]
+		queryCapture := layer.Captures[0]
 		layer.Captures = layer.Captures[1:]
-		capture := match.Match.Captures[match.Index]
+		capture := queryCapture.Match.Captures[queryCapture.Index]
 
 		// Remove from the local scope stack any local scopes that have already ended.
 		for r.StartByte > layer.ScopeStack[len(layer.ScopeStack)-1].Range.EndByte {
@@ -342,23 +337,23 @@ main:
 		// local variable info.
 		var referenceHighlight *Highlight
 		var definitionHighlight *Highlight
-		for match.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
+		for queryCapture.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
-			if layer.Config.LocalScopeCaptureIndex != nil && capture.Index == *layer.Config.LocalScopeCaptureIndex {
+			if layer.Config.LocalScopeCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalScopeCaptureIndex {
 				definitionHighlight = nil
 				scope := LocalScope{
 					Inherits:  true,
 					Range:     ByteRangeFromRange(r),
 					LocalDefs: nil,
 				}
-				for _, prop := range layer.Config.Query.PropertySettings(match.Match.PatternIndex) {
+				for _, prop := range layer.Config.Query.PropertySettings(queryCapture.Match.PatternIndex) {
 					if prop.Key == captureLocalScopeInherits {
 						scope.Inherits = *prop.Value == "true"
 					}
 				}
 				layer.ScopeStack = append(layer.ScopeStack, scope)
-			} else if layer.Config.LocalDefCaptureIndex != nil && capture.Index == *layer.Config.LocalDefCaptureIndex {
+			} else if layer.Config.LocalDefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalDefCaptureIndex {
 				// If the node represents a definition, add a new definition to the
 				// local scope at the top of the scope stack.
 				referenceHighlight = nil
@@ -366,8 +361,8 @@ main:
 				scope := layer.ScopeStack[len(layer.ScopeStack)-1]
 
 				var valueRange tree_sitter.Range
-				for _, matchCapture := range match.Match.Captures {
-					if layer.Config.LocalDefValueCaptureIndex != nil && matchCapture.Index == *layer.Config.LocalDefValueCaptureIndex {
+				for _, matchCapture := range queryCapture.Match.Captures {
+					if layer.Config.LocalDefValueCaptureIndex != nil && uint(matchCapture.Index) == *layer.Config.LocalDefValueCaptureIndex {
 						valueRange = matchCapture.Node.Range()
 					}
 				}
@@ -382,7 +377,7 @@ main:
 					})
 					definitionHighlight = scope.LocalDefs[len(scope.LocalDefs)-1].Highlight
 				}
-			} else if layer.Config.LocalRefCaptureIndex != nil && capture.Index == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
+			} else if layer.Config.LocalRefCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalRefCaptureIndex && definitionHighlight == nil {
 				// If the node represents a reference, then try to find the corresponding
 				// definition in the scope stack.
 				definitionHighlight = nil
@@ -408,11 +403,11 @@ main:
 
 			// Continue processing any additional matches for the same node.
 			if len(layer.Captures) > 0 {
-				nextMatch := layer.Captures[0]
-				nextCapture := nextMatch.Match.Captures[nextMatch.Index]
+				nextQueryCapture := layer.Captures[0]
+				nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
 				if nextCapture.Node.Equals(capture.Node) {
 					capture = nextCapture
-					match = nextMatch
+					queryCapture = nextQueryCapture
 					layer.Captures = layer.Captures[1:]
 					continue
 				}
@@ -434,26 +429,26 @@ main:
 		}
 
 		// Once a highlighting pattern is found for the current node, keep iterating over
-		// any later highlighting patterns that also match this node and set the match to it.
+		// any later highlighting patterns that also queryCapture this node and set the queryCapture to it.
 		// Captures for a given node are ordered by pattern index, so these subsequent
 		// captures are guaranteed to be for highlighting, not injections or
 		// local variables.
 		for len(layer.Captures) > 0 {
-			nextMatch := layer.Captures[0]
-			nextCapture := nextMatch.Match.Captures[nextMatch.Index]
+			nextQueryCapture := layer.Captures[0]
+			nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
 			if nextCapture.Node.Equals(capture.Node) {
-				followingMatch := nextMatch
+				followingQueryCapture := nextQueryCapture
 				layer.Captures = layer.Captures[1:]
 				// If the current node was found to be a local variable, then ignore
-				// the following match if it's a highlighting pattern that is disabled
+				// the following queryCapture if it's a highlighting pattern that is disabled
 				// for local variables.
-				if definitionHighlight != nil || referenceHighlight != nil && layer.Config.NonLocalVariablePatterns[followingMatch.Match.PatternIndex] {
+				if definitionHighlight != nil || referenceHighlight != nil && layer.Config.NonLocalVariablePatterns[followingQueryCapture.Match.PatternIndex] {
 					continue
 				}
 
-				match.Match.Remove()
+				queryCapture.Match.Remove()
 				capture = nextCapture
-				match = nextMatch
+				queryCapture = nextQueryCapture
 			} else {
 				break
 			}
@@ -587,7 +582,7 @@ func intersectRanges(parentRanges []tree_sitter.Range, nodes []tree_sitter.Node,
 	return results
 }
 
-func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, match *tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
+func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, queryMatch tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
 	if c.InjectionContentCaptureIndex == nil || c.InjectionLanguageCaptureIndex == nil {
 		return "", nil, false
 	}
@@ -597,8 +592,8 @@ func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, matc
 	var languageName string
 	var contentNode *tree_sitter.Node
 
-	for _, capture := range match.Captures {
-		index := capture.Index
+	for _, capture := range queryMatch.Captures {
+		index := uint(capture.Index)
 		if index == languageCaptureIndex {
 			languageName = capture.Node.Utf8Text(source)
 		} else if index == contentCaptureIndex {
@@ -607,7 +602,7 @@ func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, matc
 	}
 
 	var includeChildren bool
-	for _, property := range query.PropertySettings(match.PatternIndex) {
+	for _, property := range query.PropertySettings(queryMatch.PatternIndex) {
 		switch property.Key {
 		case captureInjectionLanguage:
 			if languageName == "" {
@@ -625,8 +620,8 @@ func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, matc
 	return languageName, contentNode, includeChildren
 }
 
-type queryCapture struct {
-	Match *tree_sitter.QueryMatch
+type _queryCapture struct {
+	Match tree_sitter.QueryMatch
 	Index uint
 }
 
@@ -636,7 +631,7 @@ type highlightIterLayer struct {
 	Config            HighlightConfiguration
 	HighlightEndStack []uint
 	ScopeStack        []LocalScope
-	Captures          []queryCapture
+	Captures          []_queryCapture
 	Depth             int
 }
 
@@ -651,8 +646,8 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 
 	var nextStart *uint
 	if len(h.Captures) > 0 {
-		capture := h.Captures[0]
-		startByte := capture.Match.Captures[capture.Index].Node.StartByte()
+		queryCapture := h.Captures[0]
+		startByte := queryCapture.Match.Captures[queryCapture.Index].Node.StartByte()
 		nextStart = &startByte
 	}
 
@@ -691,85 +686,5 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 		}
 	default:
 		return nil
-	}
-}
-
-type CharStyle struct {
-	Style        lipgloss.Style
-	StyleName    string
-	LanguageName string
-	Start        int
-	End          int
-}
-
-type Theme interface {
-	Highlight(i int, languageName string) lipgloss.Style
-	Scope(i int) string
-	Scopes() []string
-}
-
-func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer, theme Theme) iter.Seq[CharStyle] {
-	iterator := styleIterator{
-		activeHighlights: nil,
-		highlightIter:    highlightIter,
-		buf:              buf,
-		theme:            theme,
-	}
-
-	return iterator.iter()
-}
-
-type highlightStyle struct {
-	highlight    Highlight
-	languageName string
-}
-
-type styleIterator struct {
-	textStyle        lipgloss.Style
-	activeHighlights []highlightStyle
-	highlightIter    iter.Seq2[HighlightEvent, error]
-	buf              buffer.Buffer
-	theme            Theme
-}
-
-func (i *styleIterator) iter() iter.Seq[CharStyle] {
-	return func(yield func(CharStyle) bool) {
-		for event, err := range i.highlightIter {
-			if err != nil {
-				log.Printf("error getting highlight event: %v", err)
-				continue
-			}
-
-			switch event := event.(type) {
-			case HighlightEventStart:
-				i.activeHighlights = append(i.activeHighlights, highlightStyle{
-					highlight:    event.Highlight,
-					languageName: event.LanguageName,
-				})
-			case HighlightEventEnd:
-				i.activeHighlights = i.activeHighlights[:len(i.activeHighlights)-1]
-			case HighlightEventSource:
-				ch := CharStyle{
-					Style:        i.textStyle,
-					StyleName:    "text",
-					LanguageName: "",
-					Start:        i.buf.RuneIndex(int(event.StartByte)),
-					End:          i.buf.RuneIndex(int(event.EndByte)),
-					//End: int(event.EndByte),
-				}
-
-				if len(i.activeHighlights) > 0 {
-					highlight := i.activeHighlights[len(i.activeHighlights)-1]
-
-					ch.Style = i.theme.Highlight(int(highlight.highlight), highlight.languageName)
-					ch.StyleName = i.theme.Scope(int(highlight.highlight))
-					ch.LanguageName = highlight.languageName
-				}
-
-				if ok := yield(ch); !ok {
-					return
-				}
-			}
-		}
 	}
 }

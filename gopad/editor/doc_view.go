@@ -1,11 +1,13 @@
 package editor
 
 import (
+	"context"
 	"fmt"
 	"iter"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -498,7 +500,9 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			//	return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.RefreshSyntaxHighlight):
 				if v.Doc.Syntax != nil {
-					syntax, err := doc.NewSyntax(v.Doc.Syntax.Language, v.Doc.Buffer.Bytes())
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					syntax, err := doc.NewSyntax(ctx, v.Doc.Syntax.Language, v.Doc.Buffer.Bytes())
 					if err != nil {
 						cmds = append(cmds, notifications.Addf("failed to refresh syntax highlight: %s", err.Error()))
 						return v, tea.Batch(cmds...)

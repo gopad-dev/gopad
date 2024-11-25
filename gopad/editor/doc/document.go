@@ -35,7 +35,10 @@ func NewDocumentWithBuffer(name string, buf buffer.Buffer, mode Mode) (*Document
 	var syntax *Syntax
 	if language := GetLanguageByFilename(name); language != nil {
 		var err error
-		syntax, err = NewSyntax(language, buf.Bytes())
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		syntax, err = NewSyntax(ctx, language, buf.Bytes())
 		if err != nil {
 			return nil, fmt.Errorf("error creating syntax: %w", err)
 		}
@@ -144,7 +147,9 @@ func (d *Document) SetLanguage(name string) error {
 		return fmt.Errorf("language with name %q not found", name)
 	}
 
-	syntax, err := NewSyntax(language, d.Buffer.Bytes())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	syntax, err := NewSyntax(ctx, language, d.Buffer.Bytes())
 	if err != nil {
 		return fmt.Errorf("error creating syntax: %w", err)
 	}
