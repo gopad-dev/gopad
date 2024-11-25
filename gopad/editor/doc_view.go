@@ -59,9 +59,11 @@ func newDocumentView(name string, buff buffer.Buffer, mode doc.Mode) (*DocumentV
 	}
 
 	return &DocumentView{
-		Doc:         f,
-		viewOffsetX: -1,
-		viewOffsetY: -1,
+		Doc:                f,
+		offset:             buffer.Point{Row: 0, Col: 0},
+		forceCursorRefresh: true,
+		viewOffsetX:        -1,
+		viewOffsetY:        -1,
 	}, nil
 }
 
@@ -71,9 +73,11 @@ func newDocumentViewFromName(name string) (*DocumentView, error) {
 		return nil, err
 	}
 	return &DocumentView{
-		Doc:         f,
-		viewOffsetX: -1,
-		viewOffsetY: -1,
+		Doc:                f,
+		offset:             buffer.Point{Row: 0, Col: 0},
+		forceCursorRefresh: true,
+		viewOffsetX:        -1,
+		viewOffsetY:        -1,
 	}, nil
 }
 
@@ -81,14 +85,21 @@ type DocumentView struct {
 	Doc    *doc.Document
 	offset buffer.Point
 
-	lastCursorPosX int
-	lastCursorPosY int
-	viewOffsetX    int
-	viewOffsetY    int
+	forceCursorRefresh bool
+	lastCursorPosX     int
+	lastCursorPosY     int
+	viewOffsetX        int
+	viewOffsetY        int
 
 	focused               bool
 	showCurrentDiagnostic bool
 	definitionsIndex      int
+}
+
+func (v *DocumentView) resetCursor() {
+	v.viewOffsetX = -1
+	v.viewOffsetY = -1
+	v.forceCursorRefresh = true
 }
 
 func (v *DocumentView) Language() *doc.Language {
@@ -117,8 +128,7 @@ func (v *DocumentView) Focus() tea.Cmd {
 
 func (v *DocumentView) Blur() tea.Cmd {
 	v.focused = false
-	// return tea.HideCursor
-	return nil
+	return tea.HideCursor
 }
 
 func (v DocumentView) Focused() bool {
@@ -191,13 +201,13 @@ func (v *DocumentView) refreshCursorViewOffset(width int, height int) {
 	// }
 
 	if c.Row >= v.offset.Row+height {
-		v.offset.Row = c.Row - height + 1
+		v.offset.Row = max(c.Row-height+1, 0)
 	} else if c.Row < v.offset.Row {
 		v.offset.Row = c.Row
 	}
 
 	if c.Col >= v.offset.Col+width {
-		v.offset.Col = c.Col - width + 1
+		v.offset.Col = max(c.Col-width+1, 0)
 	} else if c.Col < v.offset.Col {
 		v.offset.Col = c.Col
 	}
@@ -325,6 +335,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	case tea.MouseMsg:
 		switch msg := msg.(type) {
 		case tea.MouseClickMsg:
+		mouseClickDiagnosticLoop:
 			for _, z := range append(zone.GetPrefix(ZoneFileDiagnosticPrefix), zone.GetPrefix(ZoneFileLineDiagnosticPrefix)...) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
@@ -337,19 +348,22 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					diagnostic := v.Doc.Diagnostics[i]
 					v.Doc.SetCursor(diagnostic.Range.Start)
 					v.Doc.SetMark(v.Doc.Cursor())
-					return v, tea.Batch(cmds...)
+					break mouseClickDiagnosticLoop
 				}
 			}
 
+		mouseClickLineLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLinePrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					p := v.GetFileZoneCursorPos(msg, z)
 					v.Doc.SetCursor(p)
 					v.Doc.SetMark(v.Doc.Cursor())
+					break mouseClickLineLoop
 				}
 			}
 
+		mouseClickLineNumberLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLineNumberPrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
@@ -359,9 +373,11 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 						Col: -1,
 					})
 					v.Doc.SetMark(v.Doc.Cursor())
+					break mouseClickLineNumberLoop
 				}
 			}
 		case tea.MouseReleaseMsg:
+		mouseReleaseDiagnosticLoop:
 			for _, z := range append(zone.GetPrefix(ZoneFileDiagnosticPrefix), zone.GetPrefix(ZoneFileLineDiagnosticPrefix)...) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
@@ -376,16 +392,17 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					i, _ := strconv.Atoi(index)
 
 					if s := v.Doc.Selection(); s != nil && !s.IsEmpty() {
-						return v, tea.Batch(cmds...)
+						break mouseReleaseDiagnosticLoop
 					}
 
 					diagnostic := v.Doc.Diagnostics[i]
 					v.Doc.SetCursor(diagnostic.Range.Start)
 					v.ShowCurrentDiagnostic()
-					return v, tea.Batch(cmds...)
+					break mouseReleaseDiagnosticLoop
 				}
 			}
 
+		mouseReleaseLineLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLinePrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
@@ -398,15 +415,14 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
 						v.Doc.ResetMark()
 					}
-					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
-					return v, tea.Batch(cmds...)
+					break mouseReleaseLineLoop
 				case mouse.MatchesZone(msg, z, tea.MouseRight):
 					// TODO: open context menu?
 					log.Println("right click on line")
-					return v, tea.Batch(cmds...)
+					break mouseReleaseLineLoop
 				}
 			}
-
+		mouseReleaseLineNumberLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLineNumberPrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
@@ -422,30 +438,32 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					if s := v.Doc.Selection(); s == nil || s.IsEmpty() {
 						v.Doc.ResetMark()
 					}
-					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
-					return v, tea.Batch(cmds...)
+					break mouseReleaseLineNumberLoop
 				}
 			}
 
+		mouseReleaseLineEmptyLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLineEmptyPrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					if !v.Focused() {
 						cmds = append(cmds, Focus(ModelTypeFile))
 					}
-					return v, tea.Batch(cmds...)
+					break mouseReleaseLineEmptyLoop
 				}
 			}
 		case tea.MouseMotionMsg:
+		mouseMotionLoop:
 			for _, z := range zone.GetPrefix(ZoneFileLinePrefix) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseLeft):
 					p := v.GetFileZoneCursorPos(msg, z)
 					v.Doc.SetCursor(p)
-					return v, tea.Batch(cmds...)
+					break mouseMotionLoop
 				}
 			}
 		case tea.MouseWheelMsg:
+		mouseWheelLoop:
 			for _, z := range append(zone.GetPrefix(ZoneFileLinePrefix), zone.GetPrefix(ZoneFileLineNumberPrefix)...) {
 				switch {
 				case mouse.MatchesZone(msg, z, tea.MouseWheelLeft), mouse.MatchesZone(msg, z, tea.MouseWheelDown, tea.ModShift):
@@ -463,7 +481,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				case mouse.MatchesZone(msg, z, tea.MouseWheelDown):
 					v.Doc.MoveCursorDown(1)
 					// cmds = append(cmds, v.file.Autocomplete.Update(v.Cursor()))
-					return v, tea.Batch(cmds...)
+					break mouseWheelLoop
 				}
 			}
 		}
@@ -475,7 +493,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 			case key.Matches(msg, config.Keys.Editor.Autocomplete.Show):
 				p := v.Doc.Cursor()
 				cmds = append(cmds, ls.GetAutocompletion(v.Doc.Name, p))
-				return v, tea.Batch(cmds...)
+				break
 			// case key.Matches(msg, config.Keys.Cancel) && v.file.Autocomplete.Visible():
 			//	v.file.Autocomplete.ClearCompletions()
 			// case key.Matches(msg, config.Keys.Editor.Autocomplete.Next) && v.file.Autocomplete.Visible():
@@ -505,7 +523,7 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 					syntax, err := doc.NewSyntax(ctx, v.Doc.Syntax.Language, v.Doc.Buffer.Bytes())
 					if err != nil {
 						cmds = append(cmds, notifications.Addf("failed to refresh syntax highlight: %s", err.Error()))
-						return v, tea.Batch(cmds...)
+						break
 					}
 					v.Doc.Syntax = syntax
 					cmds = append(cmds, notifications.Add("Syntax highlight refreshed"))
@@ -516,13 +534,10 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 				v.HideCurrentDiagnostic()
 			case key.Matches(msg, config.Keys.Editor.Code.ShowDeclaration):
 				cmds = append(cmds, v.Doc.ShowDeclaration(v.Doc.Cursor()))
-				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowDefinitions):
 				cmds = append(cmds, v.Doc.ShowDefinitions(v.Doc.Cursor()))
-				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowTypeDefinition):
 				cmds = append(cmds, v.Doc.ShowTypeDefinitions(v.Doc.Cursor()))
-				return v, tea.Batch(cmds...)
 			case key.Matches(msg, config.Keys.Editor.Code.ShowImplementation):
 				// cmds = append(cmds, f.ShowImplementations())
 				// return v, tea.Batch(cmds...)
@@ -688,15 +703,19 @@ func (v DocumentView) Update(msg tea.Msg) (DocumentView, tea.Cmd) {
 	}
 
 	c := v.Doc.Cursor()
-	if v.lastCursorPosX != c.Row || v.lastCursorPosY != c.Col {
-		log.Printf("view offset: %d, %d\n", v.viewOffsetX, v.viewOffsetY)
+	realCursorCol := c.Col - v.offset.Col
+	realCursorRow := c.Row - v.offset.Row
 
-		cmds = append(cmds,
-			tea.SetCursorPosition(c.Col+v.viewOffsetX, c.Row+v.viewOffsetY),
-		)
+	if v.lastCursorPosX != realCursorRow || v.lastCursorPosY != realCursorCol || v.forceCursorRefresh {
+		if v.viewOffsetX > 0 && v.viewOffsetY > 0 {
+			cmds = append(cmds, tea.SetCursorPosition(realCursorCol+v.viewOffsetX, realCursorRow+v.viewOffsetY))
+			v.forceCursorRefresh = false
+		} else {
+			cmds = append(cmds, refreshCursor)
+		}
 
-		v.lastCursorPosY = c.Col
-		v.lastCursorPosX = c.Row
+		v.lastCursorPosY = realCursorCol
+		v.lastCursorPosX = realCursorRow
 	}
 
 	return v, tea.Batch(cmds...)

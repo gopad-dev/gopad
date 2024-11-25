@@ -59,11 +59,12 @@ type Editor struct {
 	workspace string
 	args      []string
 
-	fileTree   fileTree
-	searchBar  searchBar
-	fileViews  []*DocumentView
-	activeFile int
-	fileOffset int
+	fileTree  fileTree
+	searchBar searchBar
+
+	docViews  []*DocumentView
+	activeDoc int
+	docOffset int
 
 	focus ModelType
 	debug bool
@@ -94,6 +95,9 @@ func (e Editor) Init() (Editor, tea.Cmd) {
 		if stat.IsDir() {
 			continue
 		}
+
+		arg, _ = filepath.Abs(arg)
+
 		cmd, err := e.OpenFile(arg)
 		if err != nil {
 			return e, notifications.Addf("error while opening file %s: %s", arg, err)
@@ -169,7 +173,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 		name = filepath.Join(e.workspace, name)
 		name, _ = filepath.Abs(name)
 	}
-	if slices.ContainsFunc(e.fileViews, func(b *DocumentView) bool {
+	if slices.ContainsFunc(e.docViews, func(b *DocumentView) bool {
 		return b.Doc.Name == name
 	}) {
 		return nil, nil
@@ -184,7 +188,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 		return nil, err
 	}
 
-	e.fileViews = append(e.fileViews, v)
+	e.docViews = append(e.docViews, v)
 
 	cmds := []tea.Cmd{
 		tea.Sequence(
@@ -198,7 +202,7 @@ func (e *Editor) CreateFile(name string) (tea.Cmd, error) {
 }
 
 func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
-	if slices.ContainsFunc(e.fileViews, func(b *DocumentView) bool {
+	if slices.ContainsFunc(e.docViews, func(b *DocumentView) bool {
 		return b.Doc.Name == name
 	}) {
 		return nil, nil
@@ -208,7 +212,7 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.fileViews = append(e.fileViews, v)
+	e.docViews = append(e.docViews, v)
 
 	cmds := []tea.Cmd{
 		tea.Sequence(
@@ -221,7 +225,7 @@ func (e *Editor) OpenFile(name string) (tea.Cmd, error) {
 }
 
 func (e *Editor) FormatFile(name string) (tea.Cmd, error) {
-	f := e.ViewByName(name)
+	f := e.DocViewByName(name)
 	if f == nil {
 		return nil, nil
 	}
@@ -234,7 +238,7 @@ func (e *Editor) FormatFile(name string) (tea.Cmd, error) {
 }
 
 func (e *Editor) SaveFile(name string) (tea.Cmd, error) {
-	f := e.ViewByName(name)
+	f := e.DocViewByName(name)
 	if f == nil {
 		return nil, nil
 	}
@@ -250,7 +254,7 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 		newName = filepath.Join(e.workspace, newName)
 		newName, _ = filepath.Abs(newName)
 	}
-	f := e.ViewByName(oldName)
+	f := e.DocViewByName(oldName)
 	if f == nil {
 		return nil, nil
 	}
@@ -262,71 +266,86 @@ func (e *Editor) RenameFile(oldName string, newName string) (tea.Cmd, error) {
 }
 
 func (e *Editor) CloseFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.fileViews, func(file *DocumentView) bool {
+	index := slices.IndexFunc(e.docViews, func(file *DocumentView) bool {
 		return file.Doc.Name == name
 	})
 	if index == -1 {
 		return nil, nil
 	}
 
-	f := e.fileViews[index]
-	e.fileViews = slices.Delete(e.fileViews, index, index+1)
-	e.activeFile = min(e.activeFile, len(e.fileViews)-1)
-	if len(e.fileViews) > 0 {
-		e.fileViews[e.activeFile].Focus()
+	var cmds []tea.Cmd
+	f := e.docViews[index]
+	e.docViews = slices.Delete(e.docViews, index, index+1)
+	e.activeDoc = min(e.activeDoc, len(e.docViews)-1)
+	if len(e.docViews) > 0 {
+		cmds = append(cmds, e.docViews[e.activeDoc].Focus())
 	} else {
 		e.fileTree.Focus()
 	}
 
-	return ls.FileClosed(f.Doc.Name), nil
+	return tea.Batch(
+		tea.Sequence(cmds...),
+		ls.FileClosed(f.Doc.Name),
+	), nil
 }
 
 func (e *Editor) DeleteFile(name string) (tea.Cmd, error) {
-	index := slices.IndexFunc(e.fileViews, func(file *DocumentView) bool {
+	index := slices.IndexFunc(e.docViews, func(file *DocumentView) bool {
 		return file.Doc.Name == name
 	})
 	if index == -1 {
 		return nil, nil
 	}
 
-	f := e.fileViews[index]
+	f := e.docViews[index]
 	if err := f.Doc.Delete(); err != nil {
 		return nil, err
 	}
 
-	e.fileViews = slices.Delete(e.fileViews, e.activeFile, e.activeFile+1)
-	e.activeFile = min(e.activeFile, len(e.fileViews)-1)
-	if len(e.fileViews) > 0 {
-		e.fileViews[e.activeFile].Focus()
+	var cmds []tea.Cmd
+	e.docViews = slices.Delete(e.docViews, e.activeDoc, e.activeDoc+1)
+	e.activeDoc = min(e.activeDoc, len(e.docViews)-1)
+	if len(e.docViews) > 0 {
+		cmds = append(cmds, e.docViews[e.activeDoc].Focus())
 	} else {
 		e.fileTree.Focus()
 	}
 
-	return ls.FileDeleted(f.Doc.Name), nil
+	return tea.Batch(
+		tea.Sequence(cmds...),
+		ls.FileDeleted(f.Doc.Name),
+	), nil
 }
 
 func (e *Editor) DocView() *DocumentView {
-	if len(e.fileViews) == 0 {
+	if len(e.docViews) == 0 {
 		return nil
 	}
-	return e.fileViews[e.activeFile]
+	return e.docViews[e.activeDoc]
 }
 
-func (e *Editor) SetView(index int) {
-	e.activeFile = index
+func (e *Editor) SetDocView(index int) tea.Cmd {
+	var cmds []tea.Cmd
+
+	cmds = append(cmds, e.docViews[e.activeDoc].Blur())
+	e.activeDoc = index
+	cmds = append(cmds, e.docViews[index].Focus())
+	e.docViews[index].resetCursor()
+	return tea.Sequence(cmds...)
 }
 
-func (e *Editor) SetViewByName(name string) {
-	for i, f := range e.fileViews {
+func (e *Editor) SetDocViewByName(name string) tea.Cmd {
+	for i, f := range e.docViews {
 		if f.Doc.Name == name {
-			e.activeFile = i
-			return
+			return e.SetDocView(i)
 		}
 	}
+
+	return nil
 }
 
-func (e *Editor) ViewByName(name string) *DocumentView {
-	for _, f := range e.fileViews {
+func (e *Editor) DocViewByName(name string) *DocumentView {
+	for _, f := range e.docViews {
 		if f.Doc.Name == name {
 			return f
 		}
@@ -335,7 +354,7 @@ func (e *Editor) ViewByName(name string) *DocumentView {
 }
 
 func (e *Editor) HasChanges() bool {
-	for _, f := range e.fileViews {
+	for _, f := range e.docViews {
 		if f.Doc.Buffer.Dirty() {
 			return true
 		}
@@ -456,7 +475,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			notifications.Add(fmt.Sprintf("file %s opened", msg.Name)),
 			Focus(ModelTypeFile),
 		)
-		e.SetViewByName(msg.Name)
+		cmds = append(cmds, e.SetDocViewByName(msg.Name))
 		if msg.Position != nil {
 			e.DocView().Doc.SetCursor(*msg.Position)
 		}
@@ -496,7 +515,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			notifications.Add(fmt.Sprintf("file %s created", msg.Name)),
 			Focus(ModelTypeFile),
 		)
-		e.SetViewByName(msg.Name)
+		cmds = append(cmds, e.SetDocViewByName(msg.Name))
 		return e, tea.Batch(cmds...)
 	case RenameFileMsg:
 		cmd, err := e.RenameFile(msg.OldName, msg.NewName)
@@ -532,7 +551,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		return e, tea.Batch(cmds...)
 	case CloseAllActionMsg:
 		var files []string
-		for _, f := range e.fileViews {
+		for _, f := range e.docViews {
 			if f.Doc.Buffer.Dirty() {
 				files = append(files, f.Doc.Name)
 			}
@@ -540,8 +559,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 		if len(files) > 0 {
 			return e, overlay.Open(NewCloseOverlay(files))
 		}
-		fileCmds := make([]tea.Cmd, len(e.fileViews))
-		for _, f := range e.fileViews {
+		fileCmds := make([]tea.Cmd, len(e.docViews))
+		for _, f := range e.docViews {
 			fileCmds = append(fileCmds, CloseFile(f.Doc.Name))
 		}
 		cmds = append(cmds, tea.Sequence(fileCmds...))
@@ -558,7 +577,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				cmds = append(cmds, Focus(ModelTypeFile))
 
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				e.SetView(i)
+				cmds = append(cmds, e.SetDocView(i))
 				return e, tea.Batch(cmds...)
 			case mouse.MatchesZone(msg, z, tea.MouseRight):
 				// TODO: open context menu?
@@ -566,7 +585,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 				return e, tea.Batch(cmds...)
 			case mouse.MatchesZone(msg, z, tea.MouseMiddle):
 				i, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFilePrefix))
-				cmds = append(cmds, CloseFile(e.fileViews[i].Doc.Name))
+				cmds = append(cmds, CloseFile(e.docViews[i].Doc.Name))
 				return e, tea.Batch(cmds...)
 			}
 		}
@@ -640,34 +659,22 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 					return e, tea.Batch(cmds...)
 				}
 
-				dv, err := newDocumentView(v.Doc.FileName()+".tree", buff, doc.ModeReadOnly)
+				dv, err := newDocumentView(v.Doc.FileName()+".sexp", buff, doc.ModeReadOnly)
 				if err != nil {
 					cmds = append(cmds, notifications.Addf("error while creating tree s-expression view: %s", err.Error()))
 					return e, tea.Batch(cmds...)
 				}
 
-				e.fileViews = append(e.fileViews, dv)
-				e.activeFile = len(e.fileViews) - 1
+				e.docViews = append(e.docViews, dv)
+				e.activeDoc = len(e.docViews) - 1
 			}
 		case key.Matches(msg, config.Keys.Editor.File.Next):
-			if e.activeFile < len(e.fileViews)-1 {
-				if f := e.DocView(); f != nil {
-					cmds = append(cmds, f.Blur())
-				}
-				e.activeFile++
-				if f := e.DocView(); f != nil {
-					cmds = append(cmds, f.Focus())
-				}
+			if e.activeDoc < len(e.docViews)-1 {
+				cmds = append(cmds, e.SetDocView(e.activeDoc+1))
 			}
 		case key.Matches(msg, config.Keys.Editor.File.Prev):
-			if e.activeFile > 0 {
-				if f := e.DocView(); f != nil {
-					cmds = append(cmds, f.Blur())
-				}
-				e.activeFile--
-				if f := e.DocView(); f != nil {
-					cmds = append(cmds, f.Focus())
-				}
+			if e.activeDoc > 0 {
+				cmds = append(cmds, e.SetDocView(e.activeDoc-1))
 			}
 		}
 	}
@@ -688,8 +695,8 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	}
 
 	if e.focus == ModelTypeFile || !bubbles.IsKeyMsg(msg) {
-		for i, fileView := range e.fileViews {
-			if i != e.activeFile && bubbles.IsInputMsg(msg) {
+		for i, fileView := range e.docViews {
+			if i != e.activeDoc && bubbles.IsInputMsg(msg) {
 				continue
 			}
 
@@ -697,7 +704,7 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 			if cmd != nil {
 				cmds = append(cmds, cmd)
 			}
-			e.fileViews[i] = &updatedFileView
+			e.docViews[i] = &updatedFileView
 		}
 	}
 	return e, tea.Batch(cmds...)
@@ -753,23 +760,23 @@ func (e *Editor) View(width int, height int, offsetX int, offsetY int) string {
 }
 
 func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
-	if e.fileOffset == 0 {
+	if e.docOffset == 0 {
 		return
 	}
 
-	filesWidth := lipgloss.Width(strings.Join(fileNames[:e.activeFile], ""))
+	filesWidth := lipgloss.Width(strings.Join(fileNames[:e.activeDoc], ""))
 	if filesWidth < width {
-		e.fileOffset = 0
+		e.docOffset = 0
 	}
 
 	if filesWidth > width {
-		e.fileOffset = e.activeFile
+		e.docOffset = e.activeDoc
 	}
 
-	for i := e.fileOffset; i > 0; i-- {
-		filesWidth = lipgloss.Width(strings.Join(fileNames[i:e.activeFile], ""))
+	for i := e.docOffset; i > 0; i-- {
+		filesWidth = lipgloss.Width(strings.Join(fileNames[i:e.activeDoc], ""))
 		if filesWidth < width {
-			e.fileOffset = i
+			e.docOffset = i
 			break
 		}
 	}
@@ -777,12 +784,12 @@ func (e *Editor) refreshActiveFileOffset(width int, fileNames []string) {
 
 func (e *Editor) FileTabsView(width int) string {
 	var fileNames []string
-	for i, f := range e.fileViews {
+	for i, f := range e.docViews {
 		languageName := f.LanguageName()
 		icon := config.Theme.Icons.FileIcon(languageName).Render()
 
 		style := config.Theme.UI.AppBar.Files.FileStyle
-		if i == e.activeFile {
+		if i == e.activeDoc {
 			style = config.Theme.UI.AppBar.Files.SelectedFileStyle
 		}
 
@@ -817,7 +824,7 @@ func (e *Editor) FileTabsView(width int) string {
 
 	e.refreshActiveFileOffset(width, fileNames)
 
-	return config.Theme.UI.AppBar.Files.Style.Render(fileNames[e.fileOffset:]...)
+	return config.Theme.UI.AppBar.Files.Style.Render(fileNames[e.docOffset:]...)
 }
 
 func clampString(s string, length int) string {

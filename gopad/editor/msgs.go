@@ -9,6 +9,12 @@ import (
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
+func refreshCursor() tea.Msg {
+	return refreshCursorMsg{}
+}
+
+type refreshCursorMsg struct{}
+
 type ModelType int
 
 const (

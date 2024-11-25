@@ -16,7 +16,6 @@ import (
 	"go.gopad.dev/gopad/gopad/editor"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/bubbles"
-	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
@@ -86,9 +85,7 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	now := time.Now()
 	defer func() {
-		if _, ok := msg.(cursor.BlinkMsg); !ok {
-			log.Printf("Update time: %s, Msg: %T", time.Since(now), msg)
-		}
+		log.Printf("Update time: %s, Msg: %T", time.Since(now), msg)
 	}()
 
 	var cmds []tea.Cmd
@@ -201,10 +198,10 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
-	now := time.Now()
-	defer func() {
-		log.Printf("Render time: %s\n", time.Since(now))
-	}()
+	//now := time.Now()
+	//defer func() {
+	//	log.Printf("Render time: %s\n", time.Since(now))
+	//}()
 
 	height := g.height
 
