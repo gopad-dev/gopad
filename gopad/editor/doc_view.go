@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
@@ -741,14 +742,14 @@ func (v *DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, widt
 		return borderStyle("") + "\n"
 	}
 
-	lineDiagnostic, lineDiagnosticIndex := v.Doc.HighestLineDiagnostic(ln)
+	//lineDiagnostic, lineDiagnosticIndex := v.Doc.HighestLineDiagnostic(ln)
 
-	var prefix string
-	if lineDiagnostic.Severity > 0 {
-		prefix = zone.Mark(zoneFileLineDiagnosticID(lineDiagnosticIndex), lineDiagnostic.Severity.Icon().Render())
-	} else {
-		prefix = " "
-	}
+	prefix := " "
+	//if lineDiagnostic.Severity > 0 {
+	//	prefix = zone.Mark(zoneFileLineDiagnosticID(lineDiagnosticIndex), lineDiagnostic.Severity.Icon().Render())
+	//} else {
+	//	prefix = " "
+	//}
 
 	prefixLn := strconv.Itoa(ln + 1)
 	prefix += zone.Mark(zoneFileLineNumberID(ln), codePrefixStyle.Render(strings.Repeat(" ", prefixWidth-lipgloss.Width(prefixLn))+prefixLn))
@@ -761,7 +762,10 @@ func (v *DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, widt
 	return borderStyle(prefix+codeLineStyle.Render(string(lineCode))) + "\n"
 }
 
-func (v *DocumentView) View(width int, height int, border bool, debug bool, offsetX int, offsetY int) string {
+func (v *DocumentView) View(ctx context.Context, width int, height int, border bool, debug bool, offsetX int, offsetY int) string {
+	ctx, span := config.Tracer.Start(ctx, "View")
+	defer span.End()
+
 	prefixWidth := lipgloss.Width(strconv.Itoa(v.Doc.Buffer.LinesLen()))
 	borderWidth := config.Theme.UI.FileView.BorderStyle.GetHorizontalFrameSize()
 	width = max(width-prefixWidth-borderWidth-3, 0)
@@ -779,7 +783,10 @@ func (v *DocumentView) View(width int, height int, border bool, debug bool, offs
 	offset := v.offset
 	selection := v.Doc.Selection()
 
-	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(nil))
+	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(tree_sitter.Range{
+		StartPoint: tree_sitter.Point{Row: uint(offset.Row), Column: 0},
+		EndPoint:   tree_sitter.Point{Row: uint(offset.Row + height + 1), Column: ^uint(0)},
+	}))
 	defer stop()
 	charStyle, _ := nextStyle()
 
@@ -828,7 +835,7 @@ func (v *DocumentView) View(width int, height int, border bool, debug bool, offs
 		}
 
 		style := charStyle.Style.Inherit(codeLineCharStyle)
-		style = v.Doc.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
+		//style = v.Doc.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
 
 		if char.Rune == '\n' {
 			if char.Point.Row == c.Row && char.Point.Col == c.Col {
@@ -858,23 +865,23 @@ func (v *DocumentView) View(width int, height int, border bool, debug bool, offs
 
 		lineCode = append(lineCode, renderChar...)
 
-		paddingStyle := codeLineCharStyle
-		labelStyle := config.Theme.UI.FileView.InlayHintStyle
-		if inSelection {
-			paddingStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(paddingStyle)
-			labelStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(labelStyle)
-		}
-		for _, hint := range v.Doc.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
-			var label string
-			if hint.PaddingLeft {
-				label += paddingStyle.Render(" ")
-			}
-			label += labelStyle.Render(hint.Label)
-			if hint.PaddingRight {
-				label += paddingStyle.Render(" ")
-			}
-			lineCode = append(lineCode, label...)
-		}
+		//paddingStyle := codeLineCharStyle
+		//labelStyle := config.Theme.UI.FileView.InlayHintStyle
+		//if inSelection {
+		//	paddingStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(paddingStyle)
+		//	labelStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(labelStyle)
+		//}
+		//for _, hint := range v.Doc.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
+		//	var label string
+		//	if hint.PaddingLeft {
+		//		label += paddingStyle.Render(" ")
+		//	}
+		//	label += labelStyle.Render(hint.Label)
+		//	if hint.PaddingRight {
+		//		label += paddingStyle.Render(" ")
+		//	}
+		//	lineCode = append(lineCode, label...)
+		//}
 	}
 
 	if len(lineCode) > 0 {

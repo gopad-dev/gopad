@@ -32,21 +32,21 @@ func render(width int) string {
 	return b.String()
 }
 
-type config struct {
+type renderConfig struct {
 	marginX int
 	marginY int
 }
 
-type Option func(*config)
+type Option func(*renderConfig)
 
 func WithMarginX(x int) Option {
-	return func(c *config) {
+	return func(c *renderConfig) {
 		c.marginX = x
 	}
 }
 
 func WithMarginY(y int) Option {
-	return func(c *config) {
+	return func(c *renderConfig) {
 		c.marginY = y
 	}
 }

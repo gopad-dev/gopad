@@ -167,7 +167,7 @@ func newHighlightConfig(languageName string, cfg config.GrammarConfig, defaultCo
 	}
 
 	return &GrammarConfig{
-		Highlight: *highlightConfig,
+		Highlight: highlightConfig,
 		Outline:   outlineQueryConfig,
 	}, nil
 }

@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/pelletier/go-toml/v2"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -32,6 +33,7 @@ var (
 	Keymaps         []KeymapConfig
 	Theme           ThemeStyles
 	Themes          []ThemeConfig
+	Tracer          trace.Tracer
 )
 
 type Identifiable interface {

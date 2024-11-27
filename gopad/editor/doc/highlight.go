@@ -10,13 +10,18 @@ import (
 )
 
 const (
-	captureInjectionCombined        = "injection.combined"
 	captureInjectionLanguage        = "injection.language"
+	captureInjectionContent         = "injection.content"
+	captureInjectionCombined        = "injection.combined"
 	captureInjectionSelf            = "injection.self"
-	captureInjectionParent          = "injection.parent"
 	captureInjectionIncludeChildren = "injection.include-children"
-	captureLocal                    = "local"
-	captureLocalScopeInherits       = "local.scope-inherits"
+
+	captureLocal                = "local"
+	captureLocalDefinition      = "local.definition"
+	captureLocalDefinitionValue = "local.definition-value"
+	captureLocalReference       = "local.reference"
+	captureLocalScope           = "local.scope"
+	captureLocalScopeInherits   = "local.scope-inherits"
 )
 
 type Highlight uint
@@ -43,7 +48,7 @@ type HighlightEventEnd struct{}
 
 func (HighlightEventEnd) highlightEvent() {}
 
-func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (*HighlightConfiguration, error) {
+func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (HighlightConfiguration, error) {
 	var querySource []byte
 	querySource = append(querySource, localsQuery...)
 	highlightsQueryOffset := uint(len(querySource))
@@ -51,7 +56,7 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 
 	query, err := tree_sitter.NewQuery(language, string(querySource))
 	if err != nil {
-		return nil, fmt.Errorf("error creating query: %w", err)
+		return HighlightConfiguration{}, fmt.Errorf("error creating query: %w", err)
 	}
 
 	highlightsPatternIndex := uint(0)
@@ -64,7 +69,7 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 
 	injectionsQuery, err := tree_sitter.NewQuery(language, string(injectionQuery))
 	if err != nil {
-		return nil, fmt.Errorf("error creating combined injections query: %w", err)
+		return HighlightConfiguration{}, fmt.Errorf("error creating combined injections query: %w", err)
 	}
 	var combinedInjectionsPatterns []uint
 	for i := range injectionsQuery.PatternCount() {
@@ -87,34 +92,41 @@ func NewHighlightConfig(language *tree_sitter.Language, languageName string, hig
 	}
 
 	var (
-		injectionContentCaptureIndex  *uint
-		injectionLanguageCaptureIndex *uint
-		localDefCaptureIndex          *uint
-		localDefValueCaptureIndex     *uint
-		localRefCaptureIndex          *uint
-		localScopeCaptureIndex        *uint
+		localDefCaptureIndex      *uint
+		localDefValueCaptureIndex *uint
+		localRefCaptureIndex      *uint
+		localScopeCaptureIndex    *uint
 	)
-
 	for i, captureName := range query.CaptureNames() {
 		ui := uint(i)
 		switch captureName {
-		case "injection.content":
-			injectionContentCaptureIndex = &ui
-		case "injection.language":
-			injectionLanguageCaptureIndex = &ui
-		case "local.definition":
+		case captureLocalDefinition:
 			localDefCaptureIndex = &ui
-		case "local.definition-value":
+		case captureLocalDefinitionValue:
 			localDefValueCaptureIndex = &ui
-		case "local.reference":
+		case captureLocalReference:
 			localRefCaptureIndex = &ui
-		case "local.scope":
+		case captureLocalScope:
 			localScopeCaptureIndex = &ui
 		}
 	}
 
+	var (
+		injectionContentCaptureIndex  *uint
+		injectionLanguageCaptureIndex *uint
+	)
+	for i, captureName := range injectionsQuery.CaptureNames() {
+		ui := uint(i)
+		switch captureName {
+		case captureInjectionContent:
+			injectionContentCaptureIndex = &ui
+		case captureInjectionLanguage:
+			injectionLanguageCaptureIndex = &ui
+		}
+	}
+
 	highlightIndices := make([]*Highlight, len(query.CaptureNames()))
-	return &HighlightConfiguration{
+	return HighlightConfiguration{
 		Language:                      language,
 		LanguageName:                  languageName,
 		Query:                         query,
@@ -242,7 +254,7 @@ func (h *highlightIter) sortLayers() {
 			for i+1 < len(h.Layers) {
 				nextOffset := h.Layers[i+1].sortKey()
 				if nextOffset != nil {
-					if nextOffset.position < sortKey.position {
+					if nextOffset.offset < sortKey.offset {
 						i++
 						continue
 					}
@@ -636,11 +648,31 @@ type highlightIterLayer struct {
 }
 
 type sortKeyResult struct {
-	position uint
-	start    bool
-	depth    int
+	offset uint
+	start  bool
+	depth  int
 }
 
+func (k sortKeyResult) Compare(k2 sortKeyResult) int {
+	if k.depth < k2.depth {
+		return -1
+	} else if k.depth > k2.depth {
+		return 1
+	} else if k.offset < k2.offset {
+		return -1
+	} else if k.offset > k2.offset {
+		return 1
+	} else if k.start && !k2.start {
+		return -1
+	} else if !k.start && k2.start {
+		return 1
+	}
+	return 0
+}
+
+// First, sort scope boundaries by their byte offset in the document. At a
+// given position, emit scope endings before scope beginnings. Finally, emit
+// scope boundaries from deeper layers first.
 func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	depth := -h.Depth
 
@@ -661,28 +693,28 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	case nextStart != nil && nextEnd != nil:
 		if *nextStart < *nextEnd {
 			return &sortKeyResult{
-				position: *nextStart,
-				start:    true,
-				depth:    depth,
+				offset: *nextStart,
+				start:  true,
+				depth:  depth,
 			}
 		} else {
 			return &sortKeyResult{
-				position: *nextEnd,
-				start:    false,
-				depth:    depth,
+				offset: *nextEnd,
+				start:  false,
+				depth:  depth,
 			}
 		}
 	case nextStart != nil && nextEnd == nil:
 		return &sortKeyResult{
-			position: *nextStart,
-			start:    true,
-			depth:    depth,
+			offset: *nextStart,
+			start:  true,
+			depth:  depth,
 		}
 	case nextStart == nil && nextEnd != nil:
 		return &sortKeyResult{
-			position: *nextEnd,
-			start:    false,
-			depth:    depth,
+			offset: *nextEnd,
+			start:  false,
+			depth:  depth,
 		}
 	default:
 		return nil

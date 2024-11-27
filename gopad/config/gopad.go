@@ -12,6 +12,7 @@ type GopadConfig struct {
 	Editor   EditorConfig   `toml:"editor"`
 	FileView FileViewConfig `toml:"file_view"`
 	FileTree FileTreeConfig `toml:"file_tree"`
+	Otel     OtelConfig     `toml:"otel"`
 }
 
 type EditorConfig struct {

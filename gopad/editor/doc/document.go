@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
@@ -532,7 +533,7 @@ func (d *Document) Delete() error {
 	return nil
 }
 
-func (d *Document) HighlightIter(r *ByteRange) iter.Seq[CharStyle] {
+func (d *Document) HighlightIter(r tree_sitter.Range) iter.Seq[CharStyle] {
 	var hIter iter.Seq2[HighlightEvent, error]
 
 	if d.Syntax == nil {

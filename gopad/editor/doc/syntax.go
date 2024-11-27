@@ -22,7 +22,7 @@ const (
 	TreeSitterMatchLimit = 256
 )
 
-var injectionCallback = func(languageName string) *HighlightConfiguration {
+func injectionCallback(languageName string) *HighlightConfiguration {
 	language := GetLanguage(languageName)
 	if language == nil || language.Grammar == nil {
 		return nil
@@ -391,20 +391,14 @@ func (s *SyntaxLayers) Tree() *tree_sitter.Tree {
 	return s.layers.Get(s.root).Tree
 }
 
-func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *ByteRange) iter.Seq2[HighlightEvent, error] {
+func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r tree_sitter.Range) iter.Seq2[HighlightEvent, error] {
 	var layers []*highlightIterLayer
 	for _, layer := range s.layers.Map() {
 		// Reuse a cursor from the pool if available.
 		cursor := s.parser.popCursor()
-		// if no range, this resets to whole range
-		if r == nil {
-			r = &ByteRange{
-				StartByte: 0,
-				EndByte:   ^uint(0),
-			}
-		}
+		//cursor.SetPointRange(r.StartPoint, r.EndPoint)
 
-		cursor.SetByteRange(r.StartByte, r.EndByte)
+		cursor.SetByteRange(0, ^uint(0))
 		cursor.SetMatchLimit(TreeSitterMatchLimit)
 
 		captures := make([]_queryCapture, 0)
@@ -445,6 +439,19 @@ func (s *SyntaxLayers) HighlightIter(ctx context.Context, source []byte, r *Byte
 			Depth:    layer.Depth,
 		})
 	}
+
+	slices.SortFunc(layers, func(a, b *highlightIterLayer) int {
+		aKey := a.sortKey()
+		if aKey == nil {
+			return 1
+		}
+
+		bKey := b.sortKey()
+		if bKey == nil {
+			return -1
+		}
+		return aKey.Compare(*bKey)
+	})
 
 	hIter := &highlightIter{
 		Ctx:                ctx,

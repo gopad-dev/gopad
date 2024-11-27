@@ -10,7 +10,7 @@ import (
 )
 
 func PlacePosition(xPos lipgloss.Position, yPos lipgloss.Position, fg string, bg string, opts ...Option) string {
-	cfg := &config{}
+	cfg := &renderConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}

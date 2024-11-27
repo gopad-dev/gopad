@@ -1,16 +1,18 @@
 package gopad
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lrstanley/bubblezone"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor"
@@ -83,10 +85,10 @@ func (g Gopad) Init() (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	now := time.Now()
-	defer func() {
-		log.Printf("Update time: %s, Msg: %T", time.Since(now), msg)
-	}()
+	_, span := config.Tracer.Start(context.Background(), "Update", trace.WithAttributes(
+		attribute.String("msg", fmt.Sprintf("%T", msg)),
+	))
+	defer span.End()
 
 	var cmds []tea.Cmd
 
@@ -198,17 +200,15 @@ func (g Gopad) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (g Gopad) View() string {
-	//now := time.Now()
-	//defer func() {
-	//	log.Printf("Render time: %s\n", time.Since(now))
-	//}()
+	ctx, span := config.Tracer.Start(context.Background(), "View")
+	defer span.End()
 
 	height := g.height
 
-	appBar := g.AppBar()
-	codeBar := g.CodeBar()
+	appBar := g.AppBar(ctx)
+	codeBar := g.CodeBar(ctx)
 	appBarHeight := lipgloss.Height(appBar)
-	codeEditor := g.editor.View(g.width, height-appBarHeight-lipgloss.Height(codeBar), 0, appBarHeight)
+	codeEditor := g.editor.View(ctx, g.width, height-appBarHeight-lipgloss.Height(codeBar), 0, appBarHeight)
 	view := fmt.Sprintf("%s\n%s\n%s", appBar, codeEditor, codeBar)
 
 	if g.overlays.Focused() {
@@ -223,7 +223,10 @@ func (g Gopad) View() string {
 	return zone.Scan(view)
 }
 
-func (g Gopad) AppBar() string {
+func (g Gopad) AppBar(ctx context.Context) string {
+	ctx, span := config.Tracer.Start(ctx, "AppBar")
+	defer span.End()
+
 	width := g.width
 	appBar := config.Theme.UI.AppBar.TitleStyle.Render("gopad-" + g.version)
 	appBar += g.editor.FileTabsView(width - lipgloss.Width(appBar))
@@ -231,7 +234,10 @@ func (g Gopad) AppBar() string {
 	return config.Theme.UI.AppBar.Style.Width(width).Render(appBar)
 }
 
-func (g Gopad) CodeBar() string {
+func (g Gopad) CodeBar(ctx context.Context) string {
+	ctx, span := config.Tracer.Start(ctx, "CodeBar")
+	defer span.End()
+
 	width := g.width
 	contentWidth := width - config.Theme.UI.CodeBar.Style.GetHorizontalFrameSize()
 	docView := g.editor.DocView()

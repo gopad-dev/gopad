@@ -58,11 +58,13 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 
 			switch event := event.(type) {
 			case HighlightEventStart:
+				log.Println("HighlightEventStart", event)
 				i.activeHighlights = append(i.activeHighlights, highlightStyle{
 					highlight:    event.Highlight,
 					languageName: event.LanguageName,
 				})
 			case HighlightEventEnd:
+				log.Println("HighlightEventEnd", event)
 				_, i.activeHighlights = xslices.Pop(i.activeHighlights)
 			case HighlightEventSource:
 				ch := CharStyle{

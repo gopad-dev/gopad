@@ -2,6 +2,7 @@ package editor
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -710,7 +711,10 @@ func (e Editor) Update(msg tea.Msg) (Editor, tea.Cmd) {
 	return e, tea.Batch(cmds...)
 }
 
-func (e *Editor) View(width int, height int, offsetX int, offsetY int) string {
+func (e *Editor) View(ctx context.Context, width int, height int, offsetX int, offsetY int) string {
+	ctx, span := config.Tracer.Start(ctx, "View")
+	defer span.End()
+
 	var tree string
 	if e.fileTree.Visible() {
 		tree = e.fileTree.View(height)
@@ -747,7 +751,7 @@ func (e *Editor) View(width int, height int, offsetX int, offsetY int) string {
 		offsetY += searchHeight
 	}
 
-	editor := f.View(width, height, e.fileTree.Visible(), e.debug, offsetX, offsetY)
+	editor := f.View(ctx, width, height, e.fileTree.Visible(), e.debug, offsetX, offsetY)
 
 	if search != "" {
 		editor = lipgloss.JoinVertical(lipgloss.Left, search, editor)
