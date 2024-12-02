@@ -62,39 +62,40 @@ type Buffer interface {
 	// Bytes returns the buffer as a byte slice. This uses \n as the line ending.
 	Bytes() []byte
 	// BytesRange returns the buffer as a byte slice from the given range. This uses \n as the line ending.
-	BytesRange(r Range) []byte
+	BytesRange(r ByteRange) []byte
 	// Rune returns the rune at the given index.
-	Rune(i int) rune
+	Rune(i uint) []byte
 
 	// ByteIndex converts the rune index to a byte index.
-	ByteIndex(i int) int
+	ByteIndex(i uint) uint
 	// RuneIndex converts the byte index to a rune index.
-	RuneIndex(i int) int
-	// ByteIndexByPoint returns the byte index in the buffer for the given point.
-	ByteIndexByPoint(p Point) int
-	// Position returns the point for the given byte index.
-	Position(i int) Point
+	RuneIndex(i uint) uint
+
+	// ByteIndexByPoint returns the byte index for the given point.
+	ByteIndexByPoint(p Point) uint
+	// Point returns the point for the given byte index.
+	Point(i uint) Point
 
 	// Len returns the rune length of the buffer. The actual byte length may be different due to line endings & encoding.
-	Len() int
+	Len() uint
 	// BytesLen returns the byte length of the buffer.
-	BytesLen() int
+	BytesLen() uint
 	// LinesLen returns the number of lines in the buffer.
-	LinesLen() int
-	// Lines returns the lines in the buffer.
-	Lines() []Line
+	LinesLen() uint
+	// LineLen returns the rune length of the line at the given row.
+	LineLen(l uint) uint
 
 	// Line returns the line at the given row.
 	Line(l int) Line
-	// LineLen returns the rune length of the line at the given row.
-	LineLen(l int) int
+	// Lines returns the lines in the buffer.
+	Lines() []Line
 
 	// Insert inserts text at the given position.
-	Insert(p Point, text []byte)
+	Insert(i uint, text []byte)
 	// Replace replaces the text in the given range with the given text.
-	Replace(r Range, text []byte)
+	Replace(r ByteRange, text []byte)
 	// Delete deletes the range of text between the two positions.
-	Delete(r Range)
+	Delete(r ByteRange)
 }
 
 // Line represents a line in a buffer.
@@ -102,36 +103,19 @@ type Line interface {
 	// Clone returns a copy of the line.
 	Clone() Line
 	// Len returns the rune length of the line.
-	Len() int
+	Len() uint
 	// BytesLen returns the byte length of the line.
-	BytesLen() int
+	BytesLen() uint
+
 	// ByteIndex converts the rune index to a byte index.
-	ByteIndex(i int) int
-	// RuneIndex converts the byte index to a rune index.
-	RuneIndex(i int) int
+	ByteIndex(i uint) uint
+	// Column converts the byte index to a rune index.
+	Column(i uint) uint
 
-	// Rune returns the rune at the given index.
-	Rune(i int) rune
-	// Runes returns the runes in the line.
-	Runes() []rune
-	// RunesRange returns the runes in the line from the given range.
-	RunesRange(start int, end int) []rune
-
-	// RuneBytes returns the rune at the given index as a byte slice.
-	RuneBytes(index int) []byte
 	// Bytes returns the line as a byte slice.
 	Bytes() []byte
-	// RunesBytesRange returns the runes in the line from the given range as a byte slice.
-	RunesBytesRange(start int, end int) []byte
-
-	// RuneString returns the rune at the given index as a string.
-	RuneString(index int) string
-	// String returns the line as a string.
-	String() string
-	// RuneStrings returns the runes in the line as strings.
-	RuneStrings() []string
-	// StringRange returns the string in the line from the given range.
-	StringRange(start int, end int) string
+	// BytesRange returns the line as a byte slice from the given range.
+	BytesRange(r ByteRange) []byte
 
 	// CutStart returns a new line with the text before the given index.
 	CutStart(i int) Line
@@ -144,10 +128,11 @@ type Line interface {
 	Append(lines ...Line) Line
 	// Prepend prepends the given lines to the current line.
 	Prepend(lines ...Line) Line
+
 	// Insert inserts text at the given index.
-	Insert(i int, text []byte) Line
+	Insert(i uint, text []byte) Line
 	// Replace replaces the text between the given start and end indexes with the given text.
-	Replace(start int, end int, text []byte) Line
+	Replace(r ByteRange, text []byte) Line
 	// Delete deletes the text between the given start and end indexes.
-	Delete(start int, end int) Line
+	Delete(r ByteRange) Line
 }

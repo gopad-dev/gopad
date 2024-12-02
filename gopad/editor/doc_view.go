@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"iter"
@@ -13,7 +14,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
@@ -32,6 +32,8 @@ const (
 	ZoneFileDiagnosticPrefix     = "file.diagnostic:"
 	ZoneFileLineDiagnosticPrefix = "file.line.diagnostic:"
 )
+
+var tab = []byte("\t")
 
 func zoneFileLineEmptyID(line int) string {
 	return fmt.Sprintf("%s%s", ZoneFileLineEmptyPrefix, strconv.Itoa(line))
@@ -150,15 +152,15 @@ func (v *DocumentView) HideCurrentDiagnostic() {
 
 func (v DocumentView) GetCursorForCharPos(p buffer.Point) buffer.Point {
 	positionRow := max(p.Row-v.offset.Row, 0)
-	if positionRow >= len(v.Doc.Positions) {
+	if positionRow >= uint(len(v.Doc.Positions)) {
 		return buffer.Point{
-			Row: max(v.Doc.Buffer.LinesLen()-1, 0),
+			Row: max(v.Doc.Buffer.LinesLen()-uint(1), uint(0)),
 			Col: 0,
 		}
 	}
 
 	linePositions := v.Doc.Positions[positionRow]
-	if p.Col >= len(linePositions) {
+	if p.Col >= uint(len(linePositions)) {
 		return buffer.Point{
 			Row: p.Row,
 			Col: v.Doc.Buffer.LineLen(p.Row),
@@ -171,7 +173,7 @@ func (v DocumentView) GetCursorForCharPos(p buffer.Point) buffer.Point {
 func (v DocumentView) GetFileZoneCursorPos(msg tea.MouseMsg, z *zone.ZoneInfo) buffer.Point {
 	row, _ := strconv.Atoi(strings.TrimPrefix(z.ID(), ZoneFileLinePrefix))
 	col, _ := z.Pos(msg)
-	return v.GetCursorForCharPos(buffer.Point{Row: row, Col: col})
+	return v.GetCursorForCharPos(buffer.Point{Row: uint(row), Col: uint(col)})
 }
 
 func (v *DocumentView) SetLanguage(language string) tea.Cmd {
@@ -201,7 +203,7 @@ func (v *DocumentView) refreshCursorViewOffset(width int, height int) {
 	//	}
 	// }
 
-	if c.Row >= v.offset.Row+height {
+	if c.Row >= v.offset.Row+uint(height) {
 		v.offset.Row = max(c.Row-height+1, 0)
 	} else if c.Row < v.offset.Row {
 		v.offset.Row = c.Row
@@ -742,14 +744,14 @@ func (v *DocumentView) renderLine(ln int, lineCode []byte, prefixWidth int, widt
 		return borderStyle("") + "\n"
 	}
 
-	//lineDiagnostic, lineDiagnosticIndex := v.Doc.HighestLineDiagnostic(ln)
+	// lineDiagnostic, lineDiagnosticIndex := v.Doc.HighestLineDiagnostic(ln)
 
 	prefix := " "
-	//if lineDiagnostic.Severity > 0 {
+	// if lineDiagnostic.Severity > 0 {
 	//	prefix = zone.Mark(zoneFileLineDiagnosticID(lineDiagnosticIndex), lineDiagnostic.Severity.Icon().Render())
-	//} else {
+	// } else {
 	//	prefix = " "
-	//}
+	// }
 
 	prefixLn := strconv.Itoa(ln + 1)
 	prefix += zone.Mark(zoneFileLineNumberID(ln), codePrefixStyle.Render(strings.Repeat(" ", prefixWidth-lipgloss.Width(prefixLn))+prefixLn))
@@ -783,9 +785,12 @@ func (v *DocumentView) View(ctx context.Context, width int, height int, border b
 	offset := v.offset
 	selection := v.Doc.Selection()
 
-	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(tree_sitter.Range{
-		StartPoint: tree_sitter.Point{Row: uint(offset.Row), Column: 0},
-		EndPoint:   tree_sitter.Point{Row: uint(offset.Row + height + 1), Column: ^uint(0)},
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	nextStyle, stop := iter.Pull(v.Doc.HighlightIter(ctx, &buffer.ByteRange{
+		StartByte: 0,
+		EndByte:   ^uint(0),
 	}))
 	defer stop()
 	charStyle, _ := nextStyle()
@@ -835,7 +840,7 @@ func (v *DocumentView) View(ctx context.Context, width int, height int, border b
 		}
 
 		style := charStyle.Style.Inherit(codeLineCharStyle)
-		//style = v.Doc.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
+		// style = v.Doc.HighestLineColDiagnosticStyle(style, char.Point.Row, char.Point.Col)
 
 		if char.Rune == '\n' {
 			if char.Point.Row == c.Row && char.Point.Col == c.Col {
@@ -850,28 +855,28 @@ func (v *DocumentView) View(ctx context.Context, width int, height int, border b
 		}
 
 		// replace tabs with spaces for now TODO: handle tabs properly
-		if char.Rune == '\t' {
-			char.Rune = ' '
+		if bytes.Equal(char.Text, tab) {
+			char.Text = []byte(" ")
 		}
 
-		inSelection := selection != nil && selection.Contains(char.Point)
+		inSelection := selection != nil && selection.Contains(char.Index)
 
 		var renderChar string
 		if inSelection {
-			renderChar = config.Theme.UI.FileView.SelectionStyle.Inherit(style).Render(string(char.Rune))
+			renderChar = config.Theme.UI.FileView.SelectionStyle.Inherit(style).Render(string(char.Text))
 		} else {
-			renderChar = style.Render(string(char.Rune))
+			renderChar = style.Render(string(char.Text))
 		}
 
 		lineCode = append(lineCode, renderChar...)
 
-		//paddingStyle := codeLineCharStyle
-		//labelStyle := config.Theme.UI.FileView.InlayHintStyle
-		//if inSelection {
+		// paddingStyle := codeLineCharStyle
+		// labelStyle := config.Theme.UI.FileView.InlayHintStyle
+		// if inSelection {
 		//	paddingStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(paddingStyle)
 		//	labelStyle = config.Theme.UI.FileView.SelectionStyle.Inherit(labelStyle)
-		//}
-		//for _, hint := range v.Doc.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
+		// }
+		// for _, hint := range v.Doc.InlayHintsForLineCol(char.Point.Row, char.Point.Col+1) {
 		//	var label string
 		//	if hint.PaddingLeft {
 		//		label += paddingStyle.Render(" ")
@@ -881,7 +886,7 @@ func (v *DocumentView) View(ctx context.Context, width int, height int, border b
 		//		label += paddingStyle.Render(" ")
 		//	}
 		//	lineCode = append(lineCode, label...)
-		//}
+		// }
 	}
 
 	if len(lineCode) > 0 {

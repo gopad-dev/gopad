@@ -6,19 +6,53 @@ import (
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
+type Selection struct {
+	// Anchor is the starting point of the selection which doesn't move.
+	Anchor uint
+	// Head is the ending point of the selection which moves when the cursor moves.
+	Head uint
+}
+
 func newCursor() Cursor {
 	return Cursor{
-		point: buffer.Point{},
+		point: 0,
 		mark:  nil,
 	}
 }
 
 type Cursor struct {
-	point buffer.Point
-	mark  *buffer.Point
+	point uint
+	mark  *uint
 
 	start bool
 	end   bool
+}
+
+func (c Cursor) mapChanges(changes ChangeSet) Cursor {
+	if changes.IsEmpty() {
+		return c
+	}
+
+	selection := Selection{
+		Anchor: c.point,
+		Head:   c.point,
+	}
+	if c.mark != nil {
+		selection.Anchor = *c.mark
+	}
+
+	selections := changes.UpdatePosition([]Selection{selection})
+
+	newC := Cursor{
+		point: selections[0].Head,
+		mark:  nil,
+	}
+
+	if selections[0].Anchor != selections[0].Head {
+		newC.mark = &selections[0].Anchor
+	}
+
+	return newC
 }
 
 func (d *Document) Cursor() buffer.Point {
@@ -42,22 +76,14 @@ func (d *Document) Cursor() buffer.Point {
 	}
 }
 
-func (d *Document) SetCursor(newCursor buffer.Point) {
-	if newCursor.Row > -1 {
-		d.cursor.point.Row = min(max(newCursor.Row, 0), d.Buffer.LinesLen()-1)
-		d.cursor.start = false
-		d.cursor.end = false
-	}
-	if newCursor.Col > -1 {
-		c := d.Cursor()
-		d.cursor.point.Col = min(max(newCursor.Col, 0), d.Buffer.LineLen(c.Row))
-		d.cursor.start = false
-		d.cursor.end = false
-	}
+func (d *Document) SetCursor(cursor uint) {
+	d.cursor.point = cursor
+	d.cursor.start = false
+	d.cursor.end = false
 }
 
-func (d *Document) SetMark(p buffer.Point) {
-	d.cursor.mark = &p
+func (d *Document) SetMark(mark uint) {
+	d.cursor.mark = &mark
 }
 
 func (d *Document) HasMark() bool {
@@ -70,46 +96,20 @@ func (d *Document) ResetMark() {
 
 func (d *Document) checkMark() {
 	if d.cursor.mark != nil {
-		c := d.Cursor()
-
-		if d.cursor.mark.Row == c.Row && d.cursor.mark.Col == c.Col {
+		if *d.cursor.mark == d.cursor.point {
 			d.cursor.mark = nil
 		}
 	}
 }
 
-func (d *Document) Selection() *buffer.Range {
+func (d *Document) Selection() *buffer.ByteRange {
 	if d.cursor.mark == nil {
 		return nil
 	}
 
-	c := d.Cursor()
-	if c.Row == d.cursor.mark.Row && c.Col == d.cursor.mark.Col {
-		return nil
-	}
-
-	if c.Row < d.cursor.mark.Row || (c.Row == d.cursor.mark.Row && c.Col < d.cursor.mark.Col) {
-		return &buffer.Range{
-			Start: buffer.Point{
-				Row: c.Row,
-				Col: c.Col,
-			},
-			End: buffer.Point{
-				Row: d.cursor.mark.Row,
-				Col: d.cursor.mark.Col,
-			},
-		}
-	}
-
-	return &buffer.Range{
-		Start: buffer.Point{
-			Row: d.cursor.mark.Row,
-			Col: d.cursor.mark.Col,
-		},
-		End: buffer.Point{
-			Row: c.Row,
-			Col: c.Col,
-		},
+	return &buffer.ByteRange{
+		StartByte: min(*d.cursor.mark, d.cursor.point),
+		EndByte:   max(*d.cursor.mark, d.cursor.point),
 	}
 }
 
@@ -118,7 +118,7 @@ func (d *Document) SelectionBytes() []byte {
 	if s == nil || s.Start.Row == s.End.Row && s.Start.Col == s.End.Col {
 		return nil
 	}
-	return d.Buffer.BytesRange(*s)
+	return d.Buffer.BytesRange()
 }
 
 func (d *Document) SelectAll() {

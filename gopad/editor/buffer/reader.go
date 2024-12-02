@@ -4,6 +4,8 @@ import (
 	"iter"
 )
 
+var newLine = []byte("\n")
+
 func NewReader(buf Buffer, offset Point) *Reader {
 	return &Reader{
 		buf:   buf,
@@ -15,8 +17,8 @@ func NewReader(buf Buffer, offset Point) *Reader {
 
 type Reader struct {
 	buf   Buffer
-	pos   int
-	len   int
+	pos   uint
+	len   uint
 	point Point
 }
 
@@ -42,9 +44,9 @@ func (r *Reader) next() (Char, bool) {
 	p := r.point
 	i := r.pos
 
-	runee := r.buf.Rune(r.pos)
-	switch runee {
-	case '\n':
+	text := r.buf.Rune(r.pos)
+	switch text {
+	case newLine:
 		r.point.Row++
 		r.point.Col = 0
 	default:
@@ -53,14 +55,14 @@ func (r *Reader) next() (Char, bool) {
 	r.pos++
 
 	return Char{
-		Rune:  runee,
+		Text:  text,
 		Point: p,
 		Index: i,
 	}, true
 }
 
 type Char struct {
-	Rune  rune
+	Text  []byte
 	Point Point
-	Index int
+	Index uint
 }

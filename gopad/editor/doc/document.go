@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/gopad/editor/buffer"
@@ -214,6 +213,8 @@ func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
 
 	d.version++
 
+	d.cursor = d.cursor.mapChanges(changes)
+
 	cmds := []tea.Cmd{
 		tea.Sequence(
 			ls.FileChanged(d.Name, d.Version(), d.Buffer.Bytes()),
@@ -222,7 +223,8 @@ func (d *Document) apply(t Transaction) (tea.Cmd, bool) {
 	}
 
 	if d.Syntax != nil {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
 		if err := d.Syntax.Update(ctx, d.version, d.Buffer, oldBuf, t.Changes); err != nil {
 			log.Printf("error updating syntax: %v", err)
 			d.Syntax = nil
@@ -264,6 +266,7 @@ func (d *Document) Insert(p buffer.Point, text []byte) tea.Cmd {
 
 	startIndex := d.Buffer.ByteIndexByPoint(p)
 	transaction := NewTransactionFromInsert(d.Buffer, startIndex, text)
+	transaction.WithCursor(d.cursor)
 
 	log.Printf("inserting text at index %d: %#v", startIndex, transaction)
 	return d.Apply(transaction)
@@ -533,7 +536,7 @@ func (d *Document) Delete() error {
 	return nil
 }
 
-func (d *Document) HighlightIter(r tree_sitter.Range) iter.Seq[CharStyle] {
+func (d *Document) HighlightIter(ctx context.Context, r *buffer.ByteRange) iter.Seq[CharStyle] {
 	var hIter iter.Seq2[HighlightEvent, error]
 
 	if d.Syntax == nil {
@@ -544,7 +547,7 @@ func (d *Document) HighlightIter(r tree_sitter.Range) iter.Seq[CharStyle] {
 			}, nil)
 		}
 	} else {
-		hIter = d.Syntax.Layers.HighlightIter(context.Background(), d.Buffer.Bytes(), r)
+		hIter = d.Syntax.Layers.HighlightIter(ctx, d.Buffer.Bytes(), r)
 	}
 
 	return newStyleIter(hIter, d.Buffer, config.Theme.CodeStyles)

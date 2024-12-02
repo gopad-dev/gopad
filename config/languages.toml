@@ -16,6 +16,7 @@ line_comment_tokens = ['//']
 block_comment_tokens = [{ start = '/*', end = '*/' }]
 auto_pairs = [{ open = '(', close = ')' }, { open = '{', close = '}' }, { open = '[', close = ']' }, { open = '"', close = '"' }, { open = "'", close = "'" }, { open = '`', close = '`' }]
 grammar = { name = 'go', symbol_name = 'go', install = { git = 'https://github.com/tree-sitter/tree-sitter-go', rev = '7ee8d928db5202f6831a78f8112fd693bf69f98b', ref = 'master', ref_type = 'commit' } }
+formatter = { command = 'gofmt', args = ['-s'] }
 
 [languages.go-mod]
 alt_names = ['go.mod']

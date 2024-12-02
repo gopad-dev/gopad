@@ -30,23 +30,32 @@ type HighlightEvent interface {
 	highlightEvent()
 }
 
+type HighlightEventLayerStart struct {
+	LanguageName string
+}
+
+func (HighlightEventLayerStart) highlightEvent() {}
+
+type HighlightEventLayerEnd struct{}
+
+func (HighlightEventLayerEnd) highlightEvent() {}
+
+type HighlightEventCaptureStart struct {
+	Highlight Highlight
+}
+
+func (HighlightEventCaptureStart) highlightEvent() {}
+
+type HighlightEventCaptureEnd struct{}
+
+func (HighlightEventCaptureEnd) highlightEvent() {}
+
 type HighlightEventSource struct {
 	StartByte uint
 	EndByte   uint
 }
 
 func (HighlightEventSource) highlightEvent() {}
-
-type HighlightEventStart struct {
-	Highlight    Highlight
-	LanguageName string
-}
-
-func (HighlightEventStart) highlightEvent() {}
-
-type HighlightEventEnd struct{}
-
-func (HighlightEventEnd) highlightEvent() {}
 
 func NewHighlightConfig(language *tree_sitter.Language, languageName string, highlightsQuery []byte, injectionQuery []byte, localsQuery []byte) (HighlightConfiguration, error) {
 	var querySource []byte
@@ -164,27 +173,20 @@ type HighlightConfiguration struct {
 func (c *HighlightConfiguration) Configure(recognizedNames []string) {
 	highlightIndices := make([]*Highlight, len(c.Query.CaptureNames()))
 	for i, captureName := range c.Query.CaptureNames() {
-		captureParts := strings.Split(captureName, ".")
-
-		var bestIndex *Highlight
-		var bestMatchLen int
-		for j, recognizedName := range recognizedNames {
-			var matchLen int
-			matches := true
-			for _, part := range strings.Split(recognizedName, ".") {
-				matchLen++
-				if !slices.Contains(captureParts, part) {
-					matches = false
-					break
-				}
-			}
-			if matches && matchLen > bestMatchLen {
+		for {
+			j := slices.Index(recognizedNames, captureName)
+			if j != -1 {
 				index := Highlight(j)
-				bestIndex = &index
-				bestMatchLen = matchLen
+				highlightIndices[i] = &index
+				break
 			}
+
+			lastDot := strings.LastIndex(captureName, ".")
+			if lastDot == -1 {
+				break
+			}
+			captureName = captureName[:lastDot]
 		}
-		highlightIndices[i] = bestIndex
 	}
 	c.HighlightIndices = highlightIndices
 }
@@ -202,13 +204,13 @@ func (c *HighlightConfiguration) NonconformantCaptureNames(captureNames []string
 
 type LocalDef struct {
 	Name      string
-	Range     ByteRange
+	Range     tree_sitter.Range
 	Highlight *Highlight
 }
 
 type LocalScope struct {
 	Inherits  bool
-	Range     ByteRange
+	Range     tree_sitter.Range
 	LocalDefs []LocalDef
 }
 
@@ -225,12 +227,13 @@ type highlightIter struct {
 	Source             []byte
 	ByteOffset         uint
 	Layers             []*highlightIterLayer
-	NextEvent          HighlightEvent
+	NextEvents         []HighlightEvent
 	LastHighlightRange *iterRange
 	Syntax             *SyntaxLayers
+	LastLayer          *highlightIterLayer
 }
 
-func (h *highlightIter) emitEvent(offset uint, event HighlightEvent) (HighlightEvent, error) {
+func (h *highlightIter) emitEvents(offset uint, events ...HighlightEvent) (HighlightEvent, error) {
 	var result HighlightEvent
 	if h.ByteOffset < offset {
 		result = HighlightEventSource{
@@ -238,9 +241,12 @@ func (h *highlightIter) emitEvent(offset uint, event HighlightEvent) (HighlightE
 			EndByte:   offset,
 		}
 		h.ByteOffset = offset
-		h.NextEvent = event
+		h.NextEvents = append(events, events...)
 	} else {
-		result = event
+		if len(events) > 1 {
+			h.NextEvents = append(h.NextEvents, events[1:]...)
+		}
+		result = events[0]
 	}
 	h.sortLayers()
 	return result, nil
@@ -248,41 +254,40 @@ func (h *highlightIter) emitEvent(offset uint, event HighlightEvent) (HighlightE
 
 func (h *highlightIter) sortLayers() {
 	for len(h.Layers) > 0 {
-		sortKey := h.Layers[0].sortKey()
-		if sortKey != nil {
+		key := h.Layers[0].sortKey()
+		if key != nil {
 			var i int
 			for i+1 < len(h.Layers) {
-				nextOffset := h.Layers[i+1].sortKey()
-				if nextOffset != nil {
-					if nextOffset.offset < sortKey.offset {
-						i++
+				nextOffsetKey := h.Layers[i+1].sortKey()
+				if nextOffsetKey != nil {
+					if nextOffsetKey.GreaterThan(*key) {
+						i += 1
 						continue
 					}
-				} else {
-					layer := h.Layers[i+1]
-					h.Layers = append(h.Layers[:i], h.Layers[i+1:]...)
-					h.Syntax.parser.pushCursor(layer.Cursor)
 				}
 				break
 			}
 			if i > 0 {
-				h.Layers = append(h.Layers[:i], append([]*highlightIterLayer{h.Layers[0]}, h.Layers[i:]...)...)
+				h.Layers = append(rotateLeft(h.Layers[:i+1], 1), h.Layers[i+1:]...)
 			}
 			break
-		} else {
-			layer := h.Layers[0]
-			h.Layers = h.Layers[1:]
-			h.Syntax.parser.pushCursor(layer.Cursor)
 		}
+		layer := h.Layers[0]
+		h.Layers = h.Layers[1:]
+		h.Syntax.parser.pushCursor(layer.Cursor)
 	}
+}
+
+func rotateLeft[T any](s []T, i int) []T {
+	return append(s[i:], s[:i]...)
 }
 
 func (h *highlightIter) next() (HighlightEvent, error) {
 main:
 	for {
-		if h.NextEvent != nil {
-			event := h.NextEvent
-			h.NextEvent = nil
+		if len(h.NextEvents) > 0 {
+			event := h.NextEvents[0]
+			h.NextEvents = h.NextEvents[1:]
 			return event, nil
 		}
 
@@ -308,21 +313,32 @@ main:
 		}
 
 		// Get the next capture from whichever layer has the earliest highlight boundary.
-		var r tree_sitter.Range
 		layer := h.Layers[0]
-		if len(layer.Captures) > 0 {
-			nextQueryCapture := layer.Captures[0]
-			nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
-			r = nextCapture.Node.Range()
+		if layer != h.LastLayer {
+			var events []HighlightEvent
+			if h.LastLayer != nil {
+				events = append(events, HighlightEventLayerEnd{})
+			}
+			h.LastLayer = layer
+
+			return h.emitEvents(h.ByteOffset, append(events, HighlightEventLayerStart{
+				LanguageName: layer.Config.LanguageName,
+			})...)
+		}
+
+		var nextCaptureRange tree_sitter.Range
+		if nextMatch, captureIndex, ok := layer.Captures.Peek(); ok {
+			nextCapture := nextMatch.Captures[captureIndex]
+			nextCaptureRange = nextCapture.Node.Range()
 
 			// If any previous highlight ends before this node starts, then before
 			// processing this capture, emit the source code up until the end of the
 			// previous highlight, and an end event for that highlight.
 			if len(layer.HighlightEndStack) > 0 {
 				endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
-				if endByte <= r.StartByte {
+				if endByte <= nextCaptureRange.StartByte {
 					layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
-					return h.emitEvent(endByte, HighlightEventEnd{})
+					return h.emitEvents(endByte, HighlightEventCaptureEnd{})
 				}
 			}
 		} else {
@@ -331,17 +347,16 @@ main:
 			if len(layer.HighlightEndStack) > 0 {
 				endByte := layer.HighlightEndStack[len(layer.HighlightEndStack)-1]
 				layer.HighlightEndStack = layer.HighlightEndStack[:len(layer.HighlightEndStack)-1]
-				return h.emitEvent(endByte, HighlightEventEnd{})
+				return h.emitEvents(endByte, HighlightEventCaptureEnd{})
 			}
-			return h.emitEvent(uint(len(h.Source)), nil)
+			return h.emitEvents(uint(len(h.Source)), nil)
 		}
 
-		queryCapture := layer.Captures[0]
-		layer.Captures = layer.Captures[1:]
-		capture := queryCapture.Match.Captures[queryCapture.Index]
+		match, captureIndex, _ := layer.Captures.Next()
+		capture := match.Captures[captureIndex]
 
 		// Remove from the local scope stack any local scopes that have already ended.
-		for r.StartByte > layer.ScopeStack[len(layer.ScopeStack)-1].Range.EndByte {
+		for nextCaptureRange.StartByte > layer.ScopeStack[len(layer.ScopeStack)-1].Range.EndByte {
 			layer.ScopeStack = layer.ScopeStack[:len(layer.ScopeStack)-1]
 		}
 
@@ -349,17 +364,17 @@ main:
 		// local variable info.
 		var referenceHighlight *Highlight
 		var definitionHighlight *Highlight
-		for queryCapture.Match.PatternIndex < layer.Config.HighlightsPatternIndex {
+		for match.PatternIndex < layer.Config.HighlightsPatternIndex {
 			// If the node represents a local scope, push a new local scope onto
 			// the scope stack.
 			if layer.Config.LocalScopeCaptureIndex != nil && uint(capture.Index) == *layer.Config.LocalScopeCaptureIndex {
 				definitionHighlight = nil
 				scope := LocalScope{
 					Inherits:  true,
-					Range:     ByteRangeFromRange(r),
+					Range:     nextCaptureRange,
 					LocalDefs: nil,
 				}
-				for _, prop := range layer.Config.Query.PropertySettings(queryCapture.Match.PatternIndex) {
+				for _, prop := range layer.Config.Query.PropertySettings(match.PatternIndex) {
 					if prop.Key == captureLocalScopeInherits {
 						scope.Inherits = *prop.Value == "true"
 					}
@@ -373,18 +388,18 @@ main:
 				scope := layer.ScopeStack[len(layer.ScopeStack)-1]
 
 				var valueRange tree_sitter.Range
-				for _, matchCapture := range queryCapture.Match.Captures {
+				for _, matchCapture := range match.Captures {
 					if layer.Config.LocalDefValueCaptureIndex != nil && uint(matchCapture.Index) == *layer.Config.LocalDefValueCaptureIndex {
 						valueRange = matchCapture.Node.Range()
 					}
 				}
 
-				if len(h.Source) > int(r.StartByte) && len(h.Source) > int(valueRange.EndByte) {
-					name := string(h.Source[r.StartByte:r.EndByte])
+				if len(h.Source) > int(nextCaptureRange.StartByte) && len(h.Source) > int(valueRange.EndByte) {
+					name := string(h.Source[nextCaptureRange.StartByte:nextCaptureRange.EndByte])
 
 					scope.LocalDefs = append(scope.LocalDefs, LocalDef{
 						Name:      name,
-						Range:     ByteRangeFromRange(r),
+						Range:     nextCaptureRange,
 						Highlight: nil,
 					})
 					definitionHighlight = scope.LocalDefs[len(scope.LocalDefs)-1].Highlight
@@ -393,12 +408,12 @@ main:
 				// If the node represents a reference, then try to find the corresponding
 				// definition in the scope stack.
 				definitionHighlight = nil
-				if len(h.Source) > int(r.StartByte) && len(h.Source) > int(r.EndByte) {
-					name := string(h.Source[r.StartByte:r.EndByte])
+				if len(h.Source) > int(nextCaptureRange.StartByte) && len(h.Source) > int(nextCaptureRange.EndByte) {
+					name := string(h.Source[nextCaptureRange.StartByte:nextCaptureRange.EndByte])
 					for _, scope := range slices.Backward(layer.ScopeStack) {
 						var highlight *Highlight
 						for _, def := range slices.Backward(scope.LocalDefs) {
-							if def.Name == name && r.StartByte >= def.Range.EndByte {
+							if def.Name == name && nextCaptureRange.StartByte >= def.Range.EndByte {
 								highlight = def.Highlight
 							}
 						}
@@ -414,13 +429,11 @@ main:
 			}
 
 			// Continue processing any additional matches for the same node.
-			if len(layer.Captures) > 0 {
-				nextQueryCapture := layer.Captures[0]
-				nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
+			if nextMatch, nextCaptureIndex, ok := layer.Captures.Peek(); ok {
+				nextCapture := nextMatch.Captures[nextCaptureIndex]
 				if nextCapture.Node.Equals(capture.Node) {
 					capture = nextCapture
-					queryCapture = nextQueryCapture
-					layer.Captures = layer.Captures[1:]
+					match, _, _ = layer.Captures.Next()
 					continue
 				}
 			}
@@ -434,7 +447,7 @@ main:
 		// a different layer, then skip over this one.
 		if h.LastHighlightRange != nil {
 			lastRange := *h.LastHighlightRange
-			if r.StartByte == lastRange.Start && r.EndByte == lastRange.End && layer.Depth < lastRange.Depth {
+			if nextCaptureRange.StartByte == lastRange.Start && nextCaptureRange.EndByte == lastRange.End && layer.Depth < lastRange.Depth {
 				h.sortLayers()
 				continue main
 			}
@@ -445,22 +458,25 @@ main:
 		// Captures for a given node are ordered by pattern index, so these subsequent
 		// captures are guaranteed to be for highlighting, not injections or
 		// local variables.
-		for len(layer.Captures) > 0 {
-			nextQueryCapture := layer.Captures[0]
-			nextCapture := nextQueryCapture.Match.Captures[nextQueryCapture.Index]
+		for {
+			nextMatch, nextCaptureIndex, ok := layer.Captures.Peek()
+			if !ok {
+				break
+			}
+
+			nextCapture := nextMatch.Captures[nextCaptureIndex]
 			if nextCapture.Node.Equals(capture.Node) {
-				followingQueryCapture := nextQueryCapture
-				layer.Captures = layer.Captures[1:]
+				followingMatch, _, _ := layer.Captures.Next()
 				// If the current node was found to be a local variable, then ignore
 				// the following queryCapture if it's a highlighting pattern that is disabled
 				// for local variables.
-				if definitionHighlight != nil || referenceHighlight != nil && layer.Config.NonLocalVariablePatterns[followingQueryCapture.Match.PatternIndex] {
+				if definitionHighlight != nil || referenceHighlight != nil && layer.Config.NonLocalVariablePatterns[followingMatch.PatternIndex] {
 					continue
 				}
 
-				queryCapture.Match.Remove()
+				match.Remove()
 				capture = nextCapture
-				queryCapture = nextQueryCapture
+				match = followingMatch
 			} else {
 				break
 			}
@@ -481,14 +497,13 @@ main:
 		}
 		if highlight != nil {
 			h.LastHighlightRange = &iterRange{
-				Start: r.StartByte,
-				End:   r.EndByte,
+				Start: nextCaptureRange.StartByte,
+				End:   nextCaptureRange.EndByte,
 				Depth: layer.Depth,
 			}
-			layer.HighlightEndStack = append(layer.HighlightEndStack, r.EndByte)
-			return h.emitEvent(r.StartByte, HighlightEventStart{
-				Highlight:    *highlight,
-				LanguageName: layer.Config.LanguageName,
+			layer.HighlightEndStack = append(layer.HighlightEndStack, nextCaptureRange.EndByte)
+			return h.emitEvents(nextCaptureRange.StartByte, HighlightEventCaptureStart{
+				Highlight: *highlight,
 			})
 		}
 
@@ -497,101 +512,105 @@ main:
 }
 
 func intersectRanges(parentRanges []tree_sitter.Range, nodes []tree_sitter.Node, includesChildren bool) []tree_sitter.Range {
-	cursor := nodes[0].Walk()
-	results := make([]tree_sitter.Range, 0)
-	if len(parentRanges) == 0 {
-		panic("parentRanges must not be empty")
-	}
-	parentRange := parentRanges[0]
-	parentRanges = parentRanges[1:]
-
-	for _, node := range nodes {
-		precedingRange := tree_sitter.Range{
-			StartByte: 0,
-			StartPoint: tree_sitter.Point{
-				Row:    0,
-				Column: 0,
-			},
-			EndByte:  node.StartByte(),
-			EndPoint: node.StartPosition(),
-		}
-		followingRange := tree_sitter.Range{
-			StartByte:  node.EndByte(),
-			StartPoint: node.EndPosition(),
-			EndByte:    ^uint(0),
-			EndPoint: tree_sitter.Point{
-				Row:    ^uint(0),
-				Column: ^uint(0),
-			},
-		}
-
-		excludedRanges := make([]tree_sitter.Range, 0)
-		cursor.Reset(node)
-		cursor.GotoFirstChild()
-		for range node.ChildCount() {
-			child := cursor.Node()
-			cursor.GotoNextSibling()
-			if !includesChildren {
-				excludedRanges = append(excludedRanges, tree_sitter.Range{
-					StartByte:  child.StartByte(),
-					StartPoint: child.StartPosition(),
-					EndByte:    child.EndByte(),
-					EndPoint:   child.EndPosition(),
-				})
-			}
-		}
-		excludedRanges = append(excludedRanges, followingRange)
-
-		for _, excludedRange := range excludedRanges {
-			r := tree_sitter.Range{
-				StartByte:  precedingRange.EndByte,
-				StartPoint: precedingRange.EndPoint,
-				EndByte:    excludedRange.StartByte,
-				EndPoint:   excludedRange.StartPoint,
-			}
-			precedingRange = excludedRange
-
-			if r.EndByte < parentRange.StartByte {
-				continue
-			}
-
-			for parentRange.StartByte <= r.EndByte {
-				if parentRange.EndByte > r.StartByte {
-					if r.StartByte < parentRange.StartByte {
-						r.StartByte = parentRange.StartByte
-						r.StartPoint = parentRange.StartPoint
-					}
-
-					if parentRange.EndByte < r.EndByte {
-						if r.StartByte < parentRange.EndByte {
-							results = append(results, tree_sitter.Range{
-								StartByte:  r.StartByte,
-								StartPoint: r.StartPoint,
-								EndByte:    parentRange.EndByte,
-								EndPoint:   parentRange.EndPoint,
-							})
-						}
-						r.StartByte = parentRange.EndByte
-						r.StartPoint = parentRange.EndPoint
-					} else {
-						if r.StartByte < r.EndByte {
-							results = append(results, r)
-						}
-						break
-					}
-				}
-
-				if len(parentRanges) > 0 {
-					parentRange = parentRanges[0]
-					parentRanges = parentRanges[1:]
-				} else {
-					return results
-				}
-			}
-		}
+	return []tree_sitter.Range{
+		nodes[0].Range(),
 	}
 
-	return results
+	// cursor := nodes[0].Walk()
+	// results := make([]tree_sitter.Range, 0)
+	// if len(parentRanges) == 0 {
+	//	panic("parentRanges must not be empty")
+	// }
+	// parentRange := parentRanges[0]
+	// parentRanges = parentRanges[1:]
+	//
+	// for _, node := range nodes {
+	//	precedingRange := tree_sitter.Range{
+	//		StartByte: 0,
+	//		StartPoint: tree_sitter.Point{
+	//			Row:    0,
+	//			Column: 0,
+	//		},
+	//		EndByte:  node.StartByte(),
+	//		EndPoint: node.StartPosition(),
+	//	}
+	//	followingRange := tree_sitter.Range{
+	//		StartByte:  node.EndByte(),
+	//		StartPoint: node.EndPosition(),
+	//		EndByte:    ^uint(0),
+	//		EndPoint: tree_sitter.Point{
+	//			Row:    ^uint(0),
+	//			Column: ^uint(0),
+	//		},
+	//	}
+	//
+	//	excludedRanges := make([]tree_sitter.Range, 0)
+	//	cursor.Reset(node)
+	//	cursor.GotoFirstChild()
+	//	for range node.ChildCount() {
+	//		child := cursor.Node()
+	//		cursor.GotoNextSibling()
+	//		if !includesChildren {
+	//			excludedRanges = append(excludedRanges, tree_sitter.Range{
+	//				StartByte:  child.StartByte(),
+	//				StartPoint: child.StartPosition(),
+	//				EndByte:    child.EndByte(),
+	//				EndPoint:   child.EndPosition(),
+	//			})
+	//		}
+	//	}
+	//	excludedRanges = append(excludedRanges, followingRange)
+	//
+	//	for _, excludedRange := range excludedRanges {
+	//		r := tree_sitter.Range{
+	//			StartByte:  precedingRange.EndByte,
+	//			StartPoint: precedingRange.EndPoint,
+	//			EndByte:    excludedRange.StartByte,
+	//			EndPoint:   excludedRange.StartPoint,
+	//		}
+	//		precedingRange = excludedRange
+	//
+	//		if r.EndByte < parentRange.StartByte {
+	//			continue
+	//		}
+	//
+	//		for parentRange.StartByte <= r.EndByte {
+	//			if parentRange.EndByte > r.StartByte {
+	//				if r.StartByte < parentRange.StartByte {
+	//					r.StartByte = parentRange.StartByte
+	//					r.StartPoint = parentRange.StartPoint
+	//				}
+	//
+	//				if parentRange.EndByte < r.EndByte {
+	//					if r.StartByte < parentRange.EndByte {
+	//						results = append(results, tree_sitter.Range{
+	//							StartByte:  r.StartByte,
+	//							StartPoint: r.StartPoint,
+	//							EndByte:    parentRange.EndByte,
+	//							EndPoint:   parentRange.EndPoint,
+	//						})
+	//					}
+	//					r.StartByte = parentRange.EndByte
+	//					r.StartPoint = parentRange.EndPoint
+	//				} else {
+	//					if r.StartByte < r.EndByte {
+	//						results = append(results, r)
+	//					}
+	//					break
+	//				}
+	//			}
+	//
+	//			if len(parentRanges) > 0 {
+	//				parentRange = parentRanges[0]
+	//				parentRanges = parentRanges[1:]
+	//			} else {
+	//				return results
+	//			}
+	//		}
+	//	}
+	// }
+	//
+	// return results
 }
 
 func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, queryMatch tree_sitter.QueryMatch, source []byte) (string, *tree_sitter.Node, bool) {
@@ -632,54 +651,72 @@ func (c HighlightConfiguration) injectionForMatch(query *tree_sitter.Query, quer
 	return languageName, contentNode, includeChildren
 }
 
-type _queryCapture struct {
-	Match tree_sitter.QueryMatch
-	Index uint
-}
-
 type highlightIterLayer struct {
 	Tree              *tree_sitter.Tree
 	Cursor            *tree_sitter.QueryCursor
 	Config            HighlightConfiguration
 	HighlightEndStack []uint
 	ScopeStack        []LocalScope
-	Captures          []_queryCapture
+	Captures          *queryCapturesIter
 	Depth             int
 }
 
-type sortKeyResult struct {
+type sortKey struct {
 	offset uint
 	start  bool
 	depth  int
 }
 
-func (k sortKeyResult) Compare(k2 sortKeyResult) int {
-	if k.depth < k2.depth {
+// Compare compares the current sortKey (k) with another sortKey (other) lexicographically.
+// Returns:
+//
+// -1 if other is greater
+//
+//	1 if k is greater
+//
+// 0 if both are equal
+func (k sortKey) Compare(other sortKey) int {
+	if k.offset < other.offset {
 		return -1
-	} else if k.depth > k2.depth {
-		return 1
-	} else if k.offset < k2.offset {
-		return -1
-	} else if k.offset > k2.offset {
-		return 1
-	} else if k.start && !k2.start {
-		return -1
-	} else if !k.start && k2.start {
+	}
+	if k.offset > other.offset {
 		return 1
 	}
+
+	if !k.start && other.start {
+		return -1
+	}
+	if k.start && !other.start {
+		return 1
+	}
+
+	if k.depth < other.depth {
+		return -1
+	}
+	if k.depth > other.depth {
+		return 1
+	}
+
 	return 0
+}
+
+func (k sortKey) GreaterThan(other sortKey) bool {
+	return k.Compare(other) == 1
+}
+
+func (k sortKey) LessThan(other sortKey) bool {
+	return k.Compare(other) == -1
 }
 
 // First, sort scope boundaries by their byte offset in the document. At a
 // given position, emit scope endings before scope beginnings. Finally, emit
 // scope boundaries from deeper layers first.
-func (h *highlightIterLayer) sortKey() *sortKeyResult {
-	depth := -h.Depth
+func (h *highlightIterLayer) sortKey() *sortKey {
+	depth := -int(h.Depth)
 
 	var nextStart *uint
-	if len(h.Captures) > 0 {
-		queryCapture := h.Captures[0]
-		startByte := queryCapture.Match.Captures[queryCapture.Index].Node.StartByte()
+	if match, index, ok := h.Captures.Peek(); ok {
+		startByte := match.Captures[index].Node.StartByte()
 		nextStart = &startByte
 	}
 
@@ -692,26 +729,26 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	switch {
 	case nextStart != nil && nextEnd != nil:
 		if *nextStart < *nextEnd {
-			return &sortKeyResult{
+			return &sortKey{
 				offset: *nextStart,
 				start:  true,
 				depth:  depth,
 			}
 		} else {
-			return &sortKeyResult{
+			return &sortKey{
 				offset: *nextEnd,
 				start:  false,
 				depth:  depth,
 			}
 		}
-	case nextStart != nil && nextEnd == nil:
-		return &sortKeyResult{
+	case nextStart != nil:
+		return &sortKey{
 			offset: *nextStart,
 			start:  true,
 			depth:  depth,
 		}
-	case nextStart == nil && nextEnd != nil:
-		return &sortKeyResult{
+	case nextEnd != nil:
+		return &sortKey{
 			offset: *nextEnd,
 			start:  false,
 			depth:  depth,
@@ -719,4 +756,51 @@ func (h *highlightIterLayer) sortKey() *sortKeyResult {
 	default:
 		return nil
 	}
+}
+
+type peekedCapture struct {
+	match tree_sitter.QueryMatch
+	index uint
+	ok    bool
+}
+
+func newQueryCapturesIter(iter tree_sitter.QueryCaptures) *queryCapturesIter {
+	return &queryCapturesIter{captures: iter}
+}
+
+type queryCapturesIter struct {
+	captures tree_sitter.QueryCaptures
+	peeked   *peekedCapture
+}
+
+func (q *queryCapturesIter) next() (tree_sitter.QueryMatch, uint, bool) {
+	match, index := q.captures.Next()
+	if match == nil {
+		return tree_sitter.QueryMatch{}, index, false
+	}
+
+	match.Captures = slices.Clone(match.Captures)
+	return *match, index, true
+}
+
+func (q *queryCapturesIter) Next() (tree_sitter.QueryMatch, uint, bool) {
+	if q.peeked != nil {
+		peeked := q.peeked
+		q.peeked = nil
+		return peeked.match, peeked.index, peeked.ok
+	}
+	return q.next()
+}
+
+func (q *queryCapturesIter) Peek() (tree_sitter.QueryMatch, uint, bool) {
+	if q.peeked == nil {
+		match, index, ok := q.next()
+		q.peeked = &peekedCapture{
+			match: match,
+			index: index,
+			ok:    ok,
+		}
+	}
+
+	return q.peeked.match, q.peeked.index, q.peeked.ok
 }

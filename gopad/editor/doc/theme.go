@@ -20,13 +20,8 @@ type CharStyle struct {
 	Style        lipgloss.Style
 	StyleName    string
 	LanguageName string
-	Start        int
-	End          int
-}
-
-type highlightStyle struct {
-	highlight    Highlight
-	languageName string
+	Start        uint
+	End          uint
 }
 
 func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buffer, theme Theme) iter.Seq[CharStyle] {
@@ -42,7 +37,8 @@ func newStyleIter(highlightIter iter.Seq2[HighlightEvent, error], buf buffer.Buf
 
 type styleIterator struct {
 	textStyle        lipgloss.Style
-	activeHighlights []highlightStyle
+	activeHighlights []int
+	activeLanguages  []string
 	highlightIter    iter.Seq2[HighlightEvent, error]
 	buf              buffer.Buffer
 	theme            Theme
@@ -57,29 +53,33 @@ func (i *styleIterator) iter() iter.Seq[CharStyle] {
 			}
 
 			switch event := event.(type) {
-			case HighlightEventStart:
-				log.Println("HighlightEventStart", event)
-				i.activeHighlights = append(i.activeHighlights, highlightStyle{
-					highlight:    event.Highlight,
-					languageName: event.LanguageName,
-				})
-			case HighlightEventEnd:
-				log.Println("HighlightEventEnd", event)
+			case HighlightEventLayerStart:
+				i.activeHighlights = append(i.activeHighlights, -1)
+				i.activeLanguages = append(i.activeLanguages, event.LanguageName)
+			case HighlightEventLayerEnd:
+				_, i.activeHighlights = xslices.Pop(i.activeHighlights)
+				_, i.activeLanguages = xslices.Pop(i.activeLanguages)
+			case HighlightEventCaptureStart:
+				i.activeHighlights = append(i.activeHighlights, int(event.Highlight))
+			case HighlightEventCaptureEnd:
 				_, i.activeHighlights = xslices.Pop(i.activeHighlights)
 			case HighlightEventSource:
+				languageName := xslices.Last(i.activeLanguages)
+
 				ch := CharStyle{
-					Style:     i.textStyle,
-					StyleName: "text",
-					Start:     i.buf.RuneIndex(int(event.StartByte)),
-					End:       i.buf.RuneIndex(int(event.EndByte)),
+					Style:        i.textStyle,
+					StyleName:    "text",
+					LanguageName: languageName,
+					Start:        i.buf.RuneIndex(event.StartByte),
+					End:          i.buf.RuneIndex(event.EndByte),
 				}
 
 				if len(i.activeHighlights) > 0 {
 					highlight := xslices.Last(i.activeHighlights)
-
-					ch.Style = i.theme.Highlight(int(highlight.highlight), highlight.languageName)
-					ch.StyleName = i.theme.Scope(int(highlight.highlight))
-					ch.LanguageName = highlight.languageName
+					if highlight >= 0 {
+						ch.Style = i.theme.Highlight(highlight, languageName)
+						ch.StyleName = i.theme.Scope(highlight)
+					}
 				}
 
 				if ok := yield(ch); !ok {

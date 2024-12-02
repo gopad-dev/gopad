@@ -2,6 +2,7 @@ package doc
 
 import (
 	"iter"
+	"slices"
 
 	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/internal/xbytes"
@@ -141,18 +142,16 @@ func (c ChangeSet) Invert(originalBuf buffer.Buffer) ChangeSet {
 		LenAfter: 0,
 	}
 
-	var pos int
+	var pos uint
 	for _, change := range c.Changes {
 		switch change := change.(type) {
 		case Move:
 			changes.Move(change.N)
-			pos += change.N
+			pos = uint(int(pos) + change.N)
 		case Delete:
-			start := originalBuf.Position(pos)
-			end := originalBuf.Position(pos + change.N)
-			text := originalBuf.BytesRange(buffer.Range{Start: start, End: end})
+			text := originalBuf.BytesRange(buffer.ByteRange{StartByte: pos, EndByte: uint(int(pos) + change.N)})
 			changes.Insert(text)
-			pos += change.N
+			pos = uint(int(pos) + change.N)
 		case Insert:
 			changes.Delete(xbytes.RuneCount(change.Text))
 		}
@@ -166,18 +165,16 @@ func (c ChangeSet) Apply(buf buffer.Buffer) bool {
 		return false
 	}
 
-	var pos int
+	var pos uint
 	for _, change := range c.Changes {
 		switch change := change.(type) {
 		case Move:
-			pos += change.N
+			pos = uint(int(pos) + change.N)
 		case Delete:
-			start := buf.Position(pos)
-			end := buf.Position(pos + change.N)
-			buf.Delete(buffer.Range{Start: start, End: end})
+			buf.Delete(buffer.ByteRange{StartByte: pos, EndByte: uint(int(pos) + change.N)})
 		case Insert:
-			buf.Insert(buf.Position(pos), change.Text)
-			pos += xbytes.RuneCount(change.Text)
+			buf.Insert(pos, change.Text)
+			pos += uint(xbytes.RuneCount(change.Text))
 		}
 	}
 
@@ -315,6 +312,36 @@ func (c ChangeSet) Merge(other ChangeSet) ChangeSet {
 			}
 		}
 	}
+}
+
+func (c ChangeSet) UpdatePosition(selections []Selection) []Selection {
+	slices.SortFunc(selections, func(a, b Selection) int {
+		return int(a.Anchor) - int(b.Anchor)
+	})
+
+	for i, selection := range selections {
+		anchor := selection.Anchor
+		head := selection.Head
+		for _, change := range c.Changes {
+			switch change := change.(type) {
+			case Move:
+				anchor = uint(int(anchor) + change.N)
+				head = uint(int(head) + change.N)
+			case Delete:
+				anchor = uint(int(anchor) + change.N)
+				head += uint(int(head) + change.N)
+			case Insert:
+				anchor += uint(xbytes.RuneCount(change.Text))
+				head += uint(xbytes.RuneCount(change.Text))
+			}
+		}
+		selections[i] = Selection{
+			Anchor: anchor,
+			Head:   head,
+		}
+	}
+
+	return selections
 }
 
 func newChangeIterator(changeSet ChangeSet) *changeIterator {

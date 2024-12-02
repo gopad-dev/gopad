@@ -9,12 +9,12 @@ import (
 
 func ParsePoint(p protocol.Position) Point {
 	return Point{
-		Row: int(p.Line),
-		Col: int(p.Character),
+		Row: uint(p.Line),
+		Col: uint(p.Character),
 	}
 }
 
-func NewPoint(row int, col int) Point {
+func NewPoint(row uint, col uint) Point {
 	return Point{
 		Row: row,
 		Col: col,
@@ -22,11 +22,11 @@ func NewPoint(row int, col int) Point {
 }
 
 type Point struct {
-	Row int
-	Col int
+	Row uint
+	Col uint
 }
 
-func (p Point) Point() (int, int) {
+func (p Point) Point() (uint, uint) {
 	return p.Row, p.Col
 }
 
@@ -44,7 +44,7 @@ func (p Point) Sub(p2 Point) Point {
 	}
 }
 
-func (p Point) Offset(row int, col int) Point {
+func (p Point) Offset(row uint, col uint) Point {
 	return Point{
 		Row: p.Row + row,
 		Col: p.Col + col,
