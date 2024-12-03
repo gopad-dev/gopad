@@ -1,10 +1,14 @@
 .idea/
-dist/
-/test/
 .gopad/
+
+/dist/
+/test/
+/config/grammars/
 
 go.work
 go.work.sum
-/debug.log
-/lsp.log
-/config/grammars/
+
+debug.log
+lsp.log
+trace.log
+panic.log

@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"log"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"time"
 
@@ -15,30 +14,27 @@ import (
 	"go.lsp.dev/protocol"
 
 	"go.gopad.dev/gopad/gopad/config"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
-	"go.gopad.dev/gopad/internal/buffer"
 )
 
 type ServerConfig struct {
-	name string
-	cfg  config.LanguageServerConfig
+	Name string
+	Cfg  config.LanguageServerConfig
 	new  func(name string, cfg config.LanguageServerConfig, workspace string) (*Server, error)
 }
 
-func (c *ServerConfig) New(workspace string) (*Server, error) {
-	return c.new(c.name, c.cfg, workspace)
+func (c ServerConfig) Title() string {
+	return c.Name
 }
 
-func (c *ServerConfig) Supported(workspace string) bool {
-	var supports bool
-	for _, root := range c.cfg.Roots {
-		if _, err := os.Stat(filepath.Join(workspace, root)); err == nil {
-			supports = true
-			break
-		}
-	}
+func (c ServerConfig) Description() string {
+	return ""
+}
 
-	return supports
+func (c ServerConfig) New(workspace string) (*Server, error) {
+	log.Println("starting language server", c.Name)
+	return c.new(c.Name, c.Cfg, workspace)
 }
 
 type SendFunc func(msg tea.Cmd)
@@ -75,10 +71,6 @@ type Server struct {
 
 func (c *Server) Name() string {
 	return c.name
-}
-
-func (c *Server) SupportedFile(name string) bool {
-	return slices.Contains(c.cfg.FileTypes, filepath.Ext(name)) || slices.Contains(c.cfg.Files, filepath.Base(name))
 }
 
 func (c *Server) start() error {
@@ -187,6 +179,22 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	switch msg := msg.(type) {
+	case GetDeclarationMsg:
+		return func() tea.Msg {
+			locations, err := c.server.Declaration(context.Background(), &protocol.DeclarationParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: msg.Point.ToProtocol(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			return UpdateDeclarations(msg.Name, ParseLocations(locations))
+		}
 	case GetDefinitionMsg:
 		return func() tea.Msg {
 			locations, err := c.server.Definition(context.Background(), &protocol.DefinitionParams{
@@ -201,14 +209,58 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 				return err
 			}
 
-			definitions := make([]Definition, 0, len(locations))
-			for _, location := range locations {
-				definitions = append(definitions, Definition{
-					Name:  location.URI.Filename(),
-					Range: buffer.ParseRange(location.Range),
-				})
+			return UpdateDefinitions(msg.Name, ParseLocations(locations))
+		}
+	case GetTypeDefinitionMsg:
+		return func() tea.Msg {
+			locations, err := c.server.TypeDefinition(context.Background(), &protocol.TypeDefinitionParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: msg.Point.ToProtocol(),
+				},
+			})
+			if err != nil {
+				return err
 			}
-			return UpdateDefinition(msg.Name, definitions)
+
+			return UpdateTypeDefinitions(msg.Name, ParseLocations(locations))
+		}
+	case GetImplementationsMsg:
+		return func() tea.Msg {
+			locations, err := c.server.Implementation(context.Background(), &protocol.ImplementationParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: msg.Point.ToProtocol(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			return UpdateImplementations(msg.Name, ParseLocations(locations))
+		}
+	case GetReferencesMsg:
+		return func() tea.Msg {
+			locations, err := c.server.References(context.Background(), &protocol.ReferenceParams{
+				Context: protocol.ReferenceContext{
+					IncludeDeclaration: true,
+				},
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{
+						URI: protocol.DocumentURI("file://" + msg.Name),
+					},
+					Position: msg.Point.ToProtocol(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			return UpdateReferences(msg.Name, ParseLocations(locations))
 		}
 	case GetInlayHintMsg:
 		return func() tea.Msg {
@@ -297,8 +349,8 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 			if err := c.server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
 				TextDocument: protocol.TextDocumentItem{
 					URI:        protocol.DocumentURI("file://" + msg.Name),
-					LanguageID: protocol.GoLanguage,
-					Version:    msg.Version,
+					LanguageID: protocol.LanguageIdentifier(msg.Language),
+					Version:    int32(msg.Version),
 					Text:       string(msg.Text),
 				},
 			}); err != nil {
@@ -369,7 +421,7 @@ func (c *Server) Update(msg tea.Msg) tea.Cmd {
 					TextDocumentIdentifier: protocol.TextDocumentIdentifier{
 						URI: protocol.DocumentURI("file://" + msg.Name),
 					},
-					Version: msg.Version,
+					Version: int32(msg.Version),
 				},
 				ContentChanges: []protocol.TextDocumentContentChangeEvent{
 					{
@@ -445,7 +497,7 @@ func (c *Server) PublishDiagnostics(ctx context.Context, params *protocol.Publis
 			Priority:        110,
 		})
 	}
-	c.send(UpdateFileDiagnostic(params.URI.Filename(), DiagnosticTypeLanguageServer, int32(params.Version), diagnostics))
+	c.send(UpdateFileDiagnostic(params.URI.Filename(), DiagnosticTypeLanguageServer, uint64(params.Version), diagnostics))
 	return nil
 }
 

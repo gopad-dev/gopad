@@ -6,8 +6,14 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
+
+func refreshCursor() tea.Msg {
+	return refreshCursorMsg{}
+}
+
+type refreshCursorMsg struct{}
 
 type ModelType int
 
@@ -56,17 +62,14 @@ func ExecSearch(term string, buff buffer.Buffer) tea.Cmd {
 				break
 			}
 
-			row, col := buff.Index(index + offset)
-			rowEnd, colEnd := buff.Index(index + offset + termWidth)
+			start := buff.Position(index + offset)
+			end := buff.Position(index + offset + termWidth)
 
 			results = append(results, Result(buffer.Range{
-				Start: buffer.Point{
-					Row: row,
-					Col: col,
-				},
+				Start: start,
 				End: buffer.Point{
-					Row: rowEnd,
-					Col: colEnd + 1,
+					Row: end.Row,
+					Col: end.Col + 1,
 				},
 			}))
 

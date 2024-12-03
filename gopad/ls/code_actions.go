@@ -2,9 +2,30 @@ package ls
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"
+	"go.lsp.dev/protocol"
 
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
+
+func ParseLocations(locations []protocol.Location) []FileLocation {
+	fileLocations := make([]FileLocation, len(locations))
+	for i, location := range locations {
+		fileLocations[i] = ParseLocation(location)
+	}
+	return fileLocations
+}
+
+func ParseLocation(location protocol.Location) FileLocation {
+	return FileLocation{
+		Name:  location.URI.Filename(),
+		Range: buffer.ParseRange(location.Range),
+	}
+}
+
+type FileLocation struct {
+	Name  string
+	Range buffer.Range
+}
 
 func GetDeclaration(name string, p buffer.Point) tea.Cmd {
 	return func() tea.Msg {
@@ -20,23 +41,18 @@ type GetDeclarationMsg struct {
 	Point buffer.Point
 }
 
-func UpdateDeclaration(name string, declarations []Declaration) tea.Cmd {
+func UpdateDeclarations(name string, declarations []FileLocation) tea.Cmd {
 	return func() tea.Msg {
-		return UpdateDeclarationMsg{
+		return UpdateDeclarationsMsg{
 			Name:         name,
 			Declarations: declarations,
 		}
 	}
 }
 
-type UpdateDeclarationMsg struct {
+type UpdateDeclarationsMsg struct {
 	Name         string
-	Declarations []Declaration
-}
-
-type Declaration struct {
-	Name  string
-	Range buffer.Range
+	Declarations []FileLocation
 }
 
 func GetDefinition(name string, p buffer.Point) tea.Cmd {
@@ -53,21 +69,16 @@ type GetDefinitionMsg struct {
 	Point buffer.Point
 }
 
-func UpdateDefinition(name string, definitions []Definition) tea.Msg {
-	return UpdateDefinitionMsg{
+func UpdateDefinitions(name string, definitions []FileLocation) tea.Msg {
+	return UpdateDefinitionsMsg{
 		Name:        name,
 		Definitions: definitions,
 	}
 }
 
-type UpdateDefinitionMsg struct {
+type UpdateDefinitionsMsg struct {
 	Name        string
-	Definitions []Definition
-}
-
-type Definition struct {
-	Name  string
-	Range buffer.Range
+	Definitions []FileLocation
 }
 
 func GetTypeDefinition(name string, p buffer.Point) tea.Cmd {
@@ -84,21 +95,72 @@ type GetTypeDefinitionMsg struct {
 	Point buffer.Point
 }
 
-func UpdateTypeDefinition(name string, typeDefinitions []TypeDefinition) tea.Cmd {
+func UpdateTypeDefinitions(name string, typeDefinitions []FileLocation) tea.Cmd {
 	return func() tea.Msg {
-		return UpdateTypeDefinitionMsg{
+		return UpdateTypeDefinitionsMsg{
 			Name:            name,
 			TypeDefinitions: typeDefinitions,
 		}
 	}
 }
 
-type UpdateTypeDefinitionMsg struct {
+type UpdateTypeDefinitionsMsg struct {
 	Name            string
-	TypeDefinitions []TypeDefinition
+	TypeDefinitions []FileLocation
 }
 
-type TypeDefinition struct {
+func GetImplementations(name string, p buffer.Point) tea.Cmd {
+	return func() tea.Msg {
+		return GetImplementationsMsg{
+			Name:  name,
+			Point: p,
+		}
+	}
+}
+
+type GetImplementationsMsg struct {
 	Name  string
-	Range buffer.Range
+	Point buffer.Point
+}
+
+func UpdateImplementations(name string, implementations []FileLocation) tea.Cmd {
+	return func() tea.Msg {
+		return UpdateImplementationsMsg{
+			Name:            name,
+			Implementations: implementations,
+		}
+	}
+}
+
+type UpdateImplementationsMsg struct {
+	Name            string
+	Implementations []FileLocation
+}
+
+func GetReferences(name string, p buffer.Point) tea.Cmd {
+	return func() tea.Msg {
+		return GetReferencesMsg{
+			Name:  name,
+			Point: p,
+		}
+	}
+}
+
+type GetReferencesMsg struct {
+	Name  string
+	Point buffer.Point
+}
+
+func UpdateReferences(name string, references []FileLocation) tea.Cmd {
+	return func() tea.Msg {
+		return UpdateReferencesMsg{
+			Name:       name,
+			References: references,
+		}
+	}
+}
+
+type UpdateReferencesMsg struct {
+	Name       string
+	References []FileLocation
 }

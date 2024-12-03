@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/editor"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
@@ -58,37 +57,43 @@ var Actions = []Action{
 	{
 		Name: "Save File",
 		Run: func() tea.Cmd {
-			return file.Save
+			return editor.SaveAction
 		},
 	},
 	{
 		Name: "Save all Files",
 		Run: func() tea.Cmd {
-			return file.SaveAll
+			return editor.SaveAllAction
 		},
 	},
 	{
 		Name: "Rename File",
 		Run: func() tea.Cmd {
-			return file.Rename
+			return editor.RenameAction
 		},
 	},
 	{
 		Name: "Close File",
 		Run: func() tea.Cmd {
-			return file.Close
+			return editor.CloseAction
 		},
 	},
 	{
 		Name: "Close All Files",
 		Run: func() tea.Cmd {
-			return file.CloseAll
+			return editor.CloseAllAction
 		},
 	},
 	{
 		Name: "Delete File",
 		Run: func() tea.Cmd {
-			return file.Delete
+			return editor.DeleteAction
+		},
+	},
+	{
+		Name: "Go To",
+		Run: func() tea.Cmd {
+			return editor.GoToAction
 		},
 	},
 	{
@@ -110,9 +115,27 @@ var Actions = []Action{
 		},
 	},
 	{
-		Name: "Go To",
+		Name: "Paste",
 		Run: func() tea.Cmd {
-			return file.GoTo
+			return editor.Paste
+		},
+	},
+	{
+		Name: "Start LSP",
+		Run: func() tea.Cmd {
+			return OpenLSPOverlay
+		},
+	},
+	{
+		Name: "Stop LSP",
+		Run: func() tea.Cmd {
+			return OpenLSPOverlay
+		},
+	},
+	{
+		Name: "Format Document",
+		Run: func() tea.Cmd {
+			return editor.FormatAction
 		},
 	},
 }

@@ -15,10 +15,5 @@ func IsMouseMsg(msg tea.Msg) bool {
 }
 
 func IsInputMsg(msg tea.Msg) bool {
-	if _, ok := msg.(tea.KeyMsg); ok {
-		return true
-	}
-
-	_, ok := msg.(tea.MouseMsg)
-	return ok
+	return IsKeyMsg(msg) || IsMouseMsg(msg)
 }

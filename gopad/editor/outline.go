@@ -2,25 +2,27 @@ package editor
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
+
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 
 	"go.gopad.dev/gopad/internal/bubbles/key"
-	"go.gopad.dev/gopad/internal/buffer"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
 )
 
-func Outline(f *file.File) tea.Cmd {
+func Outline(f *doc.Document) tea.Cmd {
 	return func() tea.Msg {
-		return outlineMsg(f.OutlineTree())
+		// return outlineMsg(f.OutlineTree()) TODO: readd this
+		return outlineMsg(nil)
 	}
 }
 
-type outlineMsg []file.OutlineItem
+type outlineMsg []doc.OutlineItem
 
 type outlineItem struct {
 	r        buffer.Range
@@ -40,7 +42,7 @@ func (o outlineItem) FilterValue() string {
 	return o.rawTitle
 }
 
-func renderOutlineItem(file *file.File, itemStyle lipgloss.Style, item file.OutlineItem) outlineItem {
+func renderOutlineItem(file *doc.Document, itemStyle lipgloss.Style, item doc.OutlineItem) outlineItem {
 	codeCharStyle := config.Theme.UI.FileView.LineCharStyle
 
 	var (
@@ -54,10 +56,11 @@ func renderOutlineItem(file *file.File, itemStyle lipgloss.Style, item file.Outl
 			continue
 		}
 
-		style := file.HighestMatchStyle(codeCharStyle, char.Pos.Row, char.Pos.Col)
-		style = style.Inherit(itemStyle)
+		// TODO: highlight the current line
+		// style := file.HighestMatchStyle(codeCharStyle, char.Pos.Row, char.Pos.Col)
+		// style = style.Inherit(itemStyle)
 
-		title += style.Render(char.Char)
+		title += itemStyle.Render(char.Char)
 		rawTitle += char.Char
 	}
 
@@ -72,7 +75,7 @@ const OutlineOverlayID = "editor.outline"
 
 var _ overlay.Overlay = (*OutlineOverlay)(nil)
 
-func NewOutlineOverlay(f *file.File) OutlineOverlay {
+func NewOutlineOverlay(f *doc.Document) OutlineOverlay {
 	l := config.NewList[outlineItem](nil)
 	l.TextInput.Placeholder = "Search symbols..."
 	l.Focus()
@@ -84,8 +87,8 @@ func NewOutlineOverlay(f *file.File) OutlineOverlay {
 }
 
 type OutlineOverlay struct {
-	f     *file.File
-	items []file.OutlineItem
+	f     *doc.Document
+	items []doc.OutlineItem
 	l     list.Model[outlineItem]
 }
 
@@ -139,7 +142,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 			item := o.l.Selected()
 			return o, tea.Batch(
 				overlay.Close(OutlineOverlayID),
-				file.Scroll(item.r.Start),
+				ScrollAction(item.r.Start),
 			)
 		}
 	}
@@ -156,7 +159,7 @@ func (o OutlineOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		item := o.l.Selected()
 		return o, tea.Batch(
 			overlay.Close(OutlineOverlayID),
-			file.Scroll(item.r.Start),
+			ScrollAction(item.r.Start),
 		)
 	}
 

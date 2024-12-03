@@ -2,11 +2,11 @@ package gopad
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
-	"go.gopad.dev/gopad/internal/bubbles/key"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 )
 

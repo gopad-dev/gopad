@@ -3,8 +3,6 @@
 
 use_servers = { only = ['gopls'], except = [] }
 
-[language_servers]
-
 [language_servers.gopls]
 command = 'gopls'
 args = []
@@ -16,7 +14,15 @@ features = ['inlay_hints', 'diagnostics', 'completion', 'go_to_definition']
 [language_servers.gopls.config]
 'ui.completion.usePlaceholders' = true
 'ui.diagnostic.staticcheck' = true
-'ui.hints' = { assignVariableTypes = true, compositeLiteralFields = true, compositeLiteralTypes = true, constantValues = true, functionTypeParameters = true, parameterNames = true, rangeVariableTypes = true }
+
+[language_servers.gopls.config.hints]
+assignVariableTypes = true
+compositeLiteralFields = true
+compositeLiteralTypes = true
+constantValues = true
+functionTypeParameters = true
+parameterNames = true
+rangeVariableTypes = true
 
 [language_servers.golangci-lint]
 command = 'golangci-lint-langserver'
@@ -39,9 +45,19 @@ args = ['--stdio']
 file_types = ['.json', '.jsonc']
 files = []
 
+[language_servers.json.config]
+provideFormatter = true
+json = { validate = { enable = true } }
+
 [language_servers.html]
 command = 'vscode-html-language-server'
 args = ['--stdio']
+file_types = ['.html', '.htm']
+files = []
+
+[language_servers.superhtml]
+command = 'superhtml'
+args = ['lsp']
 file_types = ['.html', '.htm']
 files = []
 
@@ -50,3 +66,16 @@ command = 'taplo'
 args = ['language_servers', 'stdio']
 file_types = ['.toml']
 files = []
+
+[language_servers.ts-query]
+command = 'ts_query_ls'
+args = []
+file_types = ['.scm']
+files = []
+roots = []
+features = ['diagnostics']
+
+[language_servers.ts-query.config.settings]
+'parser_install_directories' = ['config/grammars']
+'parser_aliases' = {}
+'language_retrieval_patterns' = [ 'config/queries/([^/]+)/[^/]+\\.scm$' ]

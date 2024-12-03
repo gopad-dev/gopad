@@ -3,13 +3,14 @@ package config
 import (
 	"image/color"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/label"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -18,11 +19,17 @@ import (
 
 type ThemeConfig struct {
 	Name       string           `toml:"name"`
+	Foreground string           `toml:"foreground"`
+	Background string           `toml:"background"`
 	Colors     Colors           `toml:"colors"`
 	Icons      IconsConfig      `toml:"icons"`
 	UI         UIConfig         `toml:"ui"`
 	Diagnostic DiagnosticConfig `toml:"diagnostic"`
 	CodeStyles CodeStylesConfig `toml:"code_styles"`
+}
+
+func (c ThemeConfig) ID() string {
+	return c.Name
 }
 
 func (c ThemeConfig) Title() string {
@@ -36,12 +43,12 @@ func (c ThemeConfig) Description() string {
 func (c ThemeConfig) Theme() ThemeStyles {
 	colors := c.Colors.Colors()
 	return ThemeStyles{
-		Name:   c.Name,
-		Colors: colors,
-		Icons:  c.Icons.Styles(colors),
+		Name:       c.Name,
+		Foreground: bubbles.GetColor(colors, c.Foreground),
+		Background: bubbles.GetColor(colors, c.Background),
+		Colors:     colors,
+		Icons:      c.Icons.Styles(colors),
 		UI: UiStyles{
-			Background: bubbles.GetColor(colors, c.UI.Background),
-			Foreground: bubbles.GetColor(colors, c.UI.Foreground),
 			AppBar: AppBarStyles{
 				Style:      c.UI.AppBar.Style.Style(colors),
 				TitleStyle: c.UI.AppBar.Title.Style(colors).Padding(0, 1),
@@ -107,8 +114,8 @@ func (c ThemeConfig) Theme() ThemeStyles {
 				PlaceholderStyle:   c.UI.TextInput.Placeholder.Style(colors),
 			},
 			Button: button.Styles{
-				Default: c.UI.Menu.Entry.Style(colors).Padding(0, 1).Margin(0, 1),
-				Focus:   c.UI.Menu.SelectedEntry.Style(colors).Padding(0, 1).Margin(0, 1),
+				Style:   c.UI.Button.Style.Style(colors).Padding(0, 1).Margin(0, 1),
+				Focused: c.UI.Button.Focused.Style(colors).Padding(0, 1).Margin(0, 1),
 			},
 			FilePicker: filepicker.Styles{
 				Selected:         c.UI.FilePicker.Selected.Style(colors).Bold(true),
@@ -140,11 +147,14 @@ func (c ThemeConfig) Theme() ThemeStyles {
 				Notification: c.UI.Menu.Style.Style(colors).Border(lipgloss.RoundedBorder()).Padding(0, 1),
 			},
 			List: list.Styles{
-				Style:             c.UI.Menu.Style.Style(colors).MarginLeft(1),
-				ItemStyle:         c.UI.Menu.Entry.Style(colors).Padding(0, 1),
-				ItemSelectedStyle: c.UI.Menu.SelectedEntry.Style(colors).Padding(0, 1),
-
-				ItemDescriptionStyle: lipgloss.NewStyle(),
+				Style:                    c.UI.Menu.Style.Style(colors).MarginLeft(1),
+				ItemStyle:                c.UI.Menu.Entry.Style(colors).Padding(0, 1),
+				ItemSelectedStyle:        c.UI.Menu.SelectedEntryUnfocused.Style(colors).Padding(0, 1),
+				ItemSelectedFocusedStyle: c.UI.Menu.SelectedEntry.Style(colors).Padding(0, 1),
+				ItemDescriptionStyle:     lipgloss.NewStyle(),
+			},
+			Label: label.Styles{
+				Style: c.UI.Menu.Text.Style(colors).Bold(true),
 			},
 		},
 
@@ -232,15 +242,13 @@ func (c IconConfig) IconStyle(colors bubbles.ColorStyles) lipgloss.Style {
 }
 
 type UIConfig struct {
-	Background string `toml:"background"`
-	Foreground string `toml:"foreground"`
-
 	AppBar  AppBarUIConfig  `toml:"app_bar"`
 	CodeBar CodeBarUIConfig `toml:"code_bar"`
 
 	Menu    MenuUIConfig    `toml:"menu"`
 	Overlay OverlayUIConfig `toml:"overlay"`
 	Cursor  CursorUIConfig  `toml:"cursor"`
+	Button  ButtonUIConfig  `toml:"button"`
 
 	FileTree   FileTreeUIConfig   `toml:"file_tree"`
 	FileView   FileViewUIConfig   `toml:"file_view"`
@@ -285,6 +293,11 @@ type OverlayUIConfig struct {
 type CursorUIConfig struct {
 	Block     bubbles.Style `toml:"block"`
 	Underline bubbles.Style `toml:"underline"`
+}
+
+type ButtonUIConfig struct {
+	Style   bubbles.Style `toml:"style"`
+	Focused bubbles.Style `toml:"focused"`
 }
 
 type FileTreeUIConfig struct {
@@ -358,10 +371,16 @@ type DiagnosticConfig struct {
 
 type CodeStylesConfig map[string]bubbles.Style
 
-func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) map[string]lipgloss.Style {
-	m := make(map[string]lipgloss.Style, len(c))
+func (c CodeStylesConfig) Styles(colors bubbles.ColorStyles) *CodeStyles {
+	styles := make(map[string]lipgloss.Style, len(c))
+	scopes := make([]string, 0, len(c))
 	for k, v := range c {
-		m[k] = v.Style(colors)
+		styles[k] = v.Style(colors)
+		scopes = append(scopes, k)
 	}
-	return m
+
+	return &CodeStyles{
+		styles: styles,
+		scopes: scopes,
+	}
 }

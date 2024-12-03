@@ -1,15 +1,17 @@
 package config
 
 import (
+	"fmt"
 	"image/color"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/internal/bubbles"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/filepicker"
 	"go.gopad.dev/gopad/internal/bubbles/help"
+	"go.gopad.dev/gopad/internal/bubbles/label"
 	"go.gopad.dev/gopad/internal/bubbles/list"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -17,13 +19,37 @@ import (
 )
 
 type ThemeStyles struct {
-	Name string
+	Name       string
+	Foreground color.Color
+	Background color.Color
 
 	Colors     bubbles.ColorStyles
 	Icons      IconStyles
 	UI         UiStyles
 	Diagnostic DiagnosticStyles
-	CodeStyles map[string]lipgloss.Style
+	CodeStyles *CodeStyles
+}
+
+type CodeStyles struct {
+	styles map[string]lipgloss.Style
+	scopes []string
+}
+
+func (t *CodeStyles) Highlight(i int, languageName string) lipgloss.Style {
+	scope := t.scopes[i]
+	style, ok := t.styles[fmt.Sprintf("%s.%s", scope, languageName)]
+	if ok {
+		return style
+	}
+	return t.styles[scope]
+}
+
+func (t *CodeStyles) Scope(i int) string {
+	return t.scopes[i]
+}
+
+func (t *CodeStyles) Scopes() []string {
+	return t.scopes
 }
 
 type IconStyles struct {
@@ -58,9 +84,6 @@ func (c IconStyles) TypeIcon(name string) lipgloss.Style {
 }
 
 type UiStyles struct {
-	Background color.Color
-	Foreground color.Color
-
 	AppBar  AppBarStyles
 	CodeBar CodeBarStyles
 
@@ -79,6 +102,7 @@ type UiStyles struct {
 	Help              help.Styles
 	NotificationStyle notifications.Styles
 	List              list.Styles
+	Label             label.Styles
 }
 
 type AppBarStyles struct {

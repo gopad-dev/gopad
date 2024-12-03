@@ -3,9 +3,7 @@ package config
 import (
 	"slices"
 
-	"github.com/charmbracelet/lipgloss"
-
-	"go.gopad.dev/gopad/internal/buffer"
+	"github.com/charmbracelet/lipgloss/v2"
 )
 
 type Use struct {
@@ -45,19 +43,31 @@ func (l LanguageConfigs) filter() LanguageConfigs {
 }
 
 type LanguageConfig struct {
-	AltNames           []string                   `toml:"alt_names"`
-	MIMETypes          []string                   `toml:"mime_types"`
-	FileTypes          []string                   `toml:"file_types"`
-	Files              []string                   `toml:"files"`
-	LineCommentTokens  []string                   `toml:"line_comment_tokens"`
-	BlockCommentTokens []buffer.BlockCommentToken `toml:"block_comment_tokens"`
-	AutoPairs          []LanguageAutoPairs        `toml:"auto_pairs"`
-	Grammar            *GrammarConfig             `toml:"grammar"`
+	AltNames           []string            `toml:"alt_names"`
+	MIMETypes          []string            `toml:"mime_types"`
+	FileTypes          []string            `toml:"file_types"`
+	Files              []string            `toml:"files"`
+	LineCommentTokens  []string            `toml:"line_comment_tokens"`
+	BlockCommentTokens []BlockCommentToken `toml:"block_comment_tokens"`
+	AutoPairs          []LanguageAutoPairs `toml:"auto_pairs"`
+	Indent             Indent              `toml:"indent"`
+	Grammar            *GrammarConfig      `toml:"grammar"`
+	Formatter          *FormatterConfig    `toml:"formatter"`
+}
+
+type BlockCommentToken struct {
+	Start string `toml:"start"`
+	End   string `toml:"end"`
 }
 
 type LanguageAutoPairs struct {
 	Open  string `toml:"open"`
 	Close string `toml:"close"`
+}
+
+type Indent struct {
+	TabWidth int  `toml:"tab_width"`
+	Unit     byte `toml:"unit"`
 }
 
 type GrammarConfig struct {
@@ -99,3 +109,8 @@ const (
 	RefTypeCommit RefType = "commit"
 	RefTypeTag    RefType = "tag"
 )
+
+type FormatterConfig struct {
+	Command string   `toml:"command"`
+	Args    []string `toml:"args"`
+}

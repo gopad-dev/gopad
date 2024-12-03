@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/internal/bubbles/key"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/internal/bubbles/mouse"
 	"go.gopad.dev/gopad/internal/bubbles/notifications"
 )
@@ -28,7 +28,7 @@ const (
 )
 
 func fileIconByFileNameFunc(name string) lipgloss.Style {
-	language := file.GetLanguageByFilename(name)
+	language := doc.GetLanguageByFilename(name)
 	var languageName string
 	if language != nil {
 		languageName = language.Name
@@ -66,14 +66,14 @@ func Refresh() tea.Msg {
 
 type refreshMsg struct{}
 
-func NewFileTree() FileTree {
-	return FileTree{
+func newFileTree() fileTree {
+	return fileTree{
 		Width:     24,
 		EmptyText: "No folder open",
 	}
 }
 
-type FileTree struct {
+type fileTree struct {
 	entry     *Entry
 	focus     bool
 	show      bool
@@ -83,7 +83,7 @@ type FileTree struct {
 	Ignored   []string
 }
 
-func (m *FileTree) Open(name string) error {
+func (m *fileTree) Open(name string) error {
 	root := &Entry{
 		Name:     filepath.Base(name),
 		Path:     name,
@@ -140,31 +140,31 @@ func (m *FileTree) Open(name string) error {
 	return nil
 }
 
-func (m *FileTree) Visible() bool {
+func (m *fileTree) Visible() bool {
 	return m.show
 }
 
-func (m *FileTree) Show() {
+func (m *fileTree) Show() {
 	m.show = true
 }
 
-func (m *FileTree) Hide() {
+func (m *fileTree) Hide() {
 	m.show = false
 }
 
-func (m *FileTree) Focused() bool {
+func (m *fileTree) Focused() bool {
 	return m.focus
 }
 
-func (m *FileTree) Focus() {
+func (m *fileTree) Focus() {
 	m.focus = true
 }
 
-func (m *FileTree) Blur() {
+func (m *fileTree) Blur() {
 	m.focus = false
 }
 
-func (m *FileTree) selectIndex(i int) *Entry {
+func (m *fileTree) selectIndex(i int) *Entry {
 	if m.entry == nil {
 		return nil
 	}
@@ -193,7 +193,7 @@ func (m *FileTree) selectIndex(i int) *Entry {
 	return selected
 }
 
-func (m *FileTree) SelectNext() {
+func (m *fileTree) SelectNext() {
 	if m.entry == nil {
 		return
 	}
@@ -230,7 +230,7 @@ func (m *FileTree) SelectNext() {
 	}
 }
 
-func (m *FileTree) SelectPrev() {
+func (m *fileTree) SelectPrev() {
 	if m.entry == nil {
 		return
 	}
@@ -259,7 +259,7 @@ func (m *FileTree) SelectPrev() {
 	walk(m.entry)
 }
 
-func (m *FileTree) Selected() *Entry {
+func (m *fileTree) Selected() *Entry {
 	if m.entry == nil {
 		return nil
 	}
@@ -279,11 +279,11 @@ func (m *FileTree) Selected() *Entry {
 	return walk(m.entry)
 }
 
-func (m FileTree) zoneEntryID(i int) string {
+func (m fileTree) zoneEntryID(i int) string {
 	return fmt.Sprintf("%s%d", zoneIDPrefix, i)
 }
 
-func (m FileTree) Update(msg tea.Msg) (FileTree, tea.Cmd) {
+func (m fileTree) Update(msg tea.Msg) (fileTree, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -320,7 +320,7 @@ func (m FileTree) Update(msg tea.Msg) (FileTree, tea.Cmd) {
 				if entry.IsDir {
 					entry.Open = !entry.Open
 				} else {
-					cmds = append(cmds, file.OpenFile(entry.Path))
+					cmds = append(cmds, OpenFile(entry.Path))
 				}
 
 				return m, tea.Batch(cmds...)
@@ -351,7 +351,7 @@ func (m FileTree) Update(msg tea.Msg) (FileTree, tea.Cmd) {
 				if selected.IsDir {
 					selected.Open = !selected.Open
 				} else {
-					cmds = append(cmds, file.OpenFile(selected.Path))
+					cmds = append(cmds, OpenFile(selected.Path))
 				}
 			case key.Matches(msg, config.Keys.Editor.FileTree.SelectNext):
 				m.SelectNext()
@@ -369,7 +369,7 @@ func (m FileTree) Update(msg tea.Msg) (FileTree, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *FileTree) refreshViewOffset(selected int, height int) {
+func (m *fileTree) refreshViewOffset(selected int, height int) {
 	if selected >= m.offset+height {
 		m.offset = selected - height + 1
 	} else if selected < m.offset {
@@ -377,7 +377,7 @@ func (m *FileTree) refreshViewOffset(selected int, height int) {
 	}
 }
 
-func (m FileTree) View(height int) string {
+func (m fileTree) View(height int) string {
 	if m.entry == nil {
 		return config.Theme.UI.FileTree.Style.Render(config.Theme.UI.FileTree.EmptyStyle.Height(height).Width(m.Width).Render(m.EmptyText))
 	}
@@ -421,7 +421,7 @@ func (m FileTree) View(height int) string {
 	return zone.Mark(zoneID, config.Theme.UI.FileTree.Style.Height(height).Width(m.Width).Render(tree))
 }
 
-func (m FileTree) entryView(e *Entry, i int, indent string) string {
+func (m fileTree) entryView(e *Entry, i int, indent string) string {
 	var icon lipgloss.Style
 	if e.IsDir {
 		if indent == "" {

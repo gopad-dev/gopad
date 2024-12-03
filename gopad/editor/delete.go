@@ -2,10 +2,9 @@ package editor
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -21,7 +20,7 @@ func NewDeleteOverlay(files []string) DeleteOverlay {
 			overlay.Close(DeleteOverlayID),
 		}
 		for _, f := range files {
-			cmds = append(cmds, file.DeleteFile(f))
+			cmds = append(cmds, DeleteFile(f))
 		}
 		return tea.Sequence(cmds...)
 	})

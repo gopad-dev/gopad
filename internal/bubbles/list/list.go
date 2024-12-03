@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lrstanley/bubblezone"
 
 	"go.gopad.dev/gopad/internal/bubbles/key"
@@ -41,17 +41,19 @@ var DefaultKeyMap = KeyMap{
 }
 
 var DefaultStyles = Styles{
-	Style:                lipgloss.NewStyle().MarginLeft(1),
-	ItemStyle:            lipgloss.NewStyle().Padding(0, 1),
-	ItemSelectedStyle:    lipgloss.NewStyle().Padding(0, 1).Reverse(true),
-	ItemDescriptionStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")),
+	Style:                    lipgloss.NewStyle().MarginLeft(1),
+	ItemStyle:                lipgloss.NewStyle().Padding(0, 1),
+	ItemSelectedStyle:        lipgloss.NewStyle().Padding(0, 1).Reverse(true),
+	ItemSelectedFocusedStyle: lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.ANSIColor(13)).Reverse(true),
+	ItemDescriptionStyle:     lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")),
 }
 
 type Styles struct {
-	Style                lipgloss.Style
-	ItemStyle            lipgloss.Style
-	ItemSelectedStyle    lipgloss.Style
-	ItemDescriptionStyle lipgloss.Style
+	Style                    lipgloss.Style
+	ItemStyle                lipgloss.Style
+	ItemSelectedStyle        lipgloss.Style
+	ItemSelectedFocusedStyle lipgloss.Style
+	ItemDescriptionStyle     lipgloss.Style
 }
 
 func New[T Item](items []T) Model[T] {
@@ -258,7 +260,11 @@ func (m Model[T]) itemsView(width int, height int) string {
 		item := items[ii]
 		style := m.Styles.ItemStyle
 		if ii == m.item {
-			style = m.Styles.ItemSelectedStyle
+			if m.Focused() {
+				style = m.Styles.ItemSelectedFocusedStyle
+			} else {
+				style = m.Styles.ItemSelectedStyle
+			}
 		}
 
 		strs := []string{item.item.Title()}

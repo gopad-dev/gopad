@@ -6,17 +6,17 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"go.gopad.dev/gopad/internal/bubbles/cursor"
 	"go.gopad.dev/gopad/internal/bubbles/key"
+	"go.gopad.dev/gopad/internal/bubbles/notifications"
 	"go.gopad.dev/gopad/internal/bubbles/runeutil"
 )
 
 // Internal messages for clipboard operations.
 type pasteMsg string
-type pasteErrMsg struct{ error }
 
 // EchoMode sets the input behavior of the text input field.
 type EchoMode int
@@ -136,7 +136,7 @@ type Model struct {
 	// Styles. These will be applied as inline config.Styles.
 	//
 	// For an introduction to styling with Lip Gloss see:
-	// https://github.com/charmbracelet/lipgloss
+	// https://github.com/charmbracelet/lipgloss/v2
 	Styles Styles
 
 	// CharLimit is the maximum amount of characters this input element will
@@ -496,9 +496,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case pasteMsg:
 		m.insertRunesFromUserInput([]rune(msg))
-
-	case pasteErrMsg:
-		m.Err = msg
 	}
 
 	var cmds []tea.Cmd
@@ -603,7 +600,7 @@ func Blink() tea.Msg {
 func Paste() tea.Msg {
 	str, err := clipboard.ReadAll()
 	if err != nil {
-		return pasteErrMsg{err}
+		return notifications.Addf("Error pasting from clipboard: %v", err)
 	}
 	return pasteMsg(str)
 }

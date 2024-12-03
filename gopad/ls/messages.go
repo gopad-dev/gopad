@@ -10,6 +10,32 @@ func Err(err error) tea.Cmd {
 	}
 }
 
+func StartServer(name string, workspace string) tea.Cmd {
+	return func() tea.Msg {
+		return StartServerMsg{
+			Name:      name,
+			Workspace: workspace,
+		}
+	}
+}
+
+type StartServerMsg struct {
+	Name      string
+	Workspace string
+}
+
+func StopServer(name string) tea.Cmd {
+	return func() tea.Msg {
+		return StopServerMsg{
+			Name: name,
+		}
+	}
+}
+
+type StopServerMsg struct {
+	Name string
+}
+
 func WorkspaceOpened(workspace string) tea.Cmd {
 	return func() tea.Msg {
 		return WorkspaceOpenedMsg{
@@ -48,20 +74,22 @@ type FileCreatedMsg struct {
 	Text []byte
 }
 
-func FileOpened(name string, version int32, text []byte) tea.Cmd {
+func FileOpened(name string, version uint64, language string, text []byte) tea.Cmd {
 	return func() tea.Msg {
 		return FileOpenedMsg{
-			Name:    name,
-			Version: version,
-			Text:    text,
+			Name:     name,
+			Version:  version,
+			Language: language,
+			Text:     text,
 		}
 	}
 }
 
 type FileOpenedMsg struct {
-	Name    string
-	Version int32
-	Text    []byte
+	Name     string
+	Version  uint64
+	Language string
+	Text     []byte
 }
 
 func FileClosed(name string) tea.Cmd {
@@ -76,7 +104,7 @@ type FileClosedMsg struct {
 	Name string
 }
 
-func FileChanged(name string, version int32, text []byte) tea.Cmd {
+func FileChanged(name string, version uint64, text []byte) tea.Cmd {
 	return func() tea.Msg {
 		return FileChangedMsg{
 			Name:    name,
@@ -88,7 +116,7 @@ func FileChanged(name string, version int32, text []byte) tea.Cmd {
 
 type FileChangedMsg struct {
 	Name    string
-	Version int32
+	Version uint64
 	Text    []byte
 }
 

@@ -12,10 +12,12 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 	"github.com/lrstanley/bubblezone"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
 	"go.gopad.dev/gopad/gopad"
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
+	"go.gopad.dev/gopad/gopad/editor/doc"
 	"go.gopad.dev/gopad/gopad/ls"
 	"go.gopad.dev/gopad/internal/xio"
 )
@@ -33,6 +35,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			workspace, _ := cmd.Flags().GetString("workspace")
 			debug, _ := cmd.Flags().GetString("debug")
 			debugLSP, _ := cmd.Flags().GetString("debug-lsp")
+			debugTrace, _ := cmd.Flags().GetString("debug-trace")
 			pprof, _ := cmd.Flags().GetString("pprof")
 			disableMouse, _ := cmd.Flags().GetBool("disable-mouse")
 
@@ -66,6 +69,29 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				lspLogFile = xio.NopCloser(io.Discard)
 			}
 
+			loadConfig(configDir, defaultConfigs)
+			if err := doc.LoadLanguages(defaultConfigs); err != nil {
+				return err
+			}
+
+			var tracer trace.Tracer
+			if debugTrace != "" {
+				traceLogFile, err := os.OpenFile(debugTrace, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+				if err != nil {
+					log.Panicln("failed to open debug trace log file:", err)
+				}
+				defer func() {
+					_ = traceLogFile.Close()
+				}()
+
+				tracer = newTracer(traceLogFile, version)
+
+				log.Println("debug trace mode enabled")
+			} else {
+				tracer = tracenoop.NewTracerProvider().Tracer(Name)
+			}
+			config.Tracer = tracer
+
 			if pprof != "" {
 				go func() {
 					if err := http.ListenAndServe(pprof, nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -75,13 +101,10 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 				log.Println("pprof enabled")
 			}
 
-			loadConfig(configDir, defaultConfigs)
-			if err := file.LoadLanguages(defaultConfigs); err != nil {
-				return err
-			}
-
 			lsClient := ls.New(version, config.LanguageServers, lspLogFile)
-			e := gopad.New(lsClient, version, getWorkspace(workspace, args), args)
+
+			workspace = parseWorkspace(workspace, args)
+			g := gopad.New(lsClient, version, workspace, args)
 
 			opts := []tea.ProgramOption{
 				tea.WithAltScreen(),
@@ -91,6 +114,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 					tea.WithKeyReleases,
 					tea.WithUniformKeyLayout,
 				),
+				tea.WithFerociousRenderer(),
 			}
 			zone.NewGlobal()
 			defer zone.Close()
@@ -99,7 +123,7 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 			} else {
 				zone.SetEnabled(false)
 			}
-			p := tea.NewProgram(e, opts...)
+			p := tea.NewProgram(g, opts...)
 			lsClient.SetProgram(p)
 			log.Println("running gopad")
 			if _, err := p.Run(); err != nil {
@@ -112,15 +136,16 @@ func NewRootCmd(version string, defaultConfigs embed.FS) *cobra.Command {
 
 	cmd.PersistentFlags().StringP("config-dir", "c", "", "set configuration directory (Default: ./.gopad, $XDG_CONFIG_HOME/gopad or $HOME/.config/gopad)")
 	cmd.Flags().StringP("workspace", "w", "", "set workspace directory (Default: first directory argument)")
-	cmd.Flags().StringP("debug", "d", "", "set debug log file")
-	cmd.Flags().StringP("debug-lsp", "l", "", "set debug lsp log file")
-	cmd.Flags().StringP("pprof", "p", "", "set pprof address:port")
+	cmd.Flags().StringP("debug", "", "", "set debug log file")
+	cmd.Flags().StringP("debug-lsp", "", "", "set debug lsp log file")
+	cmd.Flags().StringP("debug-trace", "", "", "set debug trace log file")
+	cmd.Flags().StringP("pprof", "", "", "set pprof address:port")
 	cmd.Flags().BoolP("disable-mouse", "", false, "disable mouse support (enabled by default)")
 
 	return cmd
 }
 
-func getWorkspace(workspace string, args []string) string {
+func parseWorkspace(workspace string, args []string) string {
 	if workspace == "" {
 		for _, arg := range args {
 			stat, err := os.Stat(arg)

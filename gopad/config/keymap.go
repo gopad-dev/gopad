@@ -18,6 +18,9 @@ type Keymap struct {
 	OK     key.Binding
 	Cancel key.Binding
 
+	FocusNext key.Binding
+	FocusPrev key.Binding
+
 	Left  key.Binding
 	Right key.Binding
 	Up    key.Binding
@@ -48,6 +51,9 @@ func (k Keymap) HelpView() []help.KeyMapCategory {
 				k.Help,
 				k.OK,
 				k.Cancel,
+				emptyKeyBind,
+				k.FocusNext,
+				k.FocusPrev,
 				emptyKeyBind,
 				k.Left,
 				k.Right,
@@ -82,7 +88,7 @@ type EditorKeyMap struct {
 	OpenOutline    key.Binding
 
 	RefreshSyntaxHighlight key.Binding
-	ToggleTreeSitterDebug  key.Binding
+	ToggleDebug            key.Binding
 	DebugTreeSitterNodes   key.Binding
 
 	File         EditorFileKeyMap
@@ -108,7 +114,7 @@ func (k EditorKeyMap) HelpView() []help.KeyMapCategory {
 				k.OpenOutline,
 				emptyKeyBind,
 				k.RefreshSyntaxHighlight,
-				k.ToggleTreeSitterDebug,
+				k.ToggleDebug,
 				k.DebugTreeSitterNodes,
 			},
 		},
@@ -400,6 +406,10 @@ type KeymapConfig struct {
 	Keys KeysConfig `toml:"keys"`
 }
 
+func (k KeymapConfig) ID() string {
+	return k.Name
+}
+
 func (k KeymapConfig) KeyMap() Keymap {
 	return k.Keys.KeyMap()
 }
@@ -442,6 +452,14 @@ func (k KeysConfig) KeyMap() Keymap {
 		Cancel: key.NewBinding(
 			key.WithKeys(k.Cancel),
 			key.WithHelp(k.Cancel, "cancel"),
+		),
+		FocusNext: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "focus next"),
+		),
+		FocusPrev: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "focus prev"),
 		),
 		Left: key.NewBinding(
 			key.WithKeys(k.Left),
@@ -495,7 +513,7 @@ type EditorKeyConfig struct {
 	OpenOutline    string `toml:"open_outline"`
 
 	RefreshSyntaxHighlight string `toml:"refresh_syntax_highlight"`
-	ToggleTreeSitterDebug  string `toml:"toggle_tree_sitter_debug"`
+	ToggleDebug            string `toml:"toggle_debug"`
 	DebugTreeSitterNodes   string `toml:"debug_tree_sitter_nodes"`
 
 	File struct {
@@ -612,9 +630,9 @@ func (k EditorKeyConfig) KeyMap() EditorKeyMap {
 			key.WithKeys(k.RefreshSyntaxHighlight),
 			key.WithHelp(k.RefreshSyntaxHighlight, "refresh syntax highlight"),
 		),
-		ToggleTreeSitterDebug: key.NewBinding(
-			key.WithKeys(k.ToggleTreeSitterDebug),
-			key.WithHelp(k.ToggleTreeSitterDebug, "toggle tree-sitter debug"),
+		ToggleDebug: key.NewBinding(
+			key.WithKeys(k.ToggleDebug),
+			key.WithHelp(k.ToggleDebug, "toggle tree-sitter debug"),
 		),
 		DebugTreeSitterNodes: key.NewBinding(
 			key.WithKeys(k.DebugTreeSitterNodes),

@@ -1,11 +1,8 @@
 (fenced_code_block
   (info_string
-    (language) @_lang)
-  (code_fence_content) @injection.content
-  (#set-lang-from-info-string! @_lang))
+    (language) @injection.language)
+  (code_fence_content) @injection.content)
 
-([
-   (inline)
-   (pipe_table_cell)
-   ] @injection.content
-  (#set! injection.language "markdown-inline"))
+((pipe_table_cell) @injection.content (#set! injection.language "markdown-inline"))
+
+((inline) @injection.content (#set! injection.language "markdown-inline"))

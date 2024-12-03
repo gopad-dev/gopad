@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbletea/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
 func GetAutocompletion(name string, p buffer.Point) tea.Cmd {

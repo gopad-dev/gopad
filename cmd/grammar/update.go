@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"go.gopad.dev/gopad/gopad/config"

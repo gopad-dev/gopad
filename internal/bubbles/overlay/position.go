@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	xansi "github.com/charmbracelet/x/ansi"
 	"github.com/muesli/reflow/ansi"
 )
 
 func PlacePosition(xPos lipgloss.Position, yPos lipgloss.Position, fg string, bg string, opts ...Option) string {
-	cfg := &config{}
+	cfg := &renderConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}

@@ -9,8 +9,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/pelletier/go-toml/v2"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -31,7 +33,12 @@ var (
 	Keymaps         []KeymapConfig
 	Theme           ThemeStyles
 	Themes          []ThemeConfig
+	Tracer          trace.Tracer
 )
+
+type Identifiable interface {
+	ID() string
+}
 
 func FindHome() (string, error) {
 	gopadHome := os.Getenv("GOPAD_CONFIG_HOME")
@@ -108,7 +115,7 @@ func Load(name string, defaultConfigs embed.FS) error {
 	return nil
 }
 
-func readDir[T any](name string, dir string, defaultConfigs embed.FS) ([]T, error) {
+func readDir[T Identifiable](name string, dir string, defaultConfigs embed.FS) ([]T, error) {
 	files := make([]T, 0)
 
 	configFiles, err := os.ReadDir(filepath.Join(name, dir))
@@ -144,13 +151,19 @@ func readDir[T any](name string, dir string, defaultConfigs embed.FS) ([]T, erro
 			return nil, fmt.Errorf("error reading default file %s: %w", configFile.Name(), err)
 		}
 
+		if slices.ContainsFunc(files, func(i T) bool {
+			return i.ID() == config.ID()
+		}) {
+			continue
+		}
+
 		files = append(files, config)
 	}
 
 	return files, nil
 }
 
-func readFile[T any](dir string, name string, entry os.DirEntry, defaultConfigs *embed.FS) (T, error) {
+func readFile[T Identifiable](dir string, name string, entry os.DirEntry, defaultConfigs *embed.FS) (T, error) {
 	var (
 		f   fs.File
 		err error

@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/internal/buffer"
+	"go.gopad.dev/gopad/gopad/editor/buffer"
 )
 
-func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diagnostics []Diagnostic) tea.Cmd {
+func UpdateFileDiagnostic(name string, dType DiagnosticType, version uint64, diagnostics []Diagnostic) tea.Cmd {
 	return func() tea.Msg {
 		return UpdateFileDiagnosticMsg{
 			Name:        name,
@@ -25,7 +25,7 @@ func UpdateFileDiagnostic(name string, dType DiagnosticType, version int32, diag
 type UpdateFileDiagnosticMsg struct {
 	Name        string
 	Type        DiagnosticType
-	Version     int32
+	Version     uint64
 	Diagnostics []Diagnostic
 }
 

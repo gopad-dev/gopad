@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/button"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
@@ -23,7 +22,7 @@ func NewCloseOverlay(files []string) CloseOverlay {
 			overlay.Close(CloseOverlayID),
 		}
 		for _, f := range files {
-			cmds = append(cmds, file.CloseFile(f))
+			cmds = append(cmds, CloseFile(f))
 		}
 		return tea.Sequence(cmds...)
 	})

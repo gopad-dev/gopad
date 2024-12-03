@@ -2,10 +2,9 @@ package editor
 
 import (
 	"github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 
 	"go.gopad.dev/gopad/gopad/config"
-	"go.gopad.dev/gopad/gopad/editor/file"
 	"go.gopad.dev/gopad/internal/bubbles/key"
 	"go.gopad.dev/gopad/internal/bubbles/overlay"
 	"go.gopad.dev/gopad/internal/bubbles/textinput"
@@ -60,7 +59,7 @@ func (r RenameOverlay) Update(msg tea.Msg) (overlay.Overlay, tea.Cmd) {
 		case key.Matches(msg, config.Keys.OK):
 			return r, tea.Sequence(
 				overlay.Close(RenameOverlayID),
-				file.RenameFile(r.oldName, r.fileName.Value()),
+				RenameFile(r.oldName, r.fileName.Value()),
 			)
 		case key.Matches(msg, config.Keys.Cancel):
 			return r, overlay.Close(RenameOverlayID)
